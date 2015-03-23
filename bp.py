@@ -753,7 +753,7 @@ class ListeConsultations(bp_Dialog.Dialog):
 
 
 class Consultation(bp_Dialog.Dialog):
-    def __init__(self, parent, id_patient, id_consult, readonly=False):
+    def __init__(self, parent, id_patient, id_consult=None, readonly=False):
         self.id_patient = id_patient
         self.id_consult = id_consult
         self.readonly = readonly
@@ -765,39 +765,66 @@ class Consultation(bp_Dialog.Dialog):
         if self.readonly:
             tk.Button(box, text=bp_texte.B10, command=self.cancel).pack(side=tk.LEFT)
         else:
-            tk.Button(box, text=bp_texte.B11, command=self.modif).pack(side=tk.LEFT)
+            tk.Button(box, text=bp_texte.B2, command=self.modif).pack(side=tk.LEFT)  # Was B11
             tk.Button(box, text=bp_texte.B3, command=self.cancel).pack(side=tk.LEFT)
+        cursorS.execute("SELECT count(*) FROM consultations WHERE id = %s", [self.id_patient])
+        count, = cursorS.fetchone()
+        if count > 0:
+            tk.Button(box, text="Toutes les consultations", command=lambda: ListeConsultations(self.parent, self.id_patient)).pack(side=tk.LEFT)
         self.bind("<Escape>", self.cancel)
         box.pack()
 
     def modif(self):
         if tkMessageBox.askyesno(bp_texte.cons_pat, bp_texte.appl_modif):
             try:
-                cursorU.execute("""UPDATE consultations
-                                      SET MC=%s,
-                                          EG=%s,
-                                          exam_pclin=%s,
-                                          exam_phys=%s,
-                                          paye=%s,
-                                          divers=%s,
-                                          APT_thorax=%s,
-                                          APT_abdomen=%s,
-                                          APT_tete=%s,
-                                          APT_MS=%s,
-                                          APT_MI=%s,
-                                          APT_system=%s,
-                                          A_osteo=%s,
-                                          traitement=%s,
-                                          date_consult=%s
-                                    WHERE id_consult=%s""",
-                                [self.MCVar.get(1.0, tk.END), self.EGVar.get(1.0, tk.END), self.exam_pclinVar.get(1.0, tk.END),
-                                    self.exam_physVar.get(1.0, tk.END), self.payeVar.get(1.0, tk.END),
-                                    self.diversVar.get(1.0, tk.END), self.APT_thoraxVar.get(1.0, tk.END),
-                                    self.APT_abdomenVar.get(1.0, tk.END), self.APT_teteVar.get(1.0, tk.END),
-                                    self.APT_MSVar.get(1.0, tk.END), self.APT_MIVar.get(1.0, tk.END),
-                                    self.APT_systemVar.get(1.0, tk.END), self.A_osteoVar.get(1.0, tk.END),
-                                    self.traitementVar.get(1.0, tk.END), self.date_ouvcVar.get(),
-                                    self.id_consult])
+                if self.id_consult is None:
+                    try:
+                        cursorS.execute("SELECT max(id_consult)+1 FROM consultations")
+                        self.id_consult, = cursorS.fetchone()
+                        if self.id_consult is None:
+                            self.id_consult = 1
+                    except:
+                        traceback.print_exc()
+                        tkMessageBox.showwarning(bp_texte.BD, bp_texte.id_imp)
+                        return
+                    cursorI.execute("""INSERT INTO consultations
+                                            (MC, EG, exam_pclin, exam_phys, paye, divers, APT_thorax, APT_abdomen,
+                                             APT_tete, APT_MS, APT_MI, APT_system, A_osteo, traitement, date_consult, id_consult)
+                                       VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+                                    [self.MCVar.get(1.0, tk.END), self.EGVar.get(1.0, tk.END), self.exam_pclinVar.get(1.0, tk.END),
+                                        self.exam_physVar.get(1.0, tk.END), self.payeVar.get(1.0, tk.END),
+                                        self.diversVar.get(1.0, tk.END), self.APT_thoraxVar.get(1.0, tk.END),
+                                        self.APT_abdomenVar.get(1.0, tk.END), self.APT_teteVar.get(1.0, tk.END),
+                                        self.APT_MSVar.get(1.0, tk.END), self.APT_MIVar.get(1.0, tk.END),
+                                        self.APT_systemVar.get(1.0, tk.END), self.A_osteoVar.get(1.0, tk.END),
+                                        self.traitementVar.get(1.0, tk.END), self.date_ouvcVar.get(),
+                                        self.id_consult])
+                else:
+                    cursorU.execute("""UPDATE consultations
+                                        SET MC=%s,
+                                            EG=%s,
+                                            exam_pclin=%s,
+                                            exam_phys=%s,
+                                            paye=%s,
+                                            divers=%s,
+                                            APT_thorax=%s,
+                                            APT_abdomen=%s,
+                                            APT_tete=%s,
+                                            APT_MS=%s,
+                                            APT_MI=%s,
+                                            APT_system=%s,
+                                            A_osteo=%s,
+                                            traitement=%s,
+                                            date_consult=%s
+                                        WHERE id_consult=%s""",
+                                    [self.MCVar.get(1.0, tk.END), self.EGVar.get(1.0, tk.END), self.exam_pclinVar.get(1.0, tk.END),
+                                        self.exam_physVar.get(1.0, tk.END), self.payeVar.get(1.0, tk.END),
+                                        self.diversVar.get(1.0, tk.END), self.APT_thoraxVar.get(1.0, tk.END),
+                                        self.APT_abdomenVar.get(1.0, tk.END), self.APT_teteVar.get(1.0, tk.END),
+                                        self.APT_MSVar.get(1.0, tk.END), self.APT_MIVar.get(1.0, tk.END),
+                                        self.APT_systemVar.get(1.0, tk.END), self.A_osteoVar.get(1.0, tk.END),
+                                        self.traitementVar.get(1.0, tk.END), self.date_ouvcVar.get(),
+                                        self.id_consult])
                 cursorU.execute("UPDATE patients SET ATCD_perso=%s, ATCD_fam=%s WHERE id=%s",
                                 [self.ATCD_persoVar.get(1.0, tk.END), self.ATCD_famVar.get(1.0, tk.END), self.id_patient])
                 self.cancel()
