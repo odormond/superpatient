@@ -204,7 +204,7 @@ class Patient(bp_Dialog.Dialog):
                                     self.diversVar.get(1.0, tk.END), self.importantVar.get(1.0, tk.END)])
                 self.cancel()
                 if avec_anamnese:
-                    Anamnese(self.parent, id_patient)
+                    Consultation(self.parent, id_patient)
             else:
                 tkMessageBox.showwarning(bp_texte.info_manq, bp_texte.npdn)
         except:
@@ -328,215 +328,6 @@ class Patient(bp_Dialog.Dialog):
         return focus_widget
 
 
-class Anamnese(bp_Dialog.Dialog):
-    def __init__(self, parent, id_patient, id_consult=None, **kwargs):
-        self.id_patient = id_patient
-        self.id_consult = id_consult
-        bp_Dialog.Dialog.__init__(self, parent)
-
-    def buttonbox(self):
-        box = tk.Frame(self)
-
-        tk.Button(box, text=bp_texte.B5, command=self.exam_phys).pack(side=tk.LEFT)
-        tk.Button(box, text=bp_texte.B2, command=self.ferme_sauve).pack(side=tk.LEFT)
-        if self.id_consult is None:
-            tk.Button(box, text=bp_texte.B3, command=self.cancel).pack(side=tk.LEFT)
-        cursorS.execute("SELECT count(*) FROM consultations WHERE id = %s", [self.id_patient])
-        count, = cursorS.fetchone()
-        if count > 0:
-            tk.Button(box, text="Toutes les consultations", command=lambda: ListeConsultations(self.parent, self.id_patient)).pack(side=tk.LEFT)
-        self.bind("<Escape>", self.cancel)
-        box.pack()
-
-    def exam_phys(self, avec_exam_phys=True):
-        try:
-            if (len(self.MCVar.get(1.0, tk.END)) != 1):
-                if self.id_consult is None:
-                    try:
-                        cursorS.execute("SELECT max(id_consult)+1 FROM consultations")
-                        self.id_consult, = cursorS.fetchone()
-                        if self.id_consult is None:
-                            self.id_consult = 1
-                    except:
-                        traceback.print_exc()
-                        tkMessageBox.showwarning(bp_texte.BD, bp_texte.id_imp)
-                        return
-                    cursorI.execute("""INSERT INTO consultations
-                                              (id_consult, id, date_consult, MC, EG, APT_thorax, APT_abdomen, APT_tete,
-                                               APT_MS, APT_MI, APT_system, A_osteo, exam_phys, traitement, divers,
-                                               exam_pclin, paye)
-                                       VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
-                                    [self.id_consult, self.id_patient, self.date_ouvcVar.get(), self.MCVar.get(1.0, tk.END), self.EGVar.get(1.0, tk.END), self.APT_thoraxVar.get(1.0, tk.END), self.APT_abdomenVar.get(1.0, tk.END),
-                                        self.APT_teteVar.get(1.0, tk.END), self.APT_MSVar.get(1.0, tk.END), self.APT_MIVar.get(1.0, tk.END), self.APT_systemVar.get(1.0, tk.END), self.A_osteoVar.get(1.0, tk.END), "", "", "",
-                                        self.exam_pclinVar.get(1.0, tk.END), ""])
-                else:
-                    cursorU.execute("""UPDATE consultations
-                                          SET date_consult=%s, MC=%s, EG=%s, APT_thorax=%s, APT_abdomen=%s, APT_tete=%s,
-                                              APT_MS=%s, APT_MI=%s, APT_system=%s, A_osteo=%s, exam_pclin=%s
-                                        WHERE id_consult=%s""",
-                                    [self.date_ouvcVar.get(), self.MCVar.get(1.0, tk.END), self.EGVar.get(1.0, tk.END), self.APT_thoraxVar.get(1.0, tk.END), self.APT_abdomenVar.get(1.0, tk.END), self.APT_teteVar.get(1.0, tk.END),
-                                        self.APT_MSVar.get(1.0, tk.END), self.APT_MIVar.get(1.0, tk.END), self.APT_systemVar.get(1.0, tk.END), self.A_osteoVar.get(1.0, tk.END), self.exam_pclinVar.get(1.0, tk.END), self.id_consult])
-                cursorU.execute("UPDATE patients SET important=%s, ATCD_perso=%s, ATCD_fam=%s WHERE id=%s",
-                                [self.importantVar.get(1.0, tk.END), self.ATCD_persoVar.get(1.0, tk.END), self.ATCD_famVar.get(1.0, tk.END), self.id_patient])
-                self.cancel()
-                if avec_exam_phys:
-                    Exam_Phys(self.parent, self.id_patient, self.id_consult)
-                #exam_phys_pe(root)
-            else:
-                tkMessageBox.showwarning(bp_texte.info_manq, bp_texte.mtc)
-        except:
-            traceback.print_exc()
-            tkMessageBox.showwarning(bp_texte.error, bp_texte.imp_db)
-
-    def ferme_sauve(self):
-        self.exam_phys(avec_exam_phys=False)
-
-    def body(self, master):
-        try:
-            cursorS.execute("""SELECT sex, nom, prenom, date_naiss, important, ATCD_perso, ATCD_fam FROM patients WHERE id=%s""", [self.id_patient])
-            sex, nom, prenom, date_naiss, important, ATCD_perso, ATCD_fam = cursorS.fetchone()
-            if self.id_consult:
-                cursorS.execute("""SELECT MC, EG, exam_pclin, APT_thorax, APT_abdomen, APT_tete, APT_MS, APT_MI,
-                                          APT_system, A_osteo
-                                     FROM consultations
-                                    WHERE id_consult=%s""",
-                                [self.id_consult])
-                MC, EG, exam_pclin, APT_thorax, APT_abdomen, APT_tete, APT_MS, APT_MI, APT_system, A_osteo = cursorS.fetchone()
-            else:
-                MC = EG = exam_pclin = APT_thorax = APT_abdomen = APT_tete = APT_MS = APT_MI = APT_system = A_osteo = ''
-        except:
-            traceback.print_exc()
-            tkMessageBox.showwarning(bp_texte.error, bp_texte.imp_lire)
-            return
-
-        if self.id_consult is None:
-            title = bp_texte.nouvel_anamn
-        else:
-            title = bp_texte.anamn
-        self.title("%s %s %s %s (%s)" % (title, sex, nom, prenom, date_naiss))
-        self.geometry('+200+5')
-        self.geometry("1024x710")
-
-        self.MCVar = TextWidget(master, key='mc', row=0, column=0, columnspan=3, side_by_side=False, fg='blue', field_fg='blue', value=MC)
-        self.EGVar = TextWidget(master, key='eg', row=0, column=4, side_by_side=False, value=EG)
-
-        self.ATCD_persoVar = TextWidget(master, key='atcdp', row=2, column=0, side_by_side=False, value=ATCD_perso)
-        self.ATCD_famVar = TextWidget(master, key='atcdf', row=2, column=2, side_by_side=False, value=ATCD_fam)
-
-        self.APT_thoraxVar = TextWidget(master, key='thorax', row=4, column=0, side_by_side=False, value=APT_thorax)
-        self.APT_abdomenVar = TextWidget(master, key='abdomen', row=4, column=2, side_by_side=False, value=APT_abdomen)
-        self.exam_pclinVar = TextWidget(master, key='expc', row=4, column=4, rowspan=3, side_by_side=False, value=exam_pclin)
-
-        self.APT_teteVar = TextWidget(master, key='tete', row=6, column=0, side_by_side=False, value=APT_tete)
-        self.APT_MSVar = TextWidget(master, key='ms', row=6, column=2, side_by_side=False, value=APT_MS)
-
-        self.APT_MIVar = TextWidget(master, key='mi', row=8, column=0, side_by_side=False, value=APT_MI)
-        self.APT_systemVar = TextWidget(master, key='gen', row=8, column=2, side_by_side=False, value=APT_system)
-        self.date_ouvcVar = EntryWidget(master, key='date_ouverture', row=8, column=4, side_by_side=False, value=datetime.date.today())
-
-        self.A_osteoVar = TextWidget(master, key='a_osteo', row=10, column=0, side_by_side=False, value=A_osteo)
-        self.importantVar = TextWidget(master, key='important', row=10, column=2, columnspan=3, side_by_side=False, fg='red', field_fg='red', value=important)
-
-        # Only present in anamnese, nouv_1ere_anamnese
-        # tk.Label(master, text="", font=("Helvetica", bp_variables.entete_taille_npa)).grid(row=10, column=1)
-        # tk.Label(master, text="", font=("Helvetica", bp_variables.entete_taille_npa)).grid(row=10, column=3)
-
-        master.grid_columnconfigure(0, weight=1)
-        master.grid_columnconfigure(2, weight=1)
-        master.grid_columnconfigure(4, weight=1)
-        master.grid_rowconfigure(1, weight=1)
-        master.grid_rowconfigure(3, weight=1)
-        master.grid_rowconfigure(5, weight=1)
-        master.grid_rowconfigure(7, weight=1)
-        master.grid_rowconfigure(9, weight=1)
-        master.grid_rowconfigure(11, weight=1)
-
-        return self.MCVar
-
-
-class Exam_Phys(bp_Dialog.Dialog):
-    def __init__(self, parent, id_patient, id_consult):
-        self.id_patient = id_patient
-        self.id_consult = id_consult  # Not None for _pe
-        bp_Dialog.Dialog.__init__(self, parent)
-
-    def buttonbox(self):
-        box = tk.Frame(self)
-
-        tk.Button(box, text=bp_texte.B6, command=self.retour_anamnese).pack(side=tk.LEFT)
-        tk.Button(box, text=bp_texte.B2, command=self.ferme_sauve).pack(side=tk.LEFT)
-        if self.id_consult:  # Not in nouv_exam_phys_pe
-            tk.Button(box, text=bp_texte.B3, command=self.cancel).pack(side=tk.LEFT)
-        cursorS.execute("SELECT count(*) FROM consultations WHERE id = %s", [self.id_patient])
-        count, = cursorS.fetchone()
-        if count > 0:
-            tk.Button(box, text="Toutes les consultations", command=lambda: ListeConsultations(self.parent, self.id_patient)).pack(side=tk.LEFT)
-        self.bind("<Escape>", self.cancel)
-        box.pack()
-
-    def ferme_sauve(self, retour_anamnese=False):
-        try:
-            if (len(self.exam_physVar.get(1.0, tk.END)) != 1):
-                cursorU.execute("""UPDATE consultations
-                                      SET exam_phys=%s,
-                                          traitement=%s,
-                                          divers=%s,
-                                          paye=%s
-                                    WHERE id_consult=%s""",
-                                [self.exam_physVar.get(1.0, tk.END), self.traitementVar.get(1.0, tk.END), self.diversVar.get(1.0, tk.END), self.payeVar.get(1.0, tk.END), self.id_consult])
-                cursorU.execute("UPDATE patients SET important=%s WHERE id=%s", [self.importantVar.get(1.0, tk.END), self.id_patient])
-                self.cancel()
-                if retour_anamnese:
-                    Anamnese(self.parent, self.id_patient, self.id_consult)
-            else:
-                tkMessageBox.showwarning(bp_texte.info_manq, bp_texte.excl)
-        except:
-            traceback.print_exc()
-            tkMessageBox.showwarning(bp_texte.enr, bp_texte.imp_db)
-
-    def retour_anamnese(self):
-        self.ferme_sauve(retour_anamnese=True)
-
-    def body(self, master):
-        try:
-            cursorS.execute("""SELECT sex, nom, prenom, date_naiss, important FROM patients WHERE id=%s""", [self.id_patient])
-            sex, nom, prenom, date_naiss, important = cursorS.fetchone()
-            cursorS.execute("""SELECT exam_phys, traitement, divers, paye FROM consultations WHERE id_consult=%s""", [self.id_consult])
-            donnees = cursorS.fetchone()
-            if donnees:
-                exam_phys, traitement, divers, paye = donnees
-            else:
-                exam_phys = traitement = divers = paye = ""
-        except:
-            traceback.print_exc()
-            tkMessageBox.showwarning(bp_texte.error, bp_texte.imp_lire)
-            return
-
-        self.title("%s %s %s %s (%s)" % (bp_texte.exphp, sex, nom, prenom, date_naiss))
-        self.geometry('+200+5')
-        self.geometry("800x600")
-
-        self.exam_physVar = TextWidget(master, key='exph', row=0, column=0, rowspan=3, side_by_side=False, fg='black', value=exam_phys)
-
-        self.traitementVar = TextWidget(master, key='ttt', row=0, column=1, side_by_side=False, fg='darkgreen', value=traitement)
-
-        self.diversVar = TextWidget(master, key='remarques', row=2, column=1, side_by_side=False, value=divers)
-
-        self.importantVar = TextWidget(master, key='important', row=4, column=0, side_by_side=False, fg='red', field_fg='red', value=important)
-
-        self.payeVar = TextWidget(master, key='paye', row=4, column=1, side_by_side=False, field_fg='red', value=paye)
-
-        # In exam_phys but not _pe: tk.Label(master, text="", font=("Helvetica", bp_variables.entete_taille_npp)).grid(row=0, column=1)
-
-        master.grid_columnconfigure(0, weight=1)
-        master.grid_columnconfigure(1, weight=1)
-        master.grid_rowconfigure(1, weight=1)
-        master.grid_rowconfigure(3, weight=1)
-        master.grid_rowconfigure(5, weight=1)
-
-        return self.exam_physVar
-
-
 class GererPatients(bp_Dialog.Dialog):
     def __init__(self, parent, action):
         self.action = action
@@ -552,7 +343,7 @@ class GererPatients(bp_Dialog.Dialog):
         elif action == 'supprimer':
             self.title_str = bp_texte.db_sup_p
         elif action == 'nouvelle_consultation':
-            self.action_class = Anamnese
+            self.action_class = Consultation
             self.title_str = bp_texte.BP
         bp_Dialog.Dialog.__init__(self, parent)
 
@@ -577,7 +368,7 @@ class GererPatients(bp_Dialog.Dialog):
 
     def recherche(self):
         try:
-            cursorS.execute("""SELECT id, sex, nom, prenom
+            cursorS.execute("""SELECT id, sex, nom, prenom, (SELECT count(*) FROM consultations WHERE id = patients.id)
                                  FROM patients
                                 WHERE nom LIKE %s AND prenom LIKE %s
                              ORDER BY nom""",
@@ -587,8 +378,8 @@ class GererPatients(bp_Dialog.Dialog):
             tkMessageBox.showwarning(bp_texte.error, bp_texte.rech_imp)
         self.results = []
         self.select.delete(0, tk.END)
-        for id, sex, nom, prenom in cursorS:
-            self.select.insert(tk.END, nom+', '+prenom+', '+sex)
+        for id, sex, nom, prenom, n_consult in cursorS:
+            self.select.insert(tk.END, nom+', '+prenom+', '+sex+', %d consultations' % n_consult)
             self.results.append(id)
 
     def readonly_action(self):
@@ -788,17 +579,18 @@ class Consultation(bp_Dialog.Dialog):
                         tkMessageBox.showwarning(bp_texte.BD, bp_texte.id_imp)
                         return
                     cursorI.execute("""INSERT INTO consultations
-                                            (MC, EG, exam_pclin, exam_phys, paye, divers, APT_thorax, APT_abdomen,
-                                             APT_tete, APT_MS, APT_MI, APT_system, A_osteo, traitement, date_consult, id_consult)
+                                            (id_consult, id, date_consult,
+                                             MC, EG, exam_pclin, exam_phys, paye, divers, APT_thorax, APT_abdomen,
+                                             APT_tete, APT_MS, APT_MI, APT_system, A_osteo, traitement)
                                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
-                                    [self.MCVar.get(1.0, tk.END), self.EGVar.get(1.0, tk.END), self.exam_pclinVar.get(1.0, tk.END),
+                                    [self.id_consult, self.id_patient, self.date_ouvcVar.get(),
+                                        self.MCVar.get(1.0, tk.END), self.EGVar.get(1.0, tk.END), self.exam_pclinVar.get(1.0, tk.END),
                                         self.exam_physVar.get(1.0, tk.END), self.payeVar.get(1.0, tk.END),
                                         self.diversVar.get(1.0, tk.END), self.APT_thoraxVar.get(1.0, tk.END),
                                         self.APT_abdomenVar.get(1.0, tk.END), self.APT_teteVar.get(1.0, tk.END),
                                         self.APT_MSVar.get(1.0, tk.END), self.APT_MIVar.get(1.0, tk.END),
                                         self.APT_systemVar.get(1.0, tk.END), self.A_osteoVar.get(1.0, tk.END),
-                                        self.traitementVar.get(1.0, tk.END), self.date_ouvcVar.get(),
-                                        self.id_consult])
+                                        self.traitementVar.get(1.0, tk.END)])
                 else:
                     cursorU.execute("""UPDATE consultations
                                         SET MC=%s,
@@ -825,8 +617,8 @@ class Consultation(bp_Dialog.Dialog):
                                         self.APT_systemVar.get(1.0, tk.END), self.A_osteoVar.get(1.0, tk.END),
                                         self.traitementVar.get(1.0, tk.END), self.date_ouvcVar.get(),
                                         self.id_consult])
-                cursorU.execute("UPDATE patients SET ATCD_perso=%s, ATCD_fam=%s WHERE id=%s",
-                                [self.ATCD_persoVar.get(1.0, tk.END), self.ATCD_famVar.get(1.0, tk.END), self.id_patient])
+                cursorU.execute("UPDATE patients SET important=%s, ATCD_perso=%s, ATCD_fam=%s WHERE id=%s",
+                                [self.importantVar.get(1.0, tk.END), self.ATCD_persoVar.get(1.0, tk.END), self.ATCD_famVar.get(1.0, tk.END), self.id_patient])
                 self.cancel()
             except:
                 traceback.print_exc()
@@ -857,32 +649,45 @@ class Consultation(bp_Dialog.Dialog):
         self.title("%s %s - %s %s" % (bp_texte.cons_du_1er, date_consult, sex, nom))
         #self.minsize(800, 650)
 
+        # +----------+----------+----------+
+        # |    MC    |    EG    |  pclin   |
+        # +----------+----------+          |
+        # | ATCDperso| ATCD_fam |          |
+        # +----------+----------+----------+
+        # |  thorax  | abdomen  |  phys    |
+        # +----------+----------+          |
+        # |   tete   |    MS    |          |
+        # +----------+----------+----------+
+        # |    MI    |  system  |important |
+        # +----------+----------+----------+
+        # |  osteo   |traitement|  divers  |
+        # +----------+          +----------+
+        # | dateouvc |          |   paye   |
+        # +----------+----------+----------+
         self.MCVar = TextWidget(master, key='mc', row=0, column=0, side_by_side=False, fg='blue', field_fg='blue', value=MC, readonly=self.readonly)
         self.EGVar = TextWidget(master, key='eg', row=0, column=1, side_by_side=False, value=EG, readonly=self.readonly)
         self.exam_pclinVar = TextWidget(master, key='expc', row=0, column=2, rowspan=3, side_by_side=False, value=exam_pclin, readonly=self.readonly)
-
-        self.exam_physVar = TextWidget(master, key='exph', row=4, column=2, rowspan=3, side_by_side=False, value=exam_phys, readonly=self.readonly)
-
-        self.payeVar = TextWidget(master, key='paye', row=8, column=2, side_by_side=False, value=paye, readonly=self.readonly)
-
-        self.diversVar = TextWidget(master, key='remarques', row=10, column=2, side_by_side=False, value=divers, readonly=self.readonly)
 
         self.ATCD_persoVar = TextWidget(master, key='atcdp', row=2, column=0, side_by_side=False, value=ATCD_perso, readonly=self.readonly)
         self.ATCD_famVar = TextWidget(master, key='atcdf', row=2, column=1, side_by_side=False, value=ATCD_fam, readonly=self.readonly)
 
         self.APT_thoraxVar = TextWidget(master, key='thorax', row=4, column=0, side_by_side=False, value=APT_thorax, readonly=self.readonly)
         self.APT_abdomenVar = TextWidget(master, key='abdomen', row=4, column=1, side_by_side=False, value=APT_abdomen, readonly=self.readonly)
+        self.exam_physVar = TextWidget(master, key='exph', row=4, column=2, rowspan=3, side_by_side=False, value=exam_phys, readonly=self.readonly)
 
         self.APT_teteVar = TextWidget(master, key='tete', row=6, column=0, side_by_side=False, value=APT_tete, readonly=self.readonly)
         self.APT_MSVar = TextWidget(master, key='ms', row=6, column=1, side_by_side=False, value=APT_MS, readonly=self.readonly)
 
         self.APT_MIVar = TextWidget(master, key='mi', row=8, column=0, side_by_side=False, value=APT_MI, readonly=self.readonly)
         self.APT_systemVar = TextWidget(master, key='gen', row=8, column=1, side_by_side=False, value=APT_system, readonly=self.readonly)
+        self.importantVar = TextWidget(master, key='important', row=8, column=2, side_by_side=False, value=important, fg='red', field_fg='red', readonly=self.readonly)
 
         self.A_osteoVar = TextWidget(master, key='a_osteo', row=10, column=0, side_by_side=False, value=A_osteo, readonly=self.readonly)
-        self.traitementVar = TextWidget(master, key='ttt', row=10, column=1, side_by_side=False, fg='darkgreen', value=traitement, readonly=self.readonly)
+        self.traitementVar = TextWidget(master, key='ttt', row=10, column=1, rowspan=3, side_by_side=False, fg='darkgreen', value=traitement, readonly=self.readonly)
+        self.diversVar = TextWidget(master, key='remarques', row=10, column=2, side_by_side=False, value=divers, readonly=self.readonly)
 
         self.date_ouvcVar = EntryWidget(master, key='date_ouverture', row=12, column=0, side_by_side=False, value=datetime.date.today(), readonly=self.readonly)
+        self.payeVar = TextWidget(master, key='paye', row=12, column=2, side_by_side=False, value=paye, field_fg='red', readonly=self.readonly)
 
         master.grid_columnconfigure(0, weight=1)
         master.grid_columnconfigure(1, weight=1)
@@ -893,6 +698,7 @@ class Consultation(bp_Dialog.Dialog):
         master.grid_rowconfigure(7, weight=1)
         master.grid_rowconfigure(9, weight=1)
         master.grid_rowconfigure(11, weight=1)
+        master.grid_rowconfigure(13, weight=1)
 
 # #### 4 - Fin #####
 
