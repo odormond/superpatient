@@ -339,7 +339,7 @@ class Patient(bp_Dialog.Dialog):
         date_ouv = datetime.date.today()
 
         try:
-            cursorS.execute("""SELECT DISTINCT therapeute FROM patients""")
+            cursorS.execute("""SELECT therapeute FROM therapeutes""")
             therapeutes = [t for t, in cursorS]
         except:
             traceback.print_exc()
@@ -723,7 +723,7 @@ class Consultation(bp_Dialog.Dialog):
         self.geometry("1024x800")
 
         try:
-            cursorS.execute("""SELECT DISTINCT therapeute FROM patients""")
+            cursorS.execute("""SELECT therapeute FROM therapeutes""")
             therapeutes = [t for t, in cursorS]
             cursorS.execute("""SELECT sex, nom, prenom, date_naiss, important, ATCD_perso, ATCD_fam, therapeute
                                  FROM patients
