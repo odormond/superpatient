@@ -796,6 +796,8 @@ class Consultation(bp_Dialog.Dialog):
         self.paye_parVar = RadioWidget(master, key='paye_par', row=14, column=1, side_by_side=False, value=paye_par, options=bp_custo.MOYEN_DE_PAYEMENT, readonly=self.readonly)
         self.paye_leVar = EntryWidget(master, key='paye_le', row=14, column=2, side_by_side=False, value=paye_le, readonly=self.readonly)
 
+        self.paye_parVar.trace('w', self.update_paye_le)
+
         master.grid_columnconfigure(0, weight=1)
         master.grid_columnconfigure(1, weight=1)
         master.grid_columnconfigure(2, weight=1)
@@ -807,6 +809,12 @@ class Consultation(bp_Dialog.Dialog):
         master.grid_rowconfigure(11, weight=1)
         master.grid_rowconfigure(13, weight=1)
         master.grid_rowconfigure(15, weight=1)
+
+    def update_paye_le(self, *args):
+        if self.paye_parVar.get() == 'BVR':
+            self.paye_leVar.set('')
+        else:
+            self.paye_leVar.set(datetime.date.today())
 
 # #### 4 - Fin #####
 
