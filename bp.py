@@ -85,24 +85,32 @@ cursorU = db.cursor()
 cursorR = db.cursor()
 
 
-def SexWidget(parent, row, column, value=None, readonly=False, want_widget=False):
-    key = 'sexe'
-    sexVar = tk.StringVar()
+def RadioWidget(parent, key, row, column, options, value=None, readonly=False, side_by_side=True, fg='black', field_fg='black', want_widget=False):
+    if side_by_side:
+        rowshift, colshift = 0, 1
+    else:
+        rowshift, colshift = 1, 0
+    tk.Label(parent, text=bp_custo.labels_text[key], font=bp_custo.labels_font[key], fg=fg).grid(row=row, column=column, sticky=tk.W)
+    radioVar = tk.StringVar()
     if value:
-        sexVar.set(value)
-    extra = dict(disabledforeground='black')
-    tk.Label(parent, text=bp_custo.labels_text[key], font=bp_custo.labels_font[key], fg='red').grid(row=row, column=column, sticky=tk.W)
+        radioVar.set(value)
     frame = tk.Frame(parent)
-    r1 = tk.Radiobutton(frame, text="F", variable=sexVar, value='Mme', font=bp_custo.fields_font[key], **extra)
-    r2 = tk.Radiobutton(frame, text="M", variable=sexVar, value='Mr', font=bp_custo.fields_font[key], **extra)
-    if readonly:
-        r1['state'] = r2['state'] = tk.DISABLED
-    r1.grid(row=0, column=0, sticky=tk.E)
-    r2.grid(row=0, column=1, sticky=tk.W)
-    frame.grid(row=row, column=column+1, sticky=tk.W)
+    r1 = None
+    for option in options:
+        if isinstance(option, tuple):
+            value, label = option
+        else:
+            value = label = option
+        r = tk.Radiobutton(frame, text=label, variable=radioVar, value=value, font=bp_custo.fields_font[key], disabledforeground='black')
+        if readonly:
+            r.config(state=tk.DISABLED)
+        r.pack(side=tk.LEFT)
+        if r1 is None:
+            r1 = r
+    frame.grid(row=row+rowshift, column=column+colshift, sticky=tk.W+tk.E)
     if want_widget:
-        return sexVar, r1
-    return sexVar
+        return radioVar, r1
+    return radioVar
 
 
 def EntryWidget(parent, key, row, column, value=None, readonly=False, side_by_side=True, fg='black', field_fg='black', want_widget=False):
@@ -120,6 +128,73 @@ def EntryWidget(parent, key, row, column, value=None, readonly=False, side_by_si
     entry.grid(row=row+rowshift, column=column+colshift, sticky=tk.W+tk.E)
     if want_widget:
         return var, entry
+    return var
+
+
+def OptionWidget(parent, key, row, column, options, value=None, readonly=False, side_by_side=True, fg='black', field_fg='black', want_widget=False):
+    if side_by_side:
+        rowshift, colshift = 0, 1
+    else:
+        rowshift, colshift = 1, 0
+    tk.Label(parent, text=bp_custo.labels_text[key], font=bp_custo.labels_font[key], fg=fg).grid(row=row, column=column, sticky=tk.W)
+    frame = tk.Frame(parent)
+    var = tk.StringVar()
+    if value:
+        var.set(value)
+    entry_var = tk.StringVar()
+    entry = tk.Entry(frame, textvariable=entry_var, font=bp_custo.fields_font[key], fg=field_fg, disabledforeground='black')
+
+    def update_var(*event):
+        if len(event) == 3:
+            val = entry_var.get().strip()
+            if val:
+                var.set(val)
+        elif event == ('Autre...',):
+            parent.after_idle(lambda: entry.focus_set())
+        else:
+            entry_var.set('')
+
+    dropdown = tk.OptionMenu(frame, var, *(options+['Autre...']), command=update_var)
+    entry_var.trace('w', update_var)
+    if readonly:
+        dropdown.config(state=tk.DISABLED)
+    dropdown.pack(side=tk.LEFT, fill=tk.X, expand=1)
+    entry.pack(side=tk.RIGHT, fill=tk.X, expand=2)
+    frame.grid(row=row+rowshift, column=column+colshift, sticky=tk.W+tk.E)
+    if want_widget:
+        return var, dropdown
+    return var
+
+
+def PriceWidget(parent, key, row, column, value=None, readonly=False, side_by_side=True, fg='black', field_fg='black', want_widget=False):
+    if side_by_side:
+        rowshift, colshift = 0, 1
+    else:
+        rowshift, colshift = 1, 0
+    tk.Label(parent, text=bp_custo.labels_text[key], font=bp_custo.labels_font[key], fg=fg).grid(row=row, column=column, sticky=tk.W)
+    try:
+        cursorS.execute("""SELECT description, prix_cts from tarifs""")
+        tarifs = ['%s : %0.2f CHF' % (d, p/100.) for d, p in cursorS]
+    except:
+        traceback.print_exc()
+        tkMessageBox.showwarning(bp_texte.error, bp_texte.imp_lire)
+        tarifs = ["-- ERREUR --"]
+    var = tk.StringVar()
+    if value:
+        var.set('%0.2f CHF' % (value/100.))
+        widget = tk.Entry(parent, textvariable=var, font=bp_custo.fields_font[key], fg=field_fg, disabledforeground='black')
+    else:
+        dropvar = tk.StringVar()
+
+        def set_price(value):
+            var.set(value.split(':')[1].strip())
+
+        widget = tk.OptionMenu(parent, dropvar, *tarifs, command=set_price)
+    if readonly:
+        widget.config(state=tk.DISABLED)
+    widget.grid(row=row+rowshift, column=column+colshift, sticky=tk.W+tk.E)
+    if want_widget:
+        return var, widget
     return var
 
 
@@ -263,6 +338,14 @@ class Patient(bp_Dialog.Dialog):
         sexe = therapeute = nom = prenom = date_naiss = phone = medecin = portable = profes_phone = mail = adresse = autre_medecin = ass_compl = profes = etat = envoye = divers = important = None
         date_ouv = datetime.date.today()
 
+        try:
+            cursorS.execute("""SELECT DISTINCT therapeute FROM patients""")
+            therapeutes = [t for t, in cursorS]
+        except:
+            traceback.print_exc()
+            tkMessageBox.showwarning(bp_texte.error, bp_texte.imp_lire)
+            return
+
         def mandatory(value):
             if value:
                 return 'black'
@@ -279,10 +362,10 @@ class Patient(bp_Dialog.Dialog):
              autre_medecin, ass_compl, profes, etat, envoye, divers, important, date_ouv) = cursorS.fetchone()
 
             EntryWidget(master, key='id', row=0, column=2, value=self.id_patient, readonly=True)
-        self.sexVar, focus_widget = SexWidget(master, row=0, column=0, value=sexe, readonly=self.readonly, want_widget=True)
+        self.sexVar, focus_widget = RadioWidget(master, key='sexe', row=0, column=0, options=[('Mme', 'F'), ('Mr', 'M')], value=sexe, readonly=self.readonly, want_widget=True)
 
         self.nomVar = EntryWidget(master, key='nom', row=1, column=0, fg=mandatory(nom), value=nom, readonly=self.readonly)
-        self.therapeuteVar = EntryWidget(master, key='therapeute', row=1, column=2, value=therapeute, readonly=self.readonly)
+        self.therapeuteVar = OptionWidget(master, key='therapeute', row=1, column=2, value=therapeute, options=therapeutes, readonly=self.readonly)
 
         self.prenomVar = EntryWidget(master, key='prenom', row=2, column=0, fg=mandatory(prenom), value=prenom, readonly=self.readonly)
 
@@ -568,6 +651,10 @@ class Consultation(bp_Dialog.Dialog):
     def modif(self):
         if tkMessageBox.askyesno(bp_texte.cons_pat, bp_texte.appl_modif):
             try:
+                prix_cts = int(float(self.prixVar.get().split()[0]) * 100 + 0.5)
+                paye_le = self.paye_leVar.get()
+                if not paye_le.strip():
+                    paye_le = None
                 if self.id_consult is None:
                     try:
                         cursorS.execute("SELECT max(id_consult)+1 FROM consultations")
@@ -581,8 +668,9 @@ class Consultation(bp_Dialog.Dialog):
                     cursorI.execute("""INSERT INTO consultations
                                             (id_consult, id, date_consult,
                                              MC, EG, exam_pclin, exam_phys, paye, divers, APT_thorax, APT_abdomen,
-                                             APT_tete, APT_MS, APT_MI, APT_system, A_osteo, traitement)
-                                       VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+                                             APT_tete, APT_MS, APT_MI, APT_system, A_osteo, traitement, therapeute,
+                                             prix_cts, paye_par, paye_le)
+                                       VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
                                     [self.id_consult, self.id_patient, self.date_ouvcVar.get(),
                                         self.MCVar.get(1.0, tk.END), self.EGVar.get(1.0, tk.END), self.exam_pclinVar.get(1.0, tk.END),
                                         self.exam_physVar.get(1.0, tk.END), self.payeVar.get(1.0, tk.END),
@@ -590,7 +678,8 @@ class Consultation(bp_Dialog.Dialog):
                                         self.APT_abdomenVar.get(1.0, tk.END), self.APT_teteVar.get(1.0, tk.END),
                                         self.APT_MSVar.get(1.0, tk.END), self.APT_MIVar.get(1.0, tk.END),
                                         self.APT_systemVar.get(1.0, tk.END), self.A_osteoVar.get(1.0, tk.END),
-                                        self.traitementVar.get(1.0, tk.END)])
+                                        self.traitementVar.get(1.0, tk.END), self.therapeuteVar.get(),
+                                        prix_cts, self.paye_parVar.get(), paye_le])
                 else:
                     cursorU.execute("""UPDATE consultations
                                         SET MC=%s,
@@ -607,7 +696,11 @@ class Consultation(bp_Dialog.Dialog):
                                             APT_system=%s,
                                             A_osteo=%s,
                                             traitement=%s,
-                                            date_consult=%s
+                                            date_consult=%s,
+                                            therapeute=%s,
+                                            prix_cts=%s,
+                                            paye_par=%s,
+                                            paye_le=%s
                                         WHERE id_consult=%s""",
                                     [self.MCVar.get(1.0, tk.END), self.EGVar.get(1.0, tk.END), self.exam_pclinVar.get(1.0, tk.END),
                                         self.exam_physVar.get(1.0, tk.END), self.payeVar.get(1.0, tk.END),
@@ -616,6 +709,7 @@ class Consultation(bp_Dialog.Dialog):
                                         self.APT_MSVar.get(1.0, tk.END), self.APT_MIVar.get(1.0, tk.END),
                                         self.APT_systemVar.get(1.0, tk.END), self.A_osteoVar.get(1.0, tk.END),
                                         self.traitementVar.get(1.0, tk.END), self.date_ouvcVar.get(),
+                                        self.therapeuteVar.get(), prix_cts, self.paye_parVar.get(), paye_le,
                                         self.id_consult])
                 cursorU.execute("UPDATE patients SET important=%s, ATCD_perso=%s, ATCD_fam=%s WHERE id=%s",
                                 [self.importantVar.get(1.0, tk.END), self.ATCD_persoVar.get(1.0, tk.END), self.ATCD_famVar.get(1.0, tk.END), self.id_patient])
@@ -626,21 +720,27 @@ class Consultation(bp_Dialog.Dialog):
 
     def body(self, master):
         self.geometry('+200+5')
-        self.geometry("1024x710")
+        self.geometry("1024x800")
 
         try:
-            cursorS.execute("""SELECT sex, nom, prenom, date_naiss, important, ATCD_perso, ATCD_fam
+            cursorS.execute("""SELECT DISTINCT therapeute FROM patients""")
+            therapeutes = [t for t, in cursorS]
+            cursorS.execute("""SELECT sex, nom, prenom, date_naiss, important, ATCD_perso, ATCD_fam, therapeute
                                  FROM patients
                                 WHERE id=%s""",
                             [self.id_patient])
-            sex, nom, prenom, date_naiss, important, ATCD_perso, ATCD_fam = cursorS.fetchone()
-            cursorS.execute("""SELECT date_consult, MC, EG, exam_pclin, exam_phys, traitement, APT_thorax, APT_abdomen,
-                                      APT_tete, APT_MS, APT_MI, APT_system, A_osteo, divers, paye
-                                 FROM consultations
-                                WHERE id_consult=%s""",
-                            [self.id_consult])
-            (date_consult, MC, EG, exam_pclin, exam_phys, traitement, APT_thorax, APT_abdomen,
-             APT_tete, APT_MS, APT_MI, APT_system, A_osteo, divers, paye) = cursorS.fetchone()
+            sex, nom, prenom, date_naiss, important, ATCD_perso, ATCD_fam, therapeute = cursorS.fetchone()
+            if self.id_consult:
+                cursorS.execute("""SELECT date_consult, MC, EG, exam_pclin, exam_phys, traitement, APT_thorax, APT_abdomen,
+                                        APT_tete, APT_MS, APT_MI, APT_system, A_osteo, divers, paye, therapeute, prix_cts, paye_par, paye_le
+                                    FROM consultations
+                                    WHERE id_consult=%s""",
+                                [self.id_consult])
+                (date_consult, MC, EG, exam_pclin, exam_phys, traitement, APT_thorax, APT_abdomen,
+                 APT_tete, APT_MS, APT_MI, APT_system, A_osteo, divers, paye, therapeute, prix_cts,
+                 paye_par, paye_le) = cursorS.fetchone()
+            else:
+                date_consult = MC = EG = exam_pclin = exam_phys = traitement = APT_thorax = APT_abdomen = APT_tete = APT_MS = APT_MI = APT_system = A_osteo = divers = paye = therapeute = prix_cts = paye_par = paye_le = None
         except:
             traceback.print_exc()
             tkMessageBox.showwarning(bp_texte.error, bp_texte.imp_lire)
@@ -661,8 +761,10 @@ class Consultation(bp_Dialog.Dialog):
         # |    MI    |  system  |important |
         # +----------+----------+----------+
         # |  osteo   |traitement|  divers  |
-        # +----------+          +----------+
-        # | dateouvc |          |   paye   |
+        # +----------+----------+----------+
+        # | dateouvc |therapeute|   paye   |
+        # +----------+----------+----------+
+        # |seanceprix| paye par | paye le  |
         # +----------+----------+----------+
         self.MCVar = TextWidget(master, key='mc', row=0, column=0, side_by_side=False, fg='blue', field_fg='blue', value=MC, readonly=self.readonly)
         self.EGVar = TextWidget(master, key='eg', row=0, column=1, side_by_side=False, value=EG, readonly=self.readonly)
@@ -683,11 +785,16 @@ class Consultation(bp_Dialog.Dialog):
         self.importantVar = TextWidget(master, key='important', row=8, column=2, side_by_side=False, value=important, fg='red', field_fg='red', readonly=self.readonly)
 
         self.A_osteoVar = TextWidget(master, key='a_osteo', row=10, column=0, side_by_side=False, value=A_osteo, readonly=self.readonly)
-        self.traitementVar = TextWidget(master, key='ttt', row=10, column=1, rowspan=3, side_by_side=False, fg='darkgreen', value=traitement, readonly=self.readonly)
+        self.traitementVar = TextWidget(master, key='ttt', row=10, column=1, side_by_side=False, fg='darkgreen', value=traitement, readonly=self.readonly)
         self.diversVar = TextWidget(master, key='remarques', row=10, column=2, side_by_side=False, value=divers, readonly=self.readonly)
 
         self.date_ouvcVar = EntryWidget(master, key='date_ouverture', row=12, column=0, side_by_side=False, value=datetime.date.today(), readonly=self.readonly)
+        self.therapeuteVar = OptionWidget(master, key='therapeute', row=12, column=1, side_by_side=False, value=therapeute, options=therapeutes, readonly=self.readonly)
         self.payeVar = TextWidget(master, key='paye', row=12, column=2, side_by_side=False, value=paye, field_fg='red', readonly=self.readonly)
+
+        self.prixVar = PriceWidget(master, key='seance', row=14, column=0, side_by_side=False, value=prix_cts, readonly=self.readonly)
+        self.paye_parVar = RadioWidget(master, key='paye_par', row=14, column=1, side_by_side=False, value=paye_par, options=bp_custo.MOYEN_DE_PAYEMENT, readonly=self.readonly)
+        self.paye_leVar = EntryWidget(master, key='paye_le', row=14, column=2, side_by_side=False, value=paye_le, readonly=self.readonly)
 
         master.grid_columnconfigure(0, weight=1)
         master.grid_columnconfigure(1, weight=1)
@@ -699,6 +806,7 @@ class Consultation(bp_Dialog.Dialog):
         master.grid_rowconfigure(9, weight=1)
         master.grid_rowconfigure(11, weight=1)
         master.grid_rowconfigure(13, weight=1)
+        master.grid_rowconfigure(15, weight=1)
 
 # #### 4 - Fin #####
 

@@ -7,6 +7,8 @@ DEFAULT_FONT_NAME = "Helvetica"
 LABEL_BOLD = (DEFAULT_FONT_NAME, DEFAULT_LABEL_SIZE, 'bold')
 ENTRY_DEFAULT = (DEFAULT_FONT_NAME, DEFAULT_ENTRY_SIZE)
 
+MOYEN_DE_PAYEMENT = ['Cash', 'Carte', 'BVR']
+
 labels_text = {
     # Données concernant la fiche du patient
     'id': "ID patient",
@@ -47,6 +49,9 @@ labels_text = {
     'important': "Important",
     'paye': "Paye ?",
     'ttes_cons': "Toutes les consultations du patient",
+    'seance': "Durée / Prix",
+    'paye_par': "Moyen de payement",
+    'paye_le': "Payement reçu le",
 }
 labels_font = {
     'id': LABEL_BOLD,
@@ -86,6 +91,9 @@ labels_font = {
     'important': LABEL_BOLD,
     'paye': LABEL_BOLD,
     'ttes_cons': LABEL_BOLD,
+    'seance': LABEL_BOLD,
+    'paye_par': LABEL_BOLD,
+    'paye_le': LABEL_BOLD,
 }
 fields_font = {
     'id': ENTRY_DEFAULT,
@@ -125,6 +133,9 @@ fields_font = {
     'important': ENTRY_DEFAULT,
     'paye': ENTRY_DEFAULT,
     'ttes_cons': ENTRY_DEFAULT,
+    'seance': ENTRY_DEFAULT,
+    'paye_par': ENTRY_DEFAULT,
+    'paye_le': ENTRY_DEFAULT,
 }
 fields_height = {
     'medecin': 5,
