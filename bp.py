@@ -23,6 +23,7 @@
 
 import os
 import sys
+import mailcap
 import datetime
 import traceback
 fmt = "%d-%m-%Y"
@@ -65,6 +66,12 @@ try:
     import bp_connect
 except:
     tkMessageBox.showwarning("Missing file", "bp_connect.py is missing")
+    sys.exit()
+
+try:
+    from bp_facture import facture
+except:
+    tkMessageBox.showwarning("Missing file", "bp_facture.py is missing")
     sys.exit()
 
 try:
@@ -187,7 +194,7 @@ def PriceWidget(parent, key, row, column, value=None, readonly=False, side_by_si
         dropvar = tk.StringVar()
 
         def set_price(value):
-            var.set(value.split(':')[1].strip())
+            var.set(value.split(' : ')[1])
 
         widget = tk.OptionMenu(parent, dropvar, *tarifs, command=set_price)
     if readonly:
@@ -651,7 +658,8 @@ class Consultation(bp_Dialog.Dialog):
     def modif(self):
         if tkMessageBox.askyesno(bp_texte.cons_pat, bp_texte.appl_modif):
             try:
-                prix_cts = int(float(self.prixVar.get().split()[0]) * 100 + 0.5)
+                description, prix = self.prixVar.get().split(' : ')
+                prix_cts = int(float(prix[:-4]) * 100 + 0.5)
                 paye_le = self.paye_leVar.get()
                 if not paye_le.strip():
                     paye_le = None
@@ -714,6 +722,14 @@ class Consultation(bp_Dialog.Dialog):
                 cursorU.execute("UPDATE patients SET important=%s, ATCD_perso=%s, ATCD_fam=%s WHERE id=%s",
                                 [self.importantVar.get(1.0, tk.END), self.ATCD_persoVar.get(1.0, tk.END), self.ATCD_famVar.get(1.0, tk.END), self.id_patient])
                 self.cancel()
+                filename = os.tempnam()+'.pdf'
+                cursorS.execute("""SELECT adresse FROM therapeutes WHERE therapeute = %s""", [self.therapeuteVar.get()])
+                adresse_therapeute, = cursorS.fetchone()
+                cursorS.execute("""SELECT adresse FROM patients WHERE id = %s""", [self.id_patient])
+                adresse_patient, = cursorS.fetchone()
+                facture(filename, adresse_therapeute, adresse_patient, description, prix, self.date_ouvcVar.get(), with_bv=True)
+                cmd, cap = mailcap.findmatch(mailcap.getcaps(), 'application/pdf', 'view', filename)
+                os.system(cmd)
             except:
                 traceback.print_exc()
                 tkMessageBox.showwarning(bp_texte.error, bp_texte.modif_imp)
@@ -816,10 +832,6 @@ class Consultation(bp_Dialog.Dialog):
         else:
             self.paye_leVar.set(datetime.date.today())
 
-# #### 4 - Fin #####
-
-
-# #### 5 - Supprime des donnees #####
 
 class GererConsultations(bp_Dialog.Dialog):
     def __init__(self, parent, id_patient, action):
