@@ -1003,17 +1003,13 @@ class Application(tk.Tk):
         self.cntC_label = tk.Label(self)
         self.cntC_label.grid(row=4, column=1)
 
-        #self.update_counters()
-
         self.bind("<FocusIn>", self.update_counters)
         self.config(menu=menubar)
 
-        # 1er argument de basicpatients.py
         self.title(windows_title.application)
 
         self.minsize(400, 180)
         self.geometry('+300+150')
-        #self.geometry("320x200")
 
     def update_counters(self, event):
         cursorS.execute("SELECT count(*) FROM patients")
