@@ -726,8 +726,9 @@ class Consultation(bp_Dialog.Dialog):
             self.cancel()
             if new_consult:
                 filename = os.tempnam()+'.pdf'
-                cursorS.execute("""SELECT adresse FROM therapeutes WHERE therapeute = %s""", [self.therapeuteVar.get()])
-                adresse_therapeute, = cursorS.fetchone()
+                cursorS.execute("""SELECT entete FROM therapeutes WHERE therapeute = %s""", [self.therapeuteVar.get()])
+                entete_therapeute, = cursorS.fetchone()
+                adresse_therapeute = entete_therapeute + '\n\n' + bp_custo.labels_text.adresse_pog
                 cursorS.execute("""SELECT sex, nom, prenom FROM patients WHERE id=%s""", [self.id_patient])
                 sex, nom, prenom = cursorS.fetchone()
                 cursorS.execute("""SELECT adresse FROM patients WHERE id = %s""", [self.id_patient])
