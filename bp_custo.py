@@ -1,11 +1,15 @@
 # coding:UTF-8
 
 DEFAULT_LABEL_SIZE = 9
-DEFAULT_ENTRY_SIZE = DEFAULT_LABEL_SIZE
+DEFAULT_ENTRY_SIZE = 10
 DEFAULT_FONT_NAME = "Helvetica"
+FIXED_FONT_SIZE = 12
+FIXED_FONT_NAME = "Bitstream Vera Sans Mono"
 
 LABEL_BOLD = (DEFAULT_FONT_NAME, DEFAULT_LABEL_SIZE, 'bold')
 ENTRY_DEFAULT = (DEFAULT_FONT_NAME, DEFAULT_ENTRY_SIZE)
+TEXT_DEFAULT = ENTRY_DEFAULT
+LISTBOX_DEFAULT = (FIXED_FONT_NAME, FIXED_FONT_SIZE)
 
 MOYEN_DE_PAYEMENT = ['Cash', 'Carte', 'BVR']
 
@@ -15,7 +19,7 @@ class Config(object):
         return getattr(self, key)
 
 
-class windows_title(Config):
+class WindowsTitle(Config):
     patient = "Fiche patient"
     new_patient = "Nouveau patient"
     show_change_patient = "Voir ou modifier la fiche d'un patient"
@@ -34,9 +38,13 @@ class windows_title(Config):
     delete = "Suppression"
     done = "Fait"
     cons_pat = "Consultation patient"
+    manage_colleagues = "Gérer les collaborateurs"
 
 
-class errors_text(Config):
+windows_title = WindowsTitle()
+
+
+class ErrorsText(Config):
     db_id = "Impossible d'attribuer un ID !"
     db_read = "Impossible de lire les données !"
     db_update = "Modification impossible !"
@@ -48,14 +56,19 @@ class errors_text(Config):
     invalid_date = "Veuillez saisir la date de naissance sous la forme : AAAA-MM-JJ"
 
 
+errors_text = ErrorsText()
+
+
 # des espaces étaient présent aux deux bouts pour avoir du padding
-class buttons_text(Config):
+class ButtonsText(Config):
     ok = "OK"  # B10
     ok_new_consult = "OK, ouvrir une nouvelle consultation"  # B1
     save_close = "Enregistrer et fermer"  # B2
     cancel = "Annuler"  # B3
     search = "Rechercher"  # B7
+    add = "Ajouter"
     change = "Modifier"  # B11
+    delete = "Supprimer"
     show_patient = "Afficher la fiche patient"  # B8
     change_patient = "Modifier la fiche patient"  # B9
     new_consult = "Nouvelle consultation pour ce patient"  # B12
@@ -69,9 +82,14 @@ class buttons_text(Config):
     show_or_change_patient = "Voir ou modifier une fiche patient"  # B26
     new_consult_known_patient = "Nouvelle consultation (patient existant)"  # B27
     show_or_change_consult = "Voir ou modifier une consultation"  # B28
+    done = "Terminé"
 
 
-class menus_text(Config):
+buttons_text = ButtonsText()
+
+
+class MenusText(Config):
+    manage_colleagues = "Gestion des collaborateurs"
     delete_data = "Supprimer des données"
     save_db = "Sauvegarder la base de données"
     restore_db = "Restaurer la base de données"
@@ -81,7 +99,10 @@ class menus_text(Config):
     help = "Aide"
 
 
-class labels_text(Config):
+menus_text = MenusText()
+
+
+class LabelsText(Config):
     # Données concernant la fiche du patient
     id = "ID patient"
     sexe = "Sexe"
@@ -136,6 +157,8 @@ class labels_text(Config):
     appl_modif = "Appliquer les modifications ?"
     sup_def_c = "Supprimer definitivement cette consultation ?"
     cons_sup = "Consultation supprimée de la base"
+    collabos = "Collaborateurs"
+    entete = "Entête d'adresse"
     # Info sur l'application
     apropos_description = """BasicPatient ver. 1.0 est un gestionnaire de patients et de consultations open-source.
 
@@ -173,25 +196,36 @@ www.permanance-lausanne.ch
 021 510 50 50"""
 
 
-class labels_font(Config):
+labels_text = LabelsText()
+
+
+class LabelsFont(Config):
     id = sexe = therapeute = nom = prenom = naissance_le = naissance = LABEL_BOLD
     date_ouverture = tel_fix = medecin = portable = tel_prof = mail = LABEL_BOLD
     adr_priv = medecinS = ass_comp = profes = etat = envoye = remarques = LABEL_BOLD
     mc = eg = expc = atcdp = atcdf = thorax = abdomen = tete = ms = mi = LABEL_BOLD
     gen = a_osteo = exph = ttt = important = paye = ttes_cons = seance = LABEL_BOLD
-    paye_par = paye_le = LABEL_BOLD
+    paye_par = paye_le = entete = collabos = LABEL_BOLD
 
 
-class fields_font(Config):
+labels_font = LabelsFont()
+
+
+class FieldsFont(Config):
     id = sexe = therapeute = nom = prenom = naissance_le = naissance = ENTRY_DEFAULT
-    date_ouverture = tel_fix = medecin = portable = tel_prof = mail = ENTRY_DEFAULT
-    adr_priv = medecinS = ass_comp = profes = etat = envoye = remarques = ENTRY_DEFAULT
-    mc = eg = expc = atcdp = atcdf = thorax = abdomen = tete = ms = ENTRY_DEFAULT
-    mi = gen = a_osteo = exph = ttt = important = paye = ttes_cons = ENTRY_DEFAULT
+    date_ouverture = tel_fix = portable = tel_prof = mail = ENTRY_DEFAULT
+    ass_comp = profes = etat = envoye = ENTRY_DEFAULT
     seance = paye_par = paye_le = ENTRY_DEFAULT
+    important = medecin = addr_priv = medecinS = remarques = ttes_cons = TEXT_DEFAULT
+    mc = eg = expc = atcdp = atcdf = thorax = abdomen = tete = ms = TEXT_DEFAULT
+    mi = gen = a_osteo = exph = ttt = paye = entete = TEXT_DEFAULT
+    rp = rc = collabos = LISTBOX_DEFAULT
 
 
-class fields_height(Config):
+fields_font = FieldsFont()
+
+
+class FieldsHeight(Config):
     medecin = 4
     adr_priv = 4
     medecinS = 7
@@ -215,8 +249,17 @@ class fields_height(Config):
     rp = 19
     rc = 19
     ttes_cons = 39
+    entete = 6
+    collabos = 10
 
 
-class fields_width(Config):
+fields_height = FieldsHeight()
+
+
+class FieldsWidth(Config):
     rp = 75
     rc = 75
+    collabos = 75
+
+
+fields_width = FieldsWidth()

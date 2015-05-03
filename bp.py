@@ -226,7 +226,7 @@ def TextWidget(parent, key, row, column, rowspan=1, columnspan=1, value=None, re
 def ListboxWidget(parent, key, row, column, rowspan=1, columnspan=2):
     frame = tk.Frame(parent)
     scroll = tk.Scrollbar(frame, orient=tk.VERTICAL)
-    select = tk.Listbox(frame, yscrollcommand=scroll.set, height=fields_height[key], width=fields_width[key])
+    select = tk.Listbox(frame, yscrollcommand=scroll.set, height=fields_height[key], width=fields_width[key], font=fields_font[key])
     scroll.config(command=select.yview)
     select.grid(row=0, column=0, sticky=tk.NSEW)
     scroll.grid(row=0, column=1, pady=3, sticky=tk.N+tk.S)
@@ -909,8 +909,8 @@ class GererConsultations(bp_Dialog.Dialog):
 
         self.title(windows_title.delete_consultation % (sex, nom))
         tk.Label(master, text=sex+' '+prenom+' '+nom, font=("Helvetica", bp_variables.texte_bulle_taille_rc, 'bold')).grid(row=0, column=0, sticky=tk.W)
-        tk.Label(master, text=labels_text.naissance+str(date_naiss), font=("Helvetica", bp_variables.entete_taille_rc)).grid(row=1, column=0, sticky=tk.W)
-        tk.Label(master, text=labels_text.therapeute+therapeute, font=("Helvetica", bp_variables.entete_taille_rc)).grid(row=2, column=0, sticky=tk.W)
+        tk.Label(master, text=labels_text.naissance+' '+str(date_naiss), font=("Helvetica", bp_variables.entete_taille_rc)).grid(row=1, column=0, sticky=tk.W)
+        tk.Label(master, text=labels_text.therapeute+' '+therapeute, font=("Helvetica", bp_variables.entete_taille_rc)).grid(row=2, column=0, sticky=tk.W)
 
         self.select_consult = ListboxWidget(master, key='rc', row=3, column=0)
 
@@ -918,6 +918,104 @@ class GererConsultations(bp_Dialog.Dialog):
         master.grid_rowconfigure(3, weight=1)
 
         self.affiche_toutes()
+
+
+class GererCollegues(bp_Dialog.Dialog):
+    def buttonbox(self):
+        box = tk.Button(self, text=buttons_text.done, command=self.cancel)
+        self.bind("<Escape>", self.cancel)
+        return box
+
+    def populate(self):
+        self.listbox.delete(0, tk.END)
+        t_width = 0
+        for therapeute, entete in sorted(self.collegues):
+            t_width = max(t_width, len(therapeute))
+        for therapeute, entete in self.collegues:
+            self.listbox.insert(tk.END, "%*s    %s" % (-t_width, therapeute, entete))
+        self.listbox.selection_clear(0, tk.END)
+
+    def select_collegue(self, event):
+        indexes = self.listbox.curselection()
+        self.entete.delete('1.0', tk.END)
+        self.therapeute.set("")
+        if indexes:
+            index = indexes[0]
+            if index == self.index:
+                self.listbox.selection_clear(0, tk.END)
+                self.index = None
+                self.update.config(text=buttons_text.add)
+                return
+            self.index = index
+            self.update.config(text=buttons_text.change)
+            therapeute, entete = self.collegues[index]
+            self.therapeute.set(therapeute)
+            self.entete.insert(tk.END, entete)
+        else:
+            self.index = None
+            self.update.config(text=buttons_text.add)
+
+    def update_collegue(self):
+        indexes = self.listbox.curselection()
+        update = bool(indexes)
+        therapeute = self.therapeute.get().strip()
+        entete = self.entete.get('1.0', tk.END).strip()
+        try:
+            if update:
+                key, _ = self.collegues[indexes[0]]
+                cursorU.execute("""UPDATE therapeutes SET therapeute = %s, entete = %s WHERE therapeute = %s""",
+                                [therapeute, entete, key])
+                self.collegues[indexes[0]] = (therapeute, entete)
+            else:
+                cursorI.execute("""INSERT INTO therapeutes (therapeute, entete) VALUES (%s, %s)""",
+                                [therapeute, entete])
+                self.collegues.append((therapeute, entete))
+        except:
+            traceback.print_exc()
+            tkMessageBox.showwarning(windows_title.db_error, errors_text.db_update)
+        self.populate()
+        self.select_collegue('ignore')
+
+    def delete_collegue(self):
+        indexes = self.listbox.curselection()
+        if indexes:
+            try:
+                key, _ = self.collegues[indexes[0]]
+                cursorU.execute("""DELETE FROM therapeutes WHERE therapeute = %s""", [key])
+                del self.collegues[indexes[0]]
+            except:
+                traceback.print_exc()
+                tkMessageBox.showwarning(windows_title.db_error, errors_text.db_delete)
+        self.populate()
+        self.select_collegue('ignore')
+
+    def body(self, master):
+        try:
+            cursorS.execute("""SELECT therapeute, entete FROM therapeutes""")
+            self.collegues = list(cursorS)
+        except:
+            traceback.print_exc()
+            tkMessageBox.showwarning(windows_title.db_error, errors_text.db_read)
+            return
+
+        self.title(windows_title.manage_colleagues)
+        self.listbox = ListboxWidget(master, key='collabos', row=0, column=0, columnspan=3)
+        self.listbox.config(selectmode=tk.SINGLE)
+        self.listbox.bind('<<ListboxSelect>>', self.select_collegue)
+        self.index = None
+        self.populate()
+        self.therapeute = EntryWidget(master, key='therapeute', row=2, column=0, side_by_side=False)
+        self.entete = TextWidget(master, key='entete', row=2, column=1, rowspan=2, side_by_side=False)
+        self.update = tk.Button(master, text=buttons_text.add, command=self.update_collegue)
+        self.update.grid(row=3, column=2)
+        self.delete = tk.Button(master, text=buttons_text.delete, command=self.delete_collegue)
+        self.delete.grid(row=4, column=2)
+
+        master.grid_rowconfigure(1, weight=2)
+        master.grid_rowconfigure(3, weight=1)
+        master.grid_rowconfigure(4, weight=1)
+        master.grid_columnconfigure(0, weight=1)
+        master.grid_columnconfigure(1, weight=1)
 
 
 class save_db(bp_Dialog.Dialog):
@@ -966,6 +1064,7 @@ class Application(tk.Tk):
 
         adminmenu = tk.Menu(menubar, tearoff=0)
         adminmenu.add_separator()
+        adminmenu.add_command(label=menus_text.manage_colleagues, command=lambda: GererCollegues(self))
         adminmenu.add_command(label=menus_text.delete_data, command=lambda: GererPatients(self, 'supprimer'), foreground='red')
         adminmenu.add_command(label=menus_text.save_db, command=lambda: save_db(self))
         adminmenu.add_command(label=menus_text.restore_db, command=lambda: restore_db(self))
