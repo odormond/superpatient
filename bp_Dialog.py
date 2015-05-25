@@ -1,5 +1,5 @@
 #!/usr/bin/local/python
-# -*- coding: latin1 -*-
+# -*- coding: UTF-8 -*-
 
 # File: bp_Dialog.py
 

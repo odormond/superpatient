@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python2 -B
 # -*- coding: UTF-8 -*-
 
 # File: bp.py
@@ -50,6 +50,15 @@ try:
     from bp_custo import windows_title, errors_text
 except:
     tkMessageBox.showwarning(u"Missing file", u"bp_custo.py is missing")
+    sys.exit()
+
+try:
+    if not os.path.exists(bp_custo.PDF_DIR):
+        os.mkdir(bp_custo.PDF_DIR)
+    elif not os.path.isdir(bp_custo.PDF_DIR) or not os.access(bp_custo.PDF_DIR, os.W_OK):
+        raise ValueError()
+except:
+    tkMessageBox.showwarning(u"Wrong directory", u"Cannot store PDFs in " + bp_custo.PDF_DIR)
     sys.exit()
 
 try:
@@ -616,7 +625,6 @@ class Consultation(bp_Dialog.Dialog):
                                 self.ATCD_famVar.get(1.0, tk.END).strip(), self.id_patient])
             self.cancel()
             if new_consult:
-                filename = os.tempnam()+'.pdf'
                 cursorS.execute("""SELECT entete FROM therapeutes WHERE therapeute = %s""", [self.therapeuteVar.get()])
                 entete_therapeute, = cursorS.fetchone()
                 adresse_therapeute = entete_therapeute + u'\n\n' + labels_text.adresse_pog
@@ -625,6 +633,7 @@ class Consultation(bp_Dialog.Dialog):
                 cursorS.execute("""SELECT adresse FROM patients WHERE id = %s""", [self.id_patient])
                 adresse_patient, = cursorS.fetchone()
                 adresse_patient = u' '.join((sex, prenom, nom)) + u'\n' + adresse_patient
+                filename = os.path.join(bp_custo.PDF_DIR, (u'%s_%s_%s_%s.pdf' % (nom, prenom, sex, date_ouvc)).encode('UTF-8'))
                 facture(filename, adresse_therapeute, adresse_patient, description, prix, date_ouvc, with_bv=(paye_par == u'BVR'))
                 cmd, cap = mailcap.findmatch(mailcap.getcaps(), 'application/pdf', 'view', filename)
                 os.system(cmd)
