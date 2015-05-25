@@ -45,12 +45,6 @@ except:
     sys.exit()
 
 try:
-    import bp_variables
-except:
-    tkMessageBox.showwarning(u"Missing file", u"bp_variables.py is missing")
-    sys.exit()
-
-try:
     import bp_custo
     from bp_custo import buttons_text, menus_text, labels_text, labels_font
     from bp_custo import windows_title, errors_text
@@ -519,12 +513,6 @@ class ListeConsultations(bp_Dialog.Dialog):
         self.geometry("700x710")
 
         self.toutes = TextWidget(master, key='ttes_cons', row=0, column=0, side_by_side=False, fg='blue')
-        scroll = tk.Scrollbar(master, orient=tk.VERTICAL)
-        tk.Label(master, text=labels_text.ttes_cons, font=("Helvetica", bp_variables.entete_taille_vcs, 'bold'), fg='blue').grid(row=0, column=0, sticky=tk.W)
-        self.toutes = tk.Text(master, relief=tk.SUNKEN, height=bp_variables.liste_hauteur_vcs, yscrollcommand=scroll.set, font=("Helvetica", bp_variables.texte_bulle_taille_vcs), fg='black', wrap=tk.WORD)
-        scroll.config(command=self.toutes.yview)
-        scroll.grid(row=1, column=1, sticky=tk.W+tk.N+tk.S)
-        self.toutes.grid(row=1, column=0, sticky=tk.W+tk.E+tk.N+tk.S)
 
         master.grid_columnconfigure(0, weight=1)
         master.grid_rowconfigure(1, weight=1)
@@ -814,9 +802,9 @@ class GererConsultations(bp_Dialog.Dialog):
             self.title(windows_title.show_consultation % (sex, nom))
         else:
             self.title(windows_title.delete_consultation % (sex, nom))
-        tk.Label(master, text=sex+u' '+prenom+u' '+nom, font=("Helvetica", bp_variables.texte_bulle_taille_rc, 'bold')).grid(row=0, column=0, sticky=tk.W)
-        tk.Label(master, text=labels_text.naissance+u' '+str(date_naiss), font=("Helvetica", bp_variables.entete_taille_rc)).grid(row=1, column=0, sticky=tk.W)
-        tk.Label(master, text=labels_text.therapeute+u' '+therapeute, font=("Helvetica", bp_variables.entete_taille_rc)).grid(row=2, column=0, sticky=tk.W)
+        tk.Label(master, text=sex+u' '+prenom+u' '+nom, font=bp_custo.LABEL_BOLD).grid(row=0, column=0, sticky=tk.W)
+        tk.Label(master, text=labels_text.naissance+u' '+str(date_naiss), font=bp_custo.LABEL_NORMAL).grid(row=1, column=0, sticky=tk.W)
+        tk.Label(master, text=labels_text.therapeute+u' '+therapeute, font=bp_custo.LABEL_NORMAL).grid(row=2, column=0, sticky=tk.W)
 
         self.select_consult = ListboxWidget(master, key='rc', row=3, column=0)
 
