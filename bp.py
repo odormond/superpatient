@@ -921,24 +921,20 @@ class GererCollegues(bp_Dialog.Dialog):
         master.grid_columnconfigure(1, weight=1)
 
 
-class save_db(bp_Dialog.Dialog):
-    def body(self, master):
-        myFormats = [('Database', '*.sql'), ]
+def save_db():
+    myFormats = [('Database', '*.sql'), ]
 
-        fileName = tkFileDialog.asksaveasfilename(filetypes=myFormats, title=u"Sauvegarde de la base de donnée")
-        if len(fileName) > 0:
-            os.system("mysqldump -u root basicpatient > %s" % (fileName.encode('UTF-8')))
-            self.cancel()
+    fileName = tkFileDialog.asksaveasfilename(filetypes=myFormats, title=u"Sauvegarde de la base de donnée")
+    if len(fileName) > 0:
+        os.system("mysqldump -u root basicpatient > %s" % (fileName.encode('UTF-8')))
 
 
-class restore_db(bp_Dialog.Dialog):
-    def body(self, master):
-        myFormats = [('Database', '*.sql'), ]
+def restore_db():
+    myFormats = [('Database', '*.sql'), ]
 
-        fileName = tkFileDialog.askopenfilename(filetypes=myFormats, title=u'Restauration de la base de donnée')
-        if fileName is not None:
-            os.system("mysql -u root basicpatient < %s" % (fileName.encode('UTF-8')))
-            self.cancel()
+    fileName = tkFileDialog.askopenfilename(filetypes=myFormats, title=u'Restauration de la base de donnée')
+    if fileName is not None:
+        os.system("mysql -u root basicpatient < %s" % (fileName.encode('UTF-8')))
 
 
 class apropos(bp_Dialog.Dialog):
@@ -969,8 +965,8 @@ class Application(tk.Tk):
         adminmenu.add_separator()
         adminmenu.add_command(label=menus_text.manage_colleagues, command=lambda: GererCollegues(self))
         adminmenu.add_command(label=menus_text.delete_data, command=lambda: GererPatients(self, 'supprimer'), foreground='red')
-        adminmenu.add_command(label=menus_text.save_db, command=lambda: save_db(self))
-        adminmenu.add_command(label=menus_text.restore_db, command=lambda: restore_db(self))
+        adminmenu.add_command(label=menus_text.save_db, command=save_db)
+        adminmenu.add_command(label=menus_text.restore_db, command=restore_db)
 
         helpmenu = tk.Menu(menubar, tearoff=0)
         helpmenu.add_command(label=menus_text.about, command=lambda: apropos(self))
