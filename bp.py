@@ -810,7 +810,10 @@ class GererConsultations(bp_Dialog.Dialog):
             tkMessageBox.showwarning(windows_title.db_error, errors_text.db_read)
             return
 
-        self.title(windows_title.delete_consultation % (sex, nom))
+        if self.action == 'afficher':
+            self.title(windows_title.show_consultation % (sex, nom))
+        else:
+            self.title(windows_title.delete_consultation % (sex, nom))
         tk.Label(master, text=sex+u' '+prenom+u' '+nom, font=("Helvetica", bp_variables.texte_bulle_taille_rc, 'bold')).grid(row=0, column=0, sticky=tk.W)
         tk.Label(master, text=labels_text.naissance+u' '+str(date_naiss), font=("Helvetica", bp_variables.entete_taille_rc)).grid(row=1, column=0, sticky=tk.W)
         tk.Label(master, text=labels_text.therapeute+u' '+therapeute, font=("Helvetica", bp_variables.entete_taille_rc)).grid(row=2, column=0, sticky=tk.W)

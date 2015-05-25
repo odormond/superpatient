@@ -29,6 +29,7 @@ class WindowsTitle(Config):
     patients_db = u"Base de patients"
     consultation = u"Consultation du %s - %s %s"
     new_consultation = u"Nouvelle consultation - %s %s"
+    show_consultation = u"Afficher une consultation de %s %s"
     delete_consultation = u"Supprimer une consultation de %s %s"
     apropos = u"À propos"
     licence = u"Conditions d'utilisation"
