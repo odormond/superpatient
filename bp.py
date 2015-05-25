@@ -35,19 +35,19 @@ try:
     import tkFileDialog
 
 except:
-    tkMessageBox.showwarning("Error", "Tkinter is not correctly installed !")
+    tkMessageBox.showwarning(u"Error", u"Tkinter is not correctly installed !")
     sys.exit()
 
 try:
     import bp_Dialog
 except:
-    tkMessageBox.showwarning("Missing file", "bp_Dialog.py is missing")
+    tkMessageBox.showwarning(u"Missing file", u"bp_Dialog.py is missing")
     sys.exit()
 
 try:
     import bp_variables
 except:
-    tkMessageBox.showwarning("Missing file", "bp_variables.py is missing")
+    tkMessageBox.showwarning(u"Missing file", u"bp_variables.py is missing")
     sys.exit()
 
 try:
@@ -55,37 +55,37 @@ try:
     from bp_custo import buttons_text, menus_text, labels_text, labels_font
     from bp_custo import windows_title, errors_text
 except:
-    tkMessageBox.showwarning("Missing file", "bp_custo.py is missing")
+    tkMessageBox.showwarning(u"Missing file", u"bp_custo.py is missing")
     sys.exit()
 
 try:
     from bp_widgets import RadioWidget, EntryWidget, OptionWidget, TextWidget, ListboxWidget
 except:
-    tkMessageBox.showwarning("Missing file", "bp_custo.py is missing")
+    tkMessageBox.showwarning(u"Missing file", u"bp_custo.py is missing")
     sys.exit()
 
 try:
     import bp_connect
 except:
-    tkMessageBox.showwarning("Missing file", "bp_connect.py is missing")
+    tkMessageBox.showwarning(u"Missing file", u"bp_connect.py is missing")
     sys.exit()
 
 try:
     from bp_factures import facture
 except:
-    tkMessageBox.showwarning("Missing file", "bp_factures.py is missing")
+    tkMessageBox.showwarning(u"Missing file", u"bp_factures.py is missing")
     sys.exit()
 
 try:
     import MySQLdb
 except:
-    tkMessageBox.showwarning("Error", "Module mysqldb is not correctly installed !")
+    tkMessageBox.showwarning(u"Error", u"Module mysqldb is not correctly installed !")
     sys.exit()
 
 try:
     db = MySQLdb.connect(host=bp_connect.serveur, user=bp_connect.identifiant, passwd=bp_connect.secret, db=bp_connect.base, charset='latin1')
 except:
-    tkMessageBox.showwarning("MySQL", "Cannot connect to database")
+    tkMessageBox.showwarning(u"MySQL", u"Cannot connect to database")
     sys.exit()
 
 cursorS = db.cursor()
@@ -104,12 +104,12 @@ def PriceWidget(parent, key, row, column, value=None, readonly=False, side_by_si
         cursorS.execute("""SELECT description, prix_cts FROM tarifs ORDER BY prix_cts""")
         tarifs = []
         for description, prix_cts in cursorS:
-            label = '%s : %0.2f CHF' % (description, prix_cts/100.)
+            label = u'%s : %0.2f CHF' % (description, prix_cts/100.)
             tarifs.append((prix_cts, description, label))
     except:
         traceback.print_exc()
         tkMessageBox.showwarning(windows_title.db_error, errors_text.db_read)
-        tarifs = ["-- ERREUR --"]
+        tarifs = [u"-- ERREUR --"]
     var = tk.StringVar()
     try:
         idx = [p for p, d, l in tarifs].index(value)
@@ -150,13 +150,13 @@ class Patient(bp_Dialog.Dialog):
         date_naiss = self.date_naissVar.get().strip()
         date_ouv = self.date_ouvVar.get().strip()
         try:
-            date_naiss = datetime.date(*map(int, date_naiss.split('-')))
-            date_ouv = datetime.date(*map(int, date_ouv.split('-')))
+            date_naiss = datetime.date(*map(int, date_naiss.split(u'-')))
+            date_ouv = datetime.date(*map(int, date_ouv.split(u'-')))
         except:
             traceback.print_exc()
             tkMessageBox.showwarning(windows_title.invalid_error, errors_text.invalid_date)
             return
-        if not self.therapeuteVar.get() or not self.nomVar.get().strip() or not self.prenomVar.get().strip():
+        if not self.sexVar.get() or not self.therapeuteVar.get() or not self.nomVar.get().strip() or not self.prenomVar.get().strip():
             tkMessageBox.showwarning(windows_title.invalid_error, errors_text.missing_data)
             return
         try:
@@ -176,7 +176,7 @@ class Patient(bp_Dialog.Dialog):
                                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
                             [id_patient, date_ouv, self.therapeuteVar.get(), self.sexVar.get(),
                                 self.nomVar.get().strip(), self.prenomVar.get().strip(),
-                                date_naiss, "", "", self.medecinVar.get(1.0, tk.END).strip(),
+                                date_naiss, u"", u"", self.medecinVar.get(1.0, tk.END).strip(),
                                 self.autre_medecinVar.get(1.0, tk.END).strip(), self.phoneVar.get().strip(),
                                 self.portableVar.get().strip(), self.profes_phoneVar.get().strip(),
                                 self.mailVar.get().strip(), self.adresseVar.get(1.0, tk.END).strip(),
@@ -268,10 +268,10 @@ class Patient(bp_Dialog.Dialog):
              autre_medecin, ass_compl, profes, etat, envoye, divers, important, date_ouv) = cursorS.fetchone()
 
             EntryWidget(master, key='id', row=0, column=2, value=self.id_patient, readonly=True)
-        self.sexVar, focus_widget = RadioWidget(master, key='sexe', row=0, column=0, options=[('Mme', 'F'), ('Mr', 'M')], value=sexe, readonly=self.readonly, want_widget=True)
+        self.sexVar, focus_widget = RadioWidget(master, key='sexe', row=0, column=0, fg=mandatory(sexe), options=[(u'Mme', u'F'), (u'Mr', u'M')], value=sexe, readonly=self.readonly, want_widget=True)
 
         self.nomVar = EntryWidget(master, key='nom', row=1, column=0, fg=mandatory(nom), value=nom, readonly=self.readonly)
-        self.therapeuteVar = OptionWidget(master, key='therapeute', row=1, column=2, value=therapeute, options=therapeutes, readonly=self.readonly)
+        self.therapeuteVar = OptionWidget(master, key='therapeute', row=1, column=2, fg=mandatory(therapeute), value=therapeute, options=therapeutes, readonly=self.readonly)
 
         self.prenomVar = EntryWidget(master, key='prenom', row=2, column=0, fg=mandatory(prenom), value=prenom, readonly=self.readonly)
 
@@ -368,7 +368,7 @@ class GererPatients(bp_Dialog.Dialog):
         self.results = []
         self.select.delete(0, tk.END)
         for id, sex, nom, prenom, n_consult in cursorS:
-            self.select.insert(tk.END, nom+', '+prenom+', '+sex+', %d consultations' % n_consult)
+            self.select.insert(tk.END, nom+u', '+prenom+u', '+sex+u', %d consultations' % n_consult)
             self.results.append(id)
 
     def readonly_action(self):
@@ -406,11 +406,11 @@ class GererPatients(bp_Dialog.Dialog):
                 traceback.print_exc()
                 tkMessageBox.showwarning(windows_title.db_error, errors_text.db_search)
                 return
-            if tkMessageBox.askyesno(windows_title.delete, labels_text.suppr_def_1+'\n'+str(sex+" "+prenom+" "+nom)+labels_text.suppr_def_2+str(date_naiss)+'\n'+labels_text.suppr_def_3):
+            if tkMessageBox.askyesno(windows_title.delete, labels_text.suppr_def_1+u'\n'+str(sex+u" "+prenom+u" "+nom)+labels_text.suppr_def_2+str(date_naiss)+u'\n'+labels_text.suppr_def_3):
                 try:
                     cursorR.execute("DELETE FROM consultations WHERE id=%s", [id])
                     cursorR.execute("DELETE FROM patients WHERE id=%s", [id])
-                    tkMessageBox.showinfo(windows_title.done, labels_text.pat_sup_1+str(prenom+" "+nom+" ")+labels_text.pat_sup_2)
+                    tkMessageBox.showinfo(windows_title.done, labels_text.pat_sup_1+str(prenom+u" "+nom+u" ")+labels_text.pat_sup_2)
                 except:
                     traceback.print_exc()
                     tkMessageBox.showwarning(windows_title.db_error, errors_text.db_delete)
@@ -421,8 +421,8 @@ class GererPatients(bp_Dialog.Dialog):
         self.geometry('+200+5')
 
         frame = tk.Frame(master)
-        self.nomRec = EntryWidget(frame, key='nom', row=0, column=0, value='%')
-        self.prenomRec = EntryWidget(frame, key='prenom', row=1, column=0, value='%')
+        self.nomRec = EntryWidget(frame, key='nom', row=0, column=0, value=u'%')
+        self.prenomRec = EntryWidget(frame, key='prenom', row=1, column=0, value=u'%')
         frame.grid(row=0, column=0, sticky=tk.NSEW)
         frame.grid_columnconfigure(1, weight=1)
 
@@ -463,55 +463,55 @@ class ListeConsultations(bp_Dialog.Dialog):
         self.toutes.tag_config("titre", foreground="blue", font=("Helvetica", 15))
         self.toutes.tag_config("personne", foreground="black", font=("Helvetica", 15, "bold"))
         self.toutes.tag_config("important", foreground="darkblue", font=("Helvetica", 15, "bold"))
-        self.toutes.insert(tk.END, sex+' '+prenom+' '+nom+', '+str(date_naiss)+'\n', "personne")
-        self.toutes.insert(tk.END, labels_text.atcdp+'\n', "titre")
+        self.toutes.insert(tk.END, sex+u' '+prenom+u' '+nom+u', '+str(date_naiss)+u'\n', "personne")
+        self.toutes.insert(tk.END, labels_text.atcdp+u'\n', "titre")
         self.toutes.insert(tk.END, ATCD_perso)
-        self.toutes.insert(tk.END, labels_text.atcdf+'\n', "titre")
+        self.toutes.insert(tk.END, labels_text.atcdf+u'\n', "titre")
         self.toutes.insert(tk.END, ATCD_fam)
-        self.toutes.insert(tk.END, labels_text.important+'\n', "important")
+        self.toutes.insert(tk.END, labels_text.important+u'\n', "important")
         self.toutes.insert(tk.END, Important)
         for id_consult, date_consult, MC, EG, APT_thorax, APT_abdomen, APT_tete, APT_MS, APT_MI, APT_system, A_osteo, exam_phys, traitement, divers, exam_pclin, paye in cursorS:
-            self.toutes.insert(tk.END, '********** '+labels_text.date_consult+str(date_consult)+' **********'+'\n', "date")
+            self.toutes.insert(tk.END, u'********** '+labels_text.date_consult+str(date_consult)+u' **********'+u'\n', "date")
             if EG.strip():
-                self.toutes.insert(tk.END, labels_text.eg+'\n', "titre")
+                self.toutes.insert(tk.END, labels_text.eg+u'\n', "titre")
                 self.toutes.insert(tk.END, EG)
-            self.toutes.insert(tk.END, labels_text.mc+'\n', "titre")
+            self.toutes.insert(tk.END, labels_text.mc+u'\n', "titre")
             self.toutes.insert(tk.END, MC)
             if APT_thorax.strip():
-                self.toutes.insert(tk.END, labels_text.thorax+'\n', "titre")
+                self.toutes.insert(tk.END, labels_text.thorax+u'\n', "titre")
                 self.toutes.insert(tk.END, APT_thorax)
             if APT_abdomen.strip():
-                self.toutes.insert(tk.END, labels_text.abdomen+'\n', "titre")
+                self.toutes.insert(tk.END, labels_text.abdomen+u'\n', "titre")
                 self.toutes.insert(tk.END, APT_abdomen)
             if APT_tete.strip():
-                self.toutes.insert(tk.END, labels_text.tete+'\n', "titre")
+                self.toutes.insert(tk.END, labels_text.tete+u'\n', "titre")
                 self.toutes.insert(tk.END, APT_tete)
             if APT_MS.strip():
-                self.toutes.insert(tk.END, labels_text.ms+'\n', "titre")
+                self.toutes.insert(tk.END, labels_text.ms+u'\n', "titre")
                 self.toutes.insert(tk.END, APT_MS)
             if APT_MI.strip():
-                self.toutes.insert(tk.END, labels_text.mi+'\n', "titre")
+                self.toutes.insert(tk.END, labels_text.mi+u'\n', "titre")
                 self.toutes.insert(tk.END, APT_MI)
             if APT_system.strip():
-                self.toutes.insert(tk.END, labels_text.gen+'\n', "titre")
+                self.toutes.insert(tk.END, labels_text.gen+u'\n', "titre")
                 self.toutes.insert(tk.END, APT_system)
             if A_osteo.strip():
-                self.toutes.insert(tk.END, labels_text.a_osteo+'\n', "titre")
+                self.toutes.insert(tk.END, labels_text.a_osteo+u'\n', "titre")
                 self.toutes.insert(tk.END, A_osteo)
             if exam_phys.strip():
-                self.toutes.insert(tk.END, labels_text.exph+'\n', "titre")
+                self.toutes.insert(tk.END, labels_text.exph+u'\n', "titre")
                 self.toutes.insert(tk.END, exam_phys)
             if traitement.strip():
-                self.toutes.insert(tk.END, labels_text.ttt+'\n', "titre")
+                self.toutes.insert(tk.END, labels_text.ttt+u'\n', "titre")
                 self.toutes.insert(tk.END, traitement)
             if exam_pclin.strip():
-                self.toutes.insert(tk.END, labels_text.expc+'\n', "titre")
+                self.toutes.insert(tk.END, labels_text.expc+u'\n', "titre")
                 self.toutes.insert(tk.END, exam_pclin)
             if divers.strip():
-                self.toutes.insert(tk.END, labels_text.rem+'\n', "titre")
+                self.toutes.insert(tk.END, labels_text.rem+u'\n', "titre")
                 self.toutes.insert(tk.END, divers)
             if paye.strip():
-                self.toutes.insert(tk.END, labels_text.paye+'\n', "titre")
+                self.toutes.insert(tk.END, labels_text.paye+u'\n', "titre")
                 self.toutes.insert(tk.END, paye)
 
     def body(self, master):
@@ -550,25 +550,23 @@ class Consultation(bp_Dialog.Dialog):
         cursorS.execute("SELECT count(*) FROM consultations WHERE id = %s", [self.id_patient])
         count, = cursorS.fetchone()
         if count > 0:
-            tk.Button(box, text="Toutes les consultations", command=lambda: ListeConsultations(self.parent, self.id_patient)).pack(side=tk.LEFT)
+            tk.Button(box, text=u"Toutes les consultations", command=lambda: ListeConsultations(self.parent, self.id_patient)).pack(side=tk.LEFT)
         self.bind("<Escape>", self.cancel)
         box.pack()
 
     def modif(self):
         paye_par = self.paye_parVar.get().strip()
-        if not paye_par:
-            tkMessageBox.showwarning(windows_title.missing_error, errors_text.missing_paye_par)
-            return
-        if not tkMessageBox.askyesno(windows_title.cons_pat, labels_text.appl_modif):
+        if not self.prixVar.get().strip() or not paye_par:
+            tkMessageBox.showwarning(windows_title.missing_error, errors_text.missing_payment_info)
             return
         try:
-            description, prix = self.prixVar.get().split(' : ')
+            description, prix = self.prixVar.get().split(u' : ')
             prix_cts = int(float(prix[:-4]) * 100 + 0.5)
-            if paye_par == 'BVR':
+            if paye_par == u'BVR':
                 paye_le = None
             else:
                 paye_le = datetime.date.today()
-            date_ouvc = datetime.date(*map(int, self.date_ouvcVar.get().strip().split('-')))
+            date_ouvc = datetime.date(*map(int, self.date_ouvcVar.get().strip().split(u'-')))
             new_consult = self.id_consult is None
             if new_consult:
                 try:
@@ -633,13 +631,13 @@ class Consultation(bp_Dialog.Dialog):
                 filename = os.tempnam()+'.pdf'
                 cursorS.execute("""SELECT entete FROM therapeutes WHERE therapeute = %s""", [self.therapeuteVar.get()])
                 entete_therapeute, = cursorS.fetchone()
-                adresse_therapeute = entete_therapeute + '\n\n' + labels_text.adresse_pog
+                adresse_therapeute = entete_therapeute + u'\n\n' + labels_text.adresse_pog
                 cursorS.execute("""SELECT sex, nom, prenom FROM patients WHERE id=%s""", [self.id_patient])
                 sex, nom, prenom = cursorS.fetchone()
                 cursorS.execute("""SELECT adresse FROM patients WHERE id = %s""", [self.id_patient])
                 adresse_patient, = cursorS.fetchone()
-                adresse_patient = ' '.join((sex, prenom, nom)) + '\n' + adresse_patient
-                facture(filename, adresse_therapeute, adresse_patient, description, prix, date_ouvc, with_bv=(paye_par == 'BVR'))
+                adresse_patient = u' '.join((sex, prenom, nom)) + u'\n' + adresse_patient
+                facture(filename, adresse_therapeute, adresse_patient, description, prix, date_ouvc, with_bv=(paye_par == u'BVR'))
                 cmd, cap = mailcap.findmatch(mailcap.getcaps(), 'application/pdf', 'view', filename)
                 os.system(cmd)
         except:
@@ -724,7 +722,7 @@ class Consultation(bp_Dialog.Dialog):
         self.paye_parVar = RadioWidget(master, key='paye_par', row=14, column=1, side_by_side=False, value=paye_par, options=bp_custo.MOYEN_DE_PAYEMENT, readonly=self.readonly)
         if self.id_consult and paye_le:
             frame = master.grid_slaves(row=15, column=1)[0]
-            tk.Label(frame, text=labels_text.paye_le+' '+str(paye_le), font=labels_font.paye_le).pack(side=tk.RIGHT)
+            tk.Label(frame, text=labels_text.paye_le+u' '+str(paye_le), font=labels_font.paye_le).pack(side=tk.RIGHT)
 
         master.grid_columnconfigure(0, weight=1)
         master.grid_columnconfigure(1, weight=1)
@@ -772,7 +770,7 @@ class GererConsultations(bp_Dialog.Dialog):
         self.results = []
         self.select_consult.delete(0, tk.END)
         for id_consult, date_consult, MC in cursorS:
-            self.select_consult.insert(tk.END, str(date_consult)+' '+MC)
+            self.select_consult.insert(tk.END, str(date_consult)+u' '+MC)
             self.results.append(id_consult)
 
     def affiche(self):
@@ -813,9 +811,9 @@ class GererConsultations(bp_Dialog.Dialog):
             return
 
         self.title(windows_title.delete_consultation % (sex, nom))
-        tk.Label(master, text=sex+' '+prenom+' '+nom, font=("Helvetica", bp_variables.texte_bulle_taille_rc, 'bold')).grid(row=0, column=0, sticky=tk.W)
-        tk.Label(master, text=labels_text.naissance+' '+str(date_naiss), font=("Helvetica", bp_variables.entete_taille_rc)).grid(row=1, column=0, sticky=tk.W)
-        tk.Label(master, text=labels_text.therapeute+' '+therapeute, font=("Helvetica", bp_variables.entete_taille_rc)).grid(row=2, column=0, sticky=tk.W)
+        tk.Label(master, text=sex+u' '+prenom+u' '+nom, font=("Helvetica", bp_variables.texte_bulle_taille_rc, 'bold')).grid(row=0, column=0, sticky=tk.W)
+        tk.Label(master, text=labels_text.naissance+u' '+str(date_naiss), font=("Helvetica", bp_variables.entete_taille_rc)).grid(row=1, column=0, sticky=tk.W)
+        tk.Label(master, text=labels_text.therapeute+u' '+therapeute, font=("Helvetica", bp_variables.entete_taille_rc)).grid(row=2, column=0, sticky=tk.W)
 
         self.select_consult = ListboxWidget(master, key='rc', row=3, column=0)
 
@@ -837,13 +835,13 @@ class GererCollegues(bp_Dialog.Dialog):
         for therapeute, entete in sorted(self.collegues):
             t_width = max(t_width, len(therapeute))
         for therapeute, entete in self.collegues:
-            self.listbox.insert(tk.END, "%*s    %s" % (-t_width, therapeute, entete))
+            self.listbox.insert(tk.END, u"%*s    %s" % (-t_width, therapeute, entete))
         self.listbox.selection_clear(0, tk.END)
 
     def select_collegue(self, event):
         indexes = self.listbox.curselection()
         self.entete.delete('1.0', tk.END)
-        self.therapeute.set("")
+        self.therapeute.set(u"")
         if indexes:
             index = indexes[0]
             if index == self.index:
@@ -927,9 +925,9 @@ class save_db(bp_Dialog.Dialog):
     def body(self, master):
         myFormats = [('Database', '*.sql'), ]
 
-        fileName = tkFileDialog.asksaveasfilename(filetypes=myFormats, title="Sauvegarde de la base de donnée")
+        fileName = tkFileDialog.asksaveasfilename(filetypes=myFormats, title=u"Sauvegarde de la base de donnée")
         if len(fileName) > 0:
-            os.system("mysqldump -u root basicpatient > %s" % (fileName))
+            os.system("mysqldump -u root basicpatient > %s" % (fileName.encode('UTF-8')))
             self.cancel()
 
 
@@ -937,9 +935,9 @@ class restore_db(bp_Dialog.Dialog):
     def body(self, master):
         myFormats = [('Database', '*.sql'), ]
 
-        fileName = tkFileDialog.askopenfilename(filetypes=myFormats, title='Restauration de la base de donnée')
+        fileName = tkFileDialog.askopenfilename(filetypes=myFormats, title=u'Restauration de la base de donnée')
         if fileName is not None:
-            os.system("mysql -u root basicpatient < %s" % (fileName))
+            os.system("mysql -u root basicpatient < %s" % (fileName.encode('UTF-8')))
             self.cancel()
 
 
@@ -987,19 +985,19 @@ class Application(tk.Tk):
         self.cntP_label = tk.Label(self)
         self.cntP_label.grid(row=1, column=1)
 
-        tk.Label(self, text="").grid(row=2, column=0)
-        tk.Label(self, text="Ch").grid(row=2, column=1)
+        tk.Label(self, text=u"").grid(row=2, column=0)
+        tk.Label(self, text=u"Ch").grid(row=2, column=1)
         self.cntCH_label = tk.Label(self)
         self.cntCH_label.grid(row=2, column=2)
-        tk.Label(self, text="Tib").grid(row=2, column=3)
+        tk.Label(self, text=u"Tib").grid(row=2, column=3)
         self.cntTib_label = tk.Label(self)
         self.cntTib_label.grid(row=2, column=4)
 
         tk.Button(self, text=buttons_text.new_consult_known_patient, command=lambda: GererPatients(self, 'nouvelle_consultation')).grid(row=3, column=0, sticky=tk.W)
-        tk.Label(self, text="LI").grid(row=3, column=1)
+        tk.Label(self, text=u"LI").grid(row=3, column=1)
         self.cntLIK_label = tk.Label(self)
         self.cntLIK_label.grid(row=3, column=2)
-        tk.Label(self, text="CRT").grid(row=3, column=3)
+        tk.Label(self, text=u"CRT").grid(row=3, column=3)
         self.cntCRT_label = tk.Label(self)
         self.cntCRT_label.grid(row=3, column=4)
 

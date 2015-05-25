@@ -36,12 +36,12 @@ def fixed(canvas, doc):
     canvas.saveState()
     canvas.drawImage(os.path.join(BASE_DIR, "logo_pog.png"), doc.leftMargin, doc.pagesize[1]-doc.topMargin-LOGO_HEIGHT, LOGO_WIDTH, LOGO_HEIGHT)
     canvas.setFont('EuclidBPBold', FONT_SIZE)
-    canvas.drawRightString(doc.pagesize[0]-doc.rightMargin, doc.pagesize[1]-doc.topMargin-FONT_SIZE, "Lausanne, le "+datetime.date.today().strftime('%d.%m.%y'))
+    canvas.drawRightString(doc.pagesize[0]-doc.rightMargin, doc.pagesize[1]-doc.topMargin-FONT_SIZE, u"Lausanne, le "+datetime.date.today().strftime(u'%d.%m.%y'))
     if doc.with_bv and doc.page == 1:
         canvas.drawImage(os.path.join(BASE_DIR, "441_02_ES_LAC_105_quer_CMYK.png"), 0, 0, BV_WIDTH, BV_HEIGHT)
     else:
         canvas.drawImage(os.path.join(BASE_DIR, "logo_pog.png"), doc.pagesize[0]+doc.leftMargin, doc.pagesize[1]-doc.topMargin-LOGO_HEIGHT, LOGO_WIDTH, LOGO_HEIGHT)
-        canvas.drawRightString(2*doc.pagesize[0]-doc.rightMargin, doc.pagesize[1]-doc.topMargin-FONT_SIZE, "Lausanne, le "+datetime.date.today().strftime('%d.%m.%y'))
+        canvas.drawRightString(2*doc.pagesize[0]-doc.rightMargin, doc.pagesize[1]-doc.topMargin-FONT_SIZE, u"Lausanne, le "+datetime.date.today().strftime('%d.%m.%y'))
     canvas.restoreState()
 
     def make_italic(canvas, event, label):
@@ -78,18 +78,18 @@ def facture(filename, therapeute, patient, duree, prix, date, with_bv=False):
                   colWidths=[doc.width*2/3, doc.width/3],
                   style=[('ALIGN', (0, 0), (0, 0), 'LEFT'), ('ALIGN', (1, 0), (1, 0), 'RIGHT')]),
             Spacer(0, MARGIN),
-            Paragraph('', DEFAULT_STYLE),
+            Paragraph(u'', DEFAULT_STYLE),
             Spacer(0, 2*MARGIN),
-            Paragraph('<onDraw name=make_italic label="FACTURE"/>', FACTURE_STYLE),
+            Paragraph(u'<onDraw name=make_italic label="FACTURE"/>', FACTURE_STYLE),
             Spacer(0, 1*MARGIN),
-            Table([(Paragraph("Prise en charge ostéopathique %s datée du %s" % (duree, date.strftime('%d.%m.%y')), DEFAULT_STYLE), Paragraph(prix, DEFAULT_STYLE)),
-                   (Paragraph("Raison&nbsp;: maladie", DEFAULT_STYLE), Paragraph("payé", DEFAULT_STYLE))],
+            Table([(Paragraph(u"Prise en charge ostéopathique %s datée du %s" % (duree, date.strftime(u'%d.%m.%y')), DEFAULT_STYLE), Paragraph(prix, DEFAULT_STYLE)),
+                   (Paragraph(u"Raison&nbsp;: maladie", DEFAULT_STYLE), Paragraph(u"payé", DEFAULT_STYLE))],
                   colWidths=[doc.width-3*cm, 3*cm]),
             Spacer(0, 3*MARGIN),
-            Paragraph("Avec mes remerciements.", DEFAULT_STYLE),
+            Paragraph(u"Avec mes remerciements.", DEFAULT_STYLE),
             ]
     recu = fact[:]
-    recu[3] = Paragraph('<onDraw name=make_bold label="COPIE"/>', COPIE_STYLE)
+    recu[3] = Paragraph(u'<onDraw name=make_bold label="COPIE"/>', COPIE_STYLE)
     if with_bv:
         story = fact + [PageBreak()] + recu
     else:
@@ -99,10 +99,10 @@ def facture(filename, therapeute, patient, duree, prix, date, with_bv=False):
 
 if __name__ == '__main__':
     filename = os.tempnam()+'.pdf'
-    therapeute = 'Tibor Csernay\nDipl. CDS-GDK\n\nAv. de la gare 5\n1003 Lausanne\n021 510 50 50\n021 510 50 49 (N° direct)\n\nRCC U905461'
-    patient = 'Jean Dupont\nRoute de Quelque Part\n1234 Perdu'
-    duree = 'entre 21 et 30 minutes'
-    prix = '100.00 CHF'
+    therapeute = u'Tibor Csernay\nDipl. CDS-GDK\n\nAv. de la gare 5\n1003 Lausanne\n021 510 50 50\n021 510 50 49 (N° direct)\n\nRCC U905461'
+    patient = u'Jean Dupont\nRoute de Quelque Part\n1234 Perdu'
+    duree = u'entre 21 et 30 minutes'
+    prix = u'100.00 CHF'
     date = datetime.date.today()
     facture(filename, therapeute, patient, duree, prix, date, with_bv=True)
     #facture(filename, therapeute, patient, duree, prix, date, with_bv=False)
