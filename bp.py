@@ -1,5 +1,5 @@
 #!/usr/bin/env python2
-# -*- coding: latin1 -*-
+# -*- coding: UTF-8 -*-
 
 # File: bp.py
 
@@ -26,6 +26,8 @@ import sys
 import mailcap
 import datetime
 import traceback
+
+sys.path.insert(0, os.path.dirname(__file__))
 
 try:
     import Tkinter as tk
@@ -146,11 +148,16 @@ class Patient(bp_Dialog.Dialog):
 
     def addEntry(self, avec_anamnese=False):
         date_naiss = self.date_naissVar.get().strip()
+        date_ouv = self.date_ouvVar.get().strip()
         try:
             date_naiss = datetime.date(*map(int, date_naiss.split('-')))
+            date_ouv = datetime.date(*map(int, date_ouv.split('-')))
         except:
             traceback.print_exc()
             tkMessageBox.showwarning(windows_title.invalid_error, errors_text.invalid_date)
+            return
+        if not self.therapeuteVar.get() or not self.nomVar.get().strip() or not self.prenomVar.get().strip():
+            tkMessageBox.showwarning(windows_title.invalid_error, errors_text.missing_data)
             return
         try:
             cursorS.execute("SELECT max(id)+1 FROM patients")
@@ -161,24 +168,28 @@ class Patient(bp_Dialog.Dialog):
             traceback.print_exc()
             tkMessageBox.showwarning(windows_title.db_error, errors_text.db_id)
             return
-        if (self.nomVar.get() != '' and self.prenomVar.get() != ''):
+        try:
             cursorI.execute("""INSERT INTO patients
                                         (id, date_ouverture, therapeute, sex, nom, prenom, date_naiss, ATCD_perso,
                                         ATCD_fam, medecin, autre_medecin, phone, portable, profes_phone, mail,
                                         adresse, ass_compl, profes, etat, envoye, divers, important)
                                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
-                            [id_patient, self.date_ouvVar.get(), self.therapeuteVar.get(), self.sexVar.get(),
-                                self.nomVar.get(), self.prenomVar.get(), date_naiss, "", "",
-                                self.medecinVar.get(1.0, tk.END), self.autre_medecinVar.get(1.0, tk.END),
-                                self.phoneVar.get(), self.portableVar.get(), self.profes_phoneVar.get(),
-                                self.mailVar.get(), self.adresseVar.get(1.0, tk.END), self.ass_complVar.get(),
-                                self.profesVar.get(), self.etatVar.get(), self.envoyeVar.get(),
-                                self.diversVar.get(1.0, tk.END), self.importantVar.get(1.0, tk.END)])
-            self.cancel()
-            if avec_anamnese:
-                Consultation(self.parent, id_patient)
-        else:
-            tkMessageBox.showwarning(windows_title.missing_error, errors_text.missing_names_birthday)
+                            [id_patient, date_ouv, self.therapeuteVar.get(), self.sexVar.get(),
+                                self.nomVar.get().strip(), self.prenomVar.get().strip(),
+                                date_naiss, "", "", self.medecinVar.get(1.0, tk.END).strip(),
+                                self.autre_medecinVar.get(1.0, tk.END).strip(), self.phoneVar.get().strip(),
+                                self.portableVar.get().strip(), self.profes_phoneVar.get().strip(),
+                                self.mailVar.get().strip(), self.adresseVar.get(1.0, tk.END).strip(),
+                                self.ass_complVar.get().strip(), self.profesVar.get().strip(),
+                                self.etatVar.get().strip(), self.envoyeVar.get().strip(),
+                                self.diversVar.get(1.0, tk.END).strip(), self.importantVar.get(1.0, tk.END).strip()])
+        except:
+            traceback.print_exc()
+            tkMessageBox.showwarning(windows_title.db_error, errors_text.db_insert)
+            return
+        self.cancel()
+        if avec_anamnese:
+            Consultation(self.parent, id_patient)
 
     def updateEntry(self):
         try:
@@ -203,9 +214,15 @@ class Patient(bp_Dialog.Dialog):
                                         envoye=%s,
                                         divers=%s
                                 WHERE id=%s""",
-                            [self.sexVar.get(), self.nomVar.get(), self.prenomVar.get(), self.therapeuteVar.get(), self.date_naissVar.get(), self.date_ouvVar.get(),
-                                self.adresseVar.get(1.0, tk.END), self.importantVar.get(1.0, tk.END), self.medecinVar.get(1.0, tk.END), self.autre_medecinVar.get(1.0, tk.END), self.phoneVar.get(), self.portableVar.get(),
-                                self.profes_phoneVar.get(), self.mailVar.get(), self.ass_complVar.get(), self.profesVar.get(), self.etatVar.get(), self.envoyeVar.get(), self.diversVar.get(1.0, tk.END),
+                            [self.sexVar.get(), self.nomVar.get().strip(), self.prenomVar.get().strip(),
+                                self.therapeuteVar.get(), self.date_naissVar.get().strip(),
+                                self.date_ouvVar.get().strip(), self.adresseVar.get(1.0, tk.END).strip(),
+                                self.importantVar.get(1.0, tk.END).strip(), self.medecinVar.get(1.0, tk.END).strip(),
+                                self.autre_medecinVar.get(1.0, tk.END).strip(), self.phoneVar.get().strip(),
+                                self.portableVar.get().strip(), self.profes_phoneVar.get().strip(),
+                                self.mailVar.get().strip(), self.ass_complVar.get().strip(),
+                                self.profesVar.get().strip(), self.etatVar.get().strip(),
+                                self.envoyeVar.get().strip(), self.diversVar.get(1.0, tk.END).strip(),
                                 self.id_patient])
             self.cancel()
         except:
@@ -344,7 +361,7 @@ class GererPatients(bp_Dialog.Dialog):
                                  FROM patients
                                 WHERE nom LIKE %s AND prenom LIKE %s
                              ORDER BY nom""",
-                            [self.nomRec.get(), self.prenomRec.get()])
+                            [self.nomRec.get().strip(), self.prenomRec.get().strip()])
         except:
             traceback.print_exc()
             tkMessageBox.showwarning(windows_title.db_error, errors_text.db_search)
@@ -569,14 +586,14 @@ class Consultation(bp_Dialog.Dialog):
                                             APT_tete, APT_MS, APT_MI, APT_system, A_osteo, traitement, therapeute,
                                             prix_cts, paye_par, paye_le)
                                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
-                                [self.id_consult, self.id_patient, date_ouvc,
-                                    self.MCVar.get(1.0, tk.END), self.EGVar.get(1.0, tk.END), self.exam_pclinVar.get(1.0, tk.END),
-                                    self.exam_physVar.get(1.0, tk.END), self.payeVar.get(1.0, tk.END),
-                                    self.diversVar.get(1.0, tk.END), self.APT_thoraxVar.get(1.0, tk.END),
-                                    self.APT_abdomenVar.get(1.0, tk.END), self.APT_teteVar.get(1.0, tk.END),
-                                    self.APT_MSVar.get(1.0, tk.END), self.APT_MIVar.get(1.0, tk.END),
-                                    self.APT_systemVar.get(1.0, tk.END), self.A_osteoVar.get(1.0, tk.END),
-                                    self.traitementVar.get(1.0, tk.END), self.therapeuteVar.get(),
+                                [self.id_consult, self.id_patient, date_ouvc, self.MCVar.get(1.0, tk.END).strip(),
+                                    self.EGVar.get(1.0, tk.END).strip(), self.exam_pclinVar.get(1.0, tk.END).strip(),
+                                    self.exam_physVar.get(1.0, tk.END).strip(), self.payeVar.get(1.0, tk.END).strip(),
+                                    self.diversVar.get(1.0, tk.END).strip(), self.APT_thoraxVar.get(1.0, tk.END).strip(),
+                                    self.APT_abdomenVar.get(1.0, tk.END).strip(), self.APT_teteVar.get(1.0, tk.END).strip(),
+                                    self.APT_MSVar.get(1.0, tk.END).strip(), self.APT_MIVar.get(1.0, tk.END).strip(),
+                                    self.APT_systemVar.get(1.0, tk.END).strip(), self.A_osteoVar.get(1.0, tk.END).strip(),
+                                    self.traitementVar.get(1.0, tk.END).strip(), self.therapeuteVar.get(),
                                     prix_cts, paye_par, paye_le])
             else:
                 cursorU.execute("""UPDATE consultations
@@ -600,17 +617,17 @@ class Consultation(bp_Dialog.Dialog):
                                         paye_par=%s,
                                         paye_le=%s
                                     WHERE id_consult=%s""",
-                                [self.MCVar.get(1.0, tk.END), self.EGVar.get(1.0, tk.END), self.exam_pclinVar.get(1.0, tk.END),
-                                    self.exam_physVar.get(1.0, tk.END), self.payeVar.get(1.0, tk.END),
-                                    self.diversVar.get(1.0, tk.END), self.APT_thoraxVar.get(1.0, tk.END),
-                                    self.APT_abdomenVar.get(1.0, tk.END), self.APT_teteVar.get(1.0, tk.END),
-                                    self.APT_MSVar.get(1.0, tk.END), self.APT_MIVar.get(1.0, tk.END),
-                                    self.APT_systemVar.get(1.0, tk.END), self.A_osteoVar.get(1.0, tk.END),
-                                    self.traitementVar.get(1.0, tk.END), date_ouvc,
-                                    self.therapeuteVar.get(), prix_cts, paye_par, paye_le,
-                                    self.id_consult])
+                                [self.MCVar.get(1.0, tk.END).strip(), self.EGVar.get(1.0, tk.END).strip(),
+                                    self.exam_pclinVar.get(1.0, tk.END).strip(), self.exam_physVar.get(1.0, tk.END).strip(),
+                                    self.payeVar.get(1.0, tk.END).strip(), self.diversVar.get(1.0, tk.END).strip(),
+                                    self.APT_thoraxVar.get(1.0, tk.END).strip(), self.APT_abdomenVar.get(1.0, tk.END).strip(),
+                                    self.APT_teteVar.get(1.0, tk.END).strip(), self.APT_MSVar.get(1.0, tk.END).strip(),
+                                    self.APT_MIVar.get(1.0, tk.END).strip(), self.APT_systemVar.get(1.0, tk.END).strip(),
+                                    self.A_osteoVar.get(1.0, tk.END).strip(), self.traitementVar.get(1.0, tk.END).strip(),
+                                    date_ouvc, self.therapeuteVar.get(), prix_cts, paye_par, paye_le, self.id_consult])
             cursorU.execute("UPDATE patients SET important=%s, ATCD_perso=%s, ATCD_fam=%s WHERE id=%s",
-                            [self.importantVar.get(1.0, tk.END), self.ATCD_persoVar.get(1.0, tk.END), self.ATCD_famVar.get(1.0, tk.END), self.id_patient])
+                            [self.importantVar.get(1.0, tk.END).strip(), self.ATCD_persoVar.get(1.0, tk.END).strip(),
+                                self.ATCD_famVar.get(1.0, tk.END).strip(), self.id_patient])
             self.cancel()
             if new_consult:
                 filename = os.tempnam()+'.pdf'

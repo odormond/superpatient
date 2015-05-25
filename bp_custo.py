@@ -50,13 +50,13 @@ class ErrorsText(Config):
     db_id = "Impossible d'attribuer un ID !"
     db_read = "Impossible de lire les données !"
     db_update = "Modification impossible !"
+    db_insert = "Inssertion impossible !"
     db_delete = "Suppression impossible !"
     db_search = "Recherche impossible !"
     db_show = "Affichage impossible !"
     missing_paye_par = "Veuillez préciser le moyen de payement"
-    missing_names_birthday = "Veuillez entrer le nom, le prenom et la date de naissance"
     missing_data = "Veuillez compléter les champs en rouge"
-    invalid_date = "Veuillez saisir la date de naissance sous la forme : AAAA-MM-JJ"
+    invalid_date = "Veuillez vérifier le format des champs date pour qu'ils suivent la forme : AAAA-MM-JJ"
 
 
 errors_text = ErrorsText()

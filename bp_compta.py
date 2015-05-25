@@ -1,9 +1,12 @@
 #! /usr/bin/env python
 # coding:UTF-8
 
+import os
 import sys
 import datetime
 import traceback
+
+sys.path.insert(0, os.path.dirname(__file__))
 
 try:
     import Tkinter as tk
