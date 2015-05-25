@@ -45,6 +45,7 @@ class WindowsTitle(Config):
     done = u"Fait"
     cons_pat = u"Consultation patient"
     manage_colleagues = u"Gérer les collaborateurs"
+    manage_tarifs = u"Gérer les tarifs"
     compta = u"Gestion comptable"
 
 
@@ -62,6 +63,7 @@ class ErrorsText(Config):
     missing_payment_info = u"Veuillez préciser le prix et le moyen de payement"
     missing_data = u"Veuillez compléter les champs en rouge"
     invalid_date = u"Veuillez vérifier le format des champs date pour qu'ils suivent la forme : AAAA-MM-JJ"
+    invalid_tarif = u"Tarif invalide"
 
 
 errors_text = ErrorsText()
@@ -99,6 +101,7 @@ buttons_text = ButtonsText()
 
 class MenusText(Config):
     manage_colleagues = u"Gestion des collaborateurs"
+    manage_tarifs = u"Gestion des tarifs"
     delete_data = u"Supprimer des données"
     save_db = u"Sauvegarder la base de données"
     restore_db = u"Restaurer la base de données"
@@ -167,6 +170,9 @@ class LabelsText(Config):
     cons_sup = u"Consultation supprimée de la base"
     collabos = u"Collaborateurs"
     entete = u"Entête d'adresse"
+    tarifs = u"Tarifs"
+    tarif = u"Tarif"
+    description = u"Description"
     date_du = u"Consultations dès le"
     date_au = u"Consultations jusqu'au"
     etat_payement = u"Etat du payement"
@@ -218,7 +224,7 @@ class LabelsFont(Config):
     mc = eg = expc = atcdp = atcdf = thorax = abdomen = tete = ms = mi = LABEL_BOLD
     gen = a_osteo = exph = ttt = important = paye = ttes_cons = seance = LABEL_BOLD
     paye_par = paye_le = entete = collabos = date_du = date_au = etat_payement = LABEL_BOLD
-    total = LABEL_BOLD
+    total = tarifs = tarif = description = LABEL_BOLD
 
 
 labels_font = LabelsFont()
@@ -229,10 +235,11 @@ class FieldsFont(Config):
     date_ouverture = tel_fix = portable = tel_prof = mail = ENTRY_DEFAULT
     ass_comp = profes = etat = envoye = seance = total = ENTRY_DEFAULT
     paye_par = paye_le = date_du = date_au = etat_payement = ENTRY_DEFAULT
+    tarif = description = ENTRY_DEFAULT
     important = medecin = adr_priv = medecinS = remarques = ttes_cons = TEXT_DEFAULT
     mc = eg = expc = atcdp = atcdf = thorax = abdomen = tete = ms = TEXT_DEFAULT
     mi = gen = a_osteo = exph = ttt = paye = entete = TEXT_DEFAULT
-    rp = rc = collabos = consultations = LISTBOX_DEFAULT
+    rp = rc = collabos = tarifs = consultations = LISTBOX_DEFAULT
 
 
 fields_font = FieldsFont()
@@ -264,6 +271,9 @@ class FieldsHeight(Config):
     ttes_cons = 39
     entete = 6
     collabos = 10
+    tarifs = 10
+    tarif = 6
+    description = 6
     consultations = 50
 
 
@@ -274,6 +284,7 @@ class FieldsWidth(Config):
     rp = 75
     rc = 75
     collabos = 75
+    tarifs = 40
     consultations = 100
 
 

@@ -823,6 +823,109 @@ class GererConsultations(bp_Dialog.Dialog):
         self.affiche_toutes()
 
 
+class GererTarifs(bp_Dialog.Dialog):
+    def buttonbox(self):
+        box = tk.Button(self, text=buttons_text.done, command=self.cancel)
+        self.bind("<Escape>", self.cancel)
+        return box
+
+    def populate(self):
+        self.listbox.delete(0, tk.END)
+        d_width = 0
+        for description, prix_cts in self.tarifs:
+            d_width = max(d_width, len(description))
+        for description, prix_cts in self.tarifs:
+            self.listbox.insert(tk.END, u"%*s    %7.2f" % (-d_width, description, prix_cts/100.))
+        self.listbox.selection_clear(0, tk.END)
+
+    def select_tarif(self, event):
+        indexes = self.listbox.curselection()
+        self.tarif.set(u"")
+        self.description.set(u"")
+        if indexes:
+            index = indexes[0]
+            if index == self.index:
+                self.listbox.selection_clear(0, tk.END)
+                self.index = None
+                self.update.config(text=buttons_text.add)
+                return
+            self.index = index
+            self.update.config(text=buttons_text.change)
+            description, prix_cts = self.tarifs[index]
+            self.description.set(description)
+            self.tarif.set('%0.2f' % (prix_cts/100.))
+        else:
+            self.index = None
+            self.update.config(text=buttons_text.add)
+
+    def update_tarif(self):
+        indexes = self.listbox.curselection()
+        update = bool(indexes)
+        description = self.description.get().strip()
+        try:
+            prix_cts = int(float(self.tarif.get().strip()) * 100)
+        except:
+            traceback.print_exc()
+            tkMessageBox.showwarning(windows_title.invalid_error, errors_text.invalid_tarif)
+            return
+        try:
+            if update:
+                key, _ = self.tarifs[indexes[0]]
+                cursorU.execute("""UPDATE tarifs SET description = %s, prix_cts = %s WHERE description = %s""",
+                                [description, prix_cts, key])
+                self.tarifs[indexes[0]] = (description, prix_cts)
+            else:
+                cursorI.execute("""INSERT INTO tarifs (description, prix_cts) VALUES (%s, %s)""",
+                                [description, prix_cts])
+                self.tarifs.append((description, prix_cts))
+        except:
+            traceback.print_exc()
+            tkMessageBox.showwarning(windows_title.db_error, errors_text.db_update)
+        self.populate()
+        self.select_tarif('ignore')
+
+    def delete_tarif(self):
+        indexes = self.listbox.curselection()
+        if indexes:
+            try:
+                key, _ = self.tarifs[indexes[0]]
+                cursorU.execute("""DELETE FROM tarifs WHERE description = %s""", [key])
+                del self.tarifs[indexes[0]]
+            except:
+                traceback.print_exc()
+                tkMessageBox.showwarning(windows_title.db_error, errors_text.db_delete)
+        self.populate()
+        self.select_tarif('ignore')
+
+    def body(self, master):
+        try:
+            cursorS.execute("""SELECT description, prix_cts FROM tarifs""")
+            self.tarifs = list(cursorS)
+        except:
+            traceback.print_exc()
+            tkMessageBox.showwarning(windows_title.db_error, errors_text.db_read)
+            return
+
+        self.title(windows_title.manage_tarifs)
+        self.listbox = ListboxWidget(master, key='tarifs', row=0, column=0, columnspan=3)
+        self.listbox.config(selectmode=tk.SINGLE)
+        self.listbox.bind('<<ListboxSelect>>', self.select_tarif)
+        self.index = None
+        self.populate()
+        self.description = EntryWidget(master, key='description', row=2, column=0, side_by_side=False)
+        self.tarif = EntryWidget(master, key='tarif', row=2, column=1, side_by_side=False)
+        self.update = tk.Button(master, text=buttons_text.add, command=self.update_tarif)
+        self.update.grid(row=3, column=2)
+        self.delete = tk.Button(master, text=buttons_text.delete, command=self.delete_tarif)
+        self.delete.grid(row=4, column=2)
+
+        master.grid_rowconfigure(1, weight=2)
+        master.grid_rowconfigure(3, weight=1)
+        master.grid_rowconfigure(4, weight=1)
+        master.grid_columnconfigure(0, weight=1)
+        master.grid_columnconfigure(1, weight=1)
+
+
 class GererCollegues(bp_Dialog.Dialog):
     def buttonbox(self):
         box = tk.Button(self, text=buttons_text.done, command=self.cancel)
@@ -832,7 +935,7 @@ class GererCollegues(bp_Dialog.Dialog):
     def populate(self):
         self.listbox.delete(0, tk.END)
         t_width = 0
-        for therapeute, entete in sorted(self.collegues):
+        for therapeute, entete in self.collegues:
             t_width = max(t_width, len(therapeute))
         for therapeute, entete in self.collegues:
             self.listbox.insert(tk.END, u"%*s    %s" % (-t_width, therapeute, entete))
@@ -894,7 +997,7 @@ class GererCollegues(bp_Dialog.Dialog):
 
     def body(self, master):
         try:
-            cursorS.execute("""SELECT therapeute, entete FROM therapeutes""")
+            cursorS.execute("""SELECT therapeute, entete FROM therapeutes ORDER BY therapeute""")
             self.collegues = list(cursorS)
         except:
             traceback.print_exc()
@@ -964,6 +1067,7 @@ class Application(tk.Tk):
         adminmenu = tk.Menu(menubar, tearoff=0)
         adminmenu.add_separator()
         adminmenu.add_command(label=menus_text.manage_colleagues, command=lambda: GererCollegues(self))
+        adminmenu.add_command(label=menus_text.manage_tarifs, command=lambda: GererTarifs(self))
         adminmenu.add_command(label=menus_text.delete_data, command=lambda: GererPatients(self, 'supprimer'), foreground='red')
         adminmenu.add_command(label=menus_text.save_db, command=save_db)
         adminmenu.add_command(label=menus_text.restore_db, command=restore_db)
