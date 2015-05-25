@@ -12,6 +12,7 @@ TEXT_DEFAULT = ENTRY_DEFAULT
 LISTBOX_DEFAULT = (FIXED_FONT_NAME, FIXED_FONT_SIZE)
 
 MOYEN_DE_PAYEMENT = ['Cash', 'Carte', 'BVR']
+ETAT_PAYEMENT = ['Tous', 'Comptabilisé', 'Non-comptabilisé']
 
 
 class Config(object):
@@ -39,6 +40,7 @@ class WindowsTitle(Config):
     done = "Fait"
     cons_pat = "Consultation patient"
     manage_colleagues = "Gérer les collaborateurs"
+    compta = "Gestion comptable"
 
 
 windows_title = WindowsTitle()
@@ -53,6 +55,7 @@ class ErrorsText(Config):
     db_show = "Affichage impossible !"
     missing_paye_par = "Veuillez préciser le moyen de payement"
     missing_names_birthday = "Veuillez entrer le nom, le prenom et la date de naissance"
+    missing_data = "Veuillez compléter les champs en rouge"
     invalid_date = "Veuillez saisir la date de naissance sous la forme : AAAA-MM-JJ"
 
 
@@ -83,6 +86,7 @@ class ButtonsText(Config):
     new_consult_known_patient = "Nouvelle consultation (patient existant)"  # B27
     show_or_change_consult = "Voir ou modifier une consultation"  # B28
     done = "Terminé"
+    mark_paye = "Marquer payé"
 
 
 buttons_text = ButtonsText()
@@ -159,6 +163,10 @@ class LabelsText(Config):
     cons_sup = "Consultation supprimée de la base"
     collabos = "Collaborateurs"
     entete = "Entête d'adresse"
+    date_du = "Consultations dès le"
+    date_au = "Consultations jusqu'au"
+    etat_payement = "Etat du payement"
+    total = "Total"
     # Info sur l'application
     apropos_description = """BasicPatient ver. 1.0 est un gestionnaire de patients et de consultations open-source.
 
@@ -205,7 +213,8 @@ class LabelsFont(Config):
     adr_priv = medecinS = ass_comp = profes = etat = envoye = remarques = LABEL_BOLD
     mc = eg = expc = atcdp = atcdf = thorax = abdomen = tete = ms = mi = LABEL_BOLD
     gen = a_osteo = exph = ttt = important = paye = ttes_cons = seance = LABEL_BOLD
-    paye_par = paye_le = entete = collabos = LABEL_BOLD
+    paye_par = paye_le = entete = collabos = date_du = date_au = etat_payement = LABEL_BOLD
+    total = LABEL_BOLD
 
 
 labels_font = LabelsFont()
@@ -214,12 +223,12 @@ labels_font = LabelsFont()
 class FieldsFont(Config):
     id = sexe = therapeute = nom = prenom = naissance_le = naissance = ENTRY_DEFAULT
     date_ouverture = tel_fix = portable = tel_prof = mail = ENTRY_DEFAULT
-    ass_comp = profes = etat = envoye = ENTRY_DEFAULT
-    seance = paye_par = paye_le = ENTRY_DEFAULT
-    important = medecin = addr_priv = medecinS = remarques = ttes_cons = TEXT_DEFAULT
+    ass_comp = profes = etat = envoye = seance = total = ENTRY_DEFAULT
+    paye_par = paye_le = date_du = date_au = etat_payement = ENTRY_DEFAULT
+    important = medecin = adr_priv = medecinS = remarques = ttes_cons = TEXT_DEFAULT
     mc = eg = expc = atcdp = atcdf = thorax = abdomen = tete = ms = TEXT_DEFAULT
     mi = gen = a_osteo = exph = ttt = paye = entete = TEXT_DEFAULT
-    rp = rc = collabos = LISTBOX_DEFAULT
+    rp = rc = collabos = consultations = LISTBOX_DEFAULT
 
 
 fields_font = FieldsFont()
@@ -251,6 +260,7 @@ class FieldsHeight(Config):
     ttes_cons = 39
     entete = 6
     collabos = 10
+    consultations = 50
 
 
 fields_height = FieldsHeight()
@@ -260,6 +270,7 @@ class FieldsWidth(Config):
     rp = 75
     rc = 75
     collabos = 75
+    consultations = 100
 
 
 fields_width = FieldsWidth()

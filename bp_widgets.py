@@ -58,31 +58,13 @@ def OptionWidget(parent, key, row, column, options, value=None, readonly=False, 
     else:
         rowshift, colshift = 1, 0
     tk.Label(parent, text=labels_text[key], font=labels_font[key], fg=fg).grid(row=row, column=column, sticky=tk.W)
-    frame = tk.Frame(parent)
     var = tk.StringVar()
     if value:
         var.set(value)
-    entry_var = tk.StringVar()
-    entry = tk.Entry(frame, textvariable=entry_var, font=fields_font[key], fg=field_fg, disabledforeground='black')
-
-    def update_var(*event):
-        if len(event) == 3:
-            val = entry_var.get().strip()
-            if val:
-                var.set(val)
-        elif event == ('Autre...',):
-            parent.after_idle(lambda: entry.focus_set())
-        else:
-            entry_var.set('')
-
-    dropdown = tk.OptionMenu(frame, var, *(options+['Autre...']), command=update_var)
-    entry_var.trace('w', update_var)
+    dropdown = tk.OptionMenu(parent, var, *options)
     if readonly:
-        entry.config(state=tk.DISABLED)
         dropdown.config(state=tk.DISABLED)
-    dropdown.pack(side=tk.LEFT, fill=tk.X, expand=1)
-    entry.pack(side=tk.RIGHT, fill=tk.X, expand=2)
-    frame.grid(row=row+rowshift, column=column+colshift, sticky=tk.W+tk.E)
+    dropdown.grid(row=row+rowshift, column=column+colshift, sticky=tk.W+tk.E)
     if want_widget:
         return var, dropdown
     return var
