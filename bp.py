@@ -64,13 +64,19 @@ except:
 try:
     from bp_widgets import RadioWidget, EntryWidget, OptionWidget, TextWidget, ListboxWidget
 except:
-    tkMessageBox.showwarning(u"Missing file", u"bp_custo.py is missing")
+    tkMessageBox.showwarning(u"Missing file", u"bp_widgets.py is missing")
     sys.exit()
 
 try:
     import bp_connect
 except:
     tkMessageBox.showwarning(u"Missing file", u"bp_connect.py is missing")
+    sys.exit()
+
+try:
+    import reportlab
+except:
+    tkMessageBox.showwarning(u"Missing dependency", u"The reportlab library is missing")
     sys.exit()
 
 try:
