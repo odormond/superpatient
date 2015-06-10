@@ -248,7 +248,7 @@ class Patient(bp_Dialog.Dialog):
             title = windows_title.new_patient
         self.title(title)
         self.geometry('+200+5')
-        self.geometry("1024x710")
+        # self.geometry("1024x710")
 
         sexe = therapeute = nom = prenom = date_naiss = phone = medecin = portable = profes_phone = mail = adresse = autre_medecin = ass_compl = profes = etat = envoye = divers = important = None
         date_ouv = datetime.date.today()
@@ -525,7 +525,7 @@ class ListeConsultations(bp_Dialog.Dialog):
 
     def body(self, master):
         self.geometry('+200+5')
-        self.geometry("700x710")
+        # self.geometry("700x710")
 
         self.toutes = TextWidget(master, key='ttes_cons', row=0, column=0, side_by_side=False, fg='blue')
 
@@ -648,7 +648,8 @@ class Consultation(bp_Dialog.Dialog):
             tkMessageBox.showwarning(windows_title.db_error, errors_text.db_update)
 
     def body(self, master):
-        self.geometry("1024x900+200+5")
+        self.geometry("+200+5")
+        # self.geometry("1024x900")
 
         try:
             cursorS.execute("""SELECT therapeute FROM therapeutes""")
