@@ -639,7 +639,8 @@ class Consultation(bp_Dialog.Dialog):
                 cursorS.execute("""SELECT adresse FROM patients WHERE id = %s""", [self.id_patient])
                 adresse_patient, = cursorS.fetchone()
                 adresse_patient = u' '.join((sex, prenom, nom)) + u'\n' + adresse_patient
-                filename = os.path.join(bp_custo.PDF_DIR, (u'%s_%s_%s_%s.pdf' % (nom, prenom, sex, date_ouvc)).encode('UTF-8'))
+                ts = datetime.datetime.now().strftime('%H:%M')
+                filename = os.path.join(bp_custo.PDF_DIR, (u'%s_%s_%s_%s_%s.pdf' % (nom, prenom, sex, date_ouvc, ts)).encode('UTF-8'))
                 facture(filename, adresse_therapeute, adresse_patient, description, prix, date_ouvc, with_bv=(paye_par == u'BVR'))
                 cmd, cap = mailcap.findmatch(mailcap.getcaps(), 'application/pdf', 'view', filename)
                 os.system(cmd)
