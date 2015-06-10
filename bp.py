@@ -474,54 +474,54 @@ class ListeConsultations(bp_Dialog.Dialog):
         self.toutes.tag_config("important", foreground="darkblue", font=("Helvetica", 15, "bold"))
         self.toutes.insert(tk.END, sex+u' '+prenom+u' '+nom+u', '+str(date_naiss)+u'\n', "personne")
         self.toutes.insert(tk.END, labels_text.atcdp+u'\n', "titre")
-        self.toutes.insert(tk.END, ATCD_perso)
+        self.toutes.insert(tk.END, ATCD_perso+u'\n')
         self.toutes.insert(tk.END, labels_text.atcdf+u'\n', "titre")
-        self.toutes.insert(tk.END, ATCD_fam)
+        self.toutes.insert(tk.END, ATCD_fam+u'\n')
         self.toutes.insert(tk.END, labels_text.important+u'\n', "important")
-        self.toutes.insert(tk.END, Important)
+        self.toutes.insert(tk.END, Important+u'\n')
         for id_consult, date_consult, MC, EG, APT_thorax, APT_abdomen, APT_tete, APT_MS, APT_MI, APT_system, A_osteo, exam_phys, traitement, divers, exam_pclin, paye in cursorS:
-            self.toutes.insert(tk.END, u'********** '+labels_text.date_consult+str(date_consult)+u' **********'+u'\n', "date")
+            self.toutes.insert(tk.END, u'\n********** '+labels_text.date_consult+str(date_consult)+u' **********'+u'\n', "date")
             if EG.strip():
                 self.toutes.insert(tk.END, labels_text.eg+u'\n', "titre")
-                self.toutes.insert(tk.END, EG)
+                self.toutes.insert(tk.END, EG+u'\n')
             self.toutes.insert(tk.END, labels_text.mc+u'\n', "titre")
-            self.toutes.insert(tk.END, MC)
+            self.toutes.insert(tk.END, MC+u'\n')
             if APT_thorax.strip():
                 self.toutes.insert(tk.END, labels_text.thorax+u'\n', "titre")
-                self.toutes.insert(tk.END, APT_thorax)
+                self.toutes.insert(tk.END, APT_thorax+u'\n')
             if APT_abdomen.strip():
                 self.toutes.insert(tk.END, labels_text.abdomen+u'\n', "titre")
-                self.toutes.insert(tk.END, APT_abdomen)
+                self.toutes.insert(tk.END, APT_abdomen+u'\n')
             if APT_tete.strip():
                 self.toutes.insert(tk.END, labels_text.tete+u'\n', "titre")
-                self.toutes.insert(tk.END, APT_tete)
+                self.toutes.insert(tk.END, APT_tete+u'\n')
             if APT_MS.strip():
                 self.toutes.insert(tk.END, labels_text.ms+u'\n', "titre")
-                self.toutes.insert(tk.END, APT_MS)
+                self.toutes.insert(tk.END, APT_MS+u'\n')
             if APT_MI.strip():
                 self.toutes.insert(tk.END, labels_text.mi+u'\n', "titre")
-                self.toutes.insert(tk.END, APT_MI)
+                self.toutes.insert(tk.END, APT_MI+u'\n')
             if APT_system.strip():
                 self.toutes.insert(tk.END, labels_text.gen+u'\n', "titre")
-                self.toutes.insert(tk.END, APT_system)
+                self.toutes.insert(tk.END, APT_system+u'\n')
             if A_osteo.strip():
                 self.toutes.insert(tk.END, labels_text.a_osteo+u'\n', "titre")
-                self.toutes.insert(tk.END, A_osteo)
+                self.toutes.insert(tk.END, A_osteo+u'\n')
             if exam_phys.strip():
                 self.toutes.insert(tk.END, labels_text.exph+u'\n', "titre")
-                self.toutes.insert(tk.END, exam_phys)
+                self.toutes.insert(tk.END, exam_phys+u'\n')
             if traitement.strip():
                 self.toutes.insert(tk.END, labels_text.ttt+u'\n', "titre")
-                self.toutes.insert(tk.END, traitement)
+                self.toutes.insert(tk.END, traitement+u'\n')
             if exam_pclin.strip():
                 self.toutes.insert(tk.END, labels_text.expc+u'\n', "titre")
-                self.toutes.insert(tk.END, exam_pclin)
+                self.toutes.insert(tk.END, exam_pclin+u'\n')
             if divers.strip():
-                self.toutes.insert(tk.END, labels_text.rem+u'\n', "titre")
-                self.toutes.insert(tk.END, divers)
+                self.toutes.insert(tk.END, labels_text.remarques+u'\n', "titre")
+                self.toutes.insert(tk.END, divers+u'\n')
             if paye.strip():
                 self.toutes.insert(tk.END, labels_text.paye+u'\n', "titre")
-                self.toutes.insert(tk.END, paye)
+                self.toutes.insert(tk.END, paye+u'\n')
 
     def body(self, master):
         self.geometry('+200+5')
