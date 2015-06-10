@@ -78,7 +78,7 @@ def TextWidget(parent, key, row, column, rowspan=1, columnspan=1, value=None, re
     tk.Label(parent, text=labels_text[key], font=labels_font[key], fg=fg).grid(row=row, column=column, sticky=tk.W)
     frame = tk.Frame(parent)
     scroll = tk.Scrollbar(frame, orient=tk.VERTICAL)
-    var = tk.Text(frame, yscrollcommand=scroll.set, relief=tk.SUNKEN, borderwidth=1, height=fields_height[key], font=fields_font[key], wrap=tk.WORD, fg=field_fg)
+    var = tk.Text(frame, yscrollcommand=scroll.set, relief=tk.SUNKEN, borderwidth=1, width=60, height=fields_height[key], font=fields_font[key], wrap=tk.WORD, fg=field_fg)
     scroll.config(command=var.yview)
     var.grid(row=0, column=0, sticky=tk.NSEW)
     scroll.grid(row=0, column=1, pady=3, sticky=tk.N+tk.S)
