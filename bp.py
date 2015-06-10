@@ -565,6 +565,8 @@ class Consultation(bp_Dialog.Dialog):
         try:
             description, prix = self.prixVar.get().split(u' : ')
             prix_cts = int(float(prix[:-4]) * 100 + 0.5)
+            if self.majoration.get():
+                majoration_cts = bp_custo.MAJORATION_CTS
             if paye_par in (u'BVR', u'CdM'):
                 paye_le = None
             else:
@@ -585,8 +587,8 @@ class Consultation(bp_Dialog.Dialog):
                                         (id_consult, id, date_consult,
                                             MC, EG, exam_pclin, exam_phys, paye, divers, APT_thorax, APT_abdomen,
                                             APT_tete, APT_MS, APT_MI, APT_system, A_osteo, traitement, therapeute,
-                                            prix_cts, paye_par, paye_le)
-                                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+                                            prix_cts, majoration_cts, paye_par, paye_le)
+                                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
                                 [self.id_consult, self.id_patient, date_ouvc, self.MCVar.get(1.0, tk.END).strip(),
                                     self.EGVar.get(1.0, tk.END).strip(), self.exam_pclinVar.get(1.0, tk.END).strip(),
                                     self.exam_physVar.get(1.0, tk.END).strip(), self.payeVar.get(1.0, tk.END).strip(),
@@ -595,7 +597,7 @@ class Consultation(bp_Dialog.Dialog):
                                     self.APT_MSVar.get(1.0, tk.END).strip(), self.APT_MIVar.get(1.0, tk.END).strip(),
                                     self.APT_systemVar.get(1.0, tk.END).strip(), self.A_osteoVar.get(1.0, tk.END).strip(),
                                     self.traitementVar.get(1.0, tk.END).strip(), self.therapeuteVar.get(),
-                                    prix_cts, paye_par, paye_le])
+                                    prix_cts, majoration_cts, paye_par, paye_le])
             else:
                 cursorU.execute("""UPDATE consultations
                                     SET MC=%s,
@@ -615,6 +617,7 @@ class Consultation(bp_Dialog.Dialog):
                                         date_consult=%s,
                                         therapeute=%s,
                                         prix_cts=%s,
+                                        majoration_cts=%s,
                                         paye_par=%s,
                                         paye_le=%s
                                     WHERE id_consult=%s""",
@@ -625,7 +628,7 @@ class Consultation(bp_Dialog.Dialog):
                                     self.APT_teteVar.get(1.0, tk.END).strip(), self.APT_MSVar.get(1.0, tk.END).strip(),
                                     self.APT_MIVar.get(1.0, tk.END).strip(), self.APT_systemVar.get(1.0, tk.END).strip(),
                                     self.A_osteoVar.get(1.0, tk.END).strip(), self.traitementVar.get(1.0, tk.END).strip(),
-                                    date_ouvc, self.therapeuteVar.get(), prix_cts, paye_par, paye_le, self.id_consult])
+                                    date_ouvc, self.therapeuteVar.get(), prix_cts, majoration_cts, paye_par, paye_le, self.id_consult])
             cursorU.execute("UPDATE patients SET important=%s, ATCD_perso=%s, ATCD_fam=%s WHERE id=%s",
                             [self.importantVar.get(1.0, tk.END).strip(), self.ATCD_persoVar.get(1.0, tk.END).strip(),
                                 self.ATCD_famVar.get(1.0, tk.END).strip(), self.id_patient])
@@ -642,7 +645,7 @@ class Consultation(bp_Dialog.Dialog):
                 ts = datetime.datetime.now().strftime('%H:%M')
                 if paye_par != u'CdM':
                     filename = os.path.join(bp_custo.PDF_DIR, (u'%s_%s_%s_%s_%s.pdf' % (nom, prenom, sex, date_ouvc, ts)).encode('UTF-8'))
-                    facture(filename, adresse_therapeute, adresse_patient, description, prix, date_ouvc, with_bv=(paye_par == u'BVR'))
+                    facture(filename, adresse_therapeute, adresse_patient, description, prix_cts, majoration_cts, date_ouvc, with_bv=(paye_par == u'BVR'))
                     cmd, cap = mailcap.findmatch(mailcap.getcaps(), 'application/pdf', 'view', filename)
                     os.system(cmd)
         except:
@@ -724,7 +727,13 @@ class Consultation(bp_Dialog.Dialog):
         self.therapeuteVar = OptionWidget(master, key='therapeute', row=12, column=1, side_by_side=False, value=therapeute, options=therapeutes, readonly=self.readonly)
         self.payeVar = TextWidget(master, key='paye', row=12, column=2, rowspan=3, side_by_side=False, value=paye, field_fg='red', readonly=self.readonly)
 
-        self.prixVar = PriceWidget(master, key='seance', row=14, column=0, side_by_side=False, value=prix_cts, readonly=self.readonly)
+        self.majoration = tk.IntVar()
+        f = tk.Frame(master)
+        tk.Checkbutton(f, text=labels_text['majoration'], font=labels_font['majoration'], variable=self.majoration).grid(row=1, column=0)
+        self.prixVar = PriceWidget(f, key='seance', row=0, column=1, side_by_side=False, value=prix_cts, readonly=self.readonly)
+        f.grid(row=14, column=0, rowspan=2, sticky=tk.W+tk.E)
+        f.grid_columnconfigure(1, weight=1)
+
         self.paye_parVar = RadioWidget(master, key='paye_par', row=14, column=1, side_by_side=False, value=paye_par, options=bp_custo.MOYEN_DE_PAYEMENT, readonly=self.readonly)
         if self.id_consult and paye_le:
             frame = master.grid_slaves(row=15, column=1)[0]

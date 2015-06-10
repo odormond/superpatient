@@ -8,6 +8,7 @@ from reportlab.platypus import BaseDocTemplate, PageTemplate, Frame, Paragraph, 
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm, cm
+from reportlab.lib import colors
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 
@@ -26,6 +27,14 @@ FONT_SIZE = 10
 DEFAULT_STYLE = ParagraphStyle('default', fontName='EuclidBPBold', fontSize=FONT_SIZE)
 COPIE_STYLE = ParagraphStyle('default', fontName='EuclidBPBold', fontSize=FONT_SIZE+2)
 FACTURE_STYLE = ParagraphStyle('title', fontName='EuclidBPBold', fontSize=FONT_SIZE+4)
+
+DEFAULT_TABLE_STYLE = [('FONT', (0, 0), (-1, -1), 'EuclidBPBold', FONT_SIZE),
+                       ('ALIGN', (1, 0), (1, -1), 'RIGHT')]
+MAJORATION_TABLE_STYLE = [('FONT', (0, 0), (-1, -1), 'EuclidBPBold', FONT_SIZE),
+                          ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+                          ('ALIGN', (0, 2), (0, 2), 'RIGHT'),
+                          ('LINEABOVE', (1, 2), (1, 2), 2, colors.black),
+                          ]
 
 
 def fixed(canvas, doc):
@@ -60,7 +69,7 @@ def fixed(canvas, doc):
     canvas.make_bold = make_bold
 
 
-def facture(filename, therapeute, patient, duree, prix, date, with_bv=False):
+def facture(filename, therapeute, patient, duree, prix_cts, majoration_cts, date, with_bv=False):
     doc = BaseDocTemplate(filename, pagesize=A4, leftMargin=MARGIN, rightMargin=MARGIN, topMargin=MARGIN, bottomMargin=MARGIN)
     doc.with_bv = with_bv
     if with_bv:
@@ -73,10 +82,18 @@ def facture(filename, therapeute, patient, duree, prix, date, with_bv=False):
                                           Frame(doc.pagesize[0]+doc.leftMargin, doc.rightMargin, doc.width, doc.height)],
                                   onPage=fixed)]
     doc.addPageTemplates(templates)
-    data = [[Paragraph(u"Prise en charge ostéopathique %s datée du %s" % (duree, date.strftime(u'%d.%m.%y')), DEFAULT_STYLE), Paragraph(prix, DEFAULT_STYLE)],
-            [Paragraph(u"Raison&nbsp;: maladie", DEFAULT_STYLE), ]]
+    prix = u'%0.2f CHF' % (prix_cts/100.)
+    tstyle = DEFAULT_TABLE_STYLE
+    data = [[u"Prise en charge ostéopathique %s datée du %s" % (duree, date.strftime(u'%d.%m.%y')), prix], ]
+    if majoration_cts:
+        tstyle = MAJORATION_TABLE_STYLE
+        majoration = u'%0.2f CHF' % (majoration_cts/100.)
+        total = u'%0.2f CHF' % ((prix_cts+majoration_cts)/100.)
+        data += [[u'Majoration week-end', majoration]]
+        data += [[u'TOTAL', total]]
+    data += [[u"Raison : maladie", ]]
     if not with_bv:
-        data[1].append(Paragraph(u"payé", DEFAULT_STYLE))
+        data[-1].append(u"payé")
     fact = [Spacer(0, LOGO_HEIGHT),
             Table([[Preformatted(therapeute, DEFAULT_STYLE), Preformatted(patient, DEFAULT_STYLE)]],
                   colWidths=[doc.width*2/3, doc.width/3],
@@ -86,8 +103,8 @@ def facture(filename, therapeute, patient, duree, prix, date, with_bv=False):
             Spacer(0, 2*MARGIN),
             Paragraph(u'<onDraw name=make_italic label="FACTURE"/>', FACTURE_STYLE),
             Spacer(0, 1*MARGIN),
-            Table(data, colWidths=[doc.width-3*cm, 3*cm]),
-            Spacer(0, 3*MARGIN),
+            Table(data, colWidths=[doc.width-3*cm, 3*cm], style=tstyle),
+            Spacer(0, 2*MARGIN),
             Paragraph(u"Avec mes remerciements.", DEFAULT_STYLE),
             ]
     recu = fact[:]

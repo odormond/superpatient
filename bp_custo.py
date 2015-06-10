@@ -15,6 +15,7 @@ ENTRY_DEFAULT = (DEFAULT_FONT_NAME, DEFAULT_ENTRY_SIZE)
 TEXT_DEFAULT = ENTRY_DEFAULT
 LISTBOX_DEFAULT = (FIXED_FONT_NAME, FIXED_FONT_SIZE)
 
+MAJORATION_CTS = 1000
 MOYEN_DE_PAYEMENT = [u'Cash', u'Carte', u'BVR', u'CdM']
 ETAT_PAYEMENT = [u'Tous', u'Comptabilisé', u'Non-comptabilisé']
 
@@ -155,6 +156,7 @@ class LabelsText(Config):
     paye = u"Paye ?"
     ttes_cons = u"Toutes les consultations du patient"
     seance = u"Durée / Prix"
+    majoration = u"Majoré"
     paye_par = u"Moyen de payement"
     paye_le = u"Payement reçu le"
     date_consult = u"Consultation du "
@@ -224,7 +226,7 @@ class LabelsFont(Config):
     mc = eg = expc = atcdp = atcdf = thorax = abdomen = tete = ms = mi = LABEL_BOLD
     gen = a_osteo = exph = ttt = important = paye = ttes_cons = seance = LABEL_BOLD
     paye_par = paye_le = entete = collabos = date_du = date_au = etat_payement = LABEL_BOLD
-    total = tarifs = tarif = description = LABEL_BOLD
+    total = tarifs = tarif = description = majoration = LABEL_BOLD
 
 
 labels_font = LabelsFont()
