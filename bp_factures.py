@@ -73,6 +73,10 @@ def facture(filename, therapeute, patient, duree, prix, date, with_bv=False):
                                           Frame(doc.pagesize[0]+doc.leftMargin, doc.rightMargin, doc.width, doc.height)],
                                   onPage=fixed)]
     doc.addPageTemplates(templates)
+    data = [[Paragraph(u"Prise en charge ostéopathique %s datée du %s" % (duree, date.strftime(u'%d.%m.%y')), DEFAULT_STYLE), Paragraph(prix, DEFAULT_STYLE)],
+            [Paragraph(u"Raison&nbsp;: maladie", DEFAULT_STYLE), ]]
+    if not with_bv:
+        data[1].append(Paragraph(u"payé", DEFAULT_STYLE))
     fact = [Spacer(0, LOGO_HEIGHT),
             Table([[Preformatted(therapeute, DEFAULT_STYLE), Preformatted(patient, DEFAULT_STYLE)]],
                   colWidths=[doc.width*2/3, doc.width/3],
@@ -82,9 +86,7 @@ def facture(filename, therapeute, patient, duree, prix, date, with_bv=False):
             Spacer(0, 2*MARGIN),
             Paragraph(u'<onDraw name=make_italic label="FACTURE"/>', FACTURE_STYLE),
             Spacer(0, 1*MARGIN),
-            Table([(Paragraph(u"Prise en charge ostéopathique %s datée du %s" % (duree, date.strftime(u'%d.%m.%y')), DEFAULT_STYLE), Paragraph(prix, DEFAULT_STYLE)),
-                   (Paragraph(u"Raison&nbsp;: maladie", DEFAULT_STYLE), Paragraph(u"payé", DEFAULT_STYLE))],
-                  colWidths=[doc.width-3*cm, 3*cm]),
+            Table(data, colWidths=[doc.width-3*cm, 3*cm]),
             Spacer(0, 3*MARGIN),
             Paragraph(u"Avec mes remerciements.", DEFAULT_STYLE),
             ]
