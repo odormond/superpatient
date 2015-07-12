@@ -160,6 +160,8 @@ class LabelsText(Config):
     paye_par = u"Moyen de payement"
     paye_le = u"Payement reçu le"
     date_consult = u"Consultation du "
+    maladie = u"Maladie"
+    accident = u"Accident"
     # Divers
     ttes_cons = u"Toutes les consultations du patient"
     date_format = u"AAAA-MM-JJ"

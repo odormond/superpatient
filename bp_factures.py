@@ -69,7 +69,7 @@ def fixed(canvas, doc):
     canvas.make_bold = make_bold
 
 
-def facture(filename, therapeute, patient, duree, prix_cts, majoration_cts, date, with_bv=False):
+def facture(filename, therapeute, patient, duree, accident, prix_cts, majoration_cts, date, with_bv=False):
     doc = BaseDocTemplate(filename, pagesize=A4, leftMargin=MARGIN, rightMargin=MARGIN, topMargin=MARGIN, bottomMargin=MARGIN)
     doc.with_bv = with_bv
     if with_bv:
@@ -91,7 +91,10 @@ def facture(filename, therapeute, patient, duree, prix_cts, majoration_cts, date
         total = u'%0.2f CHF' % ((prix_cts+majoration_cts)/100.)
         data += [[u'Majoration week-end', majoration]]
         data += [[u'TOTAL', total]]
-    data += [[u"Raison : maladie", ]]
+    if accident:
+        data += [[u"Raison : accident", ]]
+    else:
+        data += [[u"Raison : maladie", ]]
     if not with_bv:
         data[-1].append(u"payé")
     fact = [Spacer(0, LOGO_HEIGHT),
@@ -122,9 +125,10 @@ if __name__ == '__main__':
     patient = u'Jean Dupont\nRoute de Quelque Part\n1234 Perdu'
     duree = u'entre 21 et 30 minutes'
     prix = u'100.00 CHF'
+    accident = True
     date = datetime.date.today()
-    facture(filename, therapeute, patient, duree, prix, date, with_bv=True)
-    #facture(filename, therapeute, patient, duree, prix, date, with_bv=False)
+    facture(filename, therapeute, patient, duree, accident, prix, date, with_bv=True)
+    #facture(filename, therapeute, patient, duree, accident, prix, date, with_bv=False)
 
     import mailcap
     import time
