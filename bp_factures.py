@@ -7,15 +7,18 @@ from math import sqrt
 from reportlab.platypus import BaseDocTemplate, PageTemplate, Frame, Paragraph, Preformatted, Table, Spacer, PageBreak, FrameBreak
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.pagesizes import A4
-from reportlab.lib.units import mm, cm
+from reportlab.lib.units import mm, cm, inch
 from reportlab.lib import colors
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
+
+from bp_custo import CCP
 
 SQRT2 = sqrt(2)
 
 BASE_DIR = os.path.join(os.path.dirname(__file__), 'pdfs')
 pdfmetrics.registerFont(TTFont('EuclidBPBold', os.path.join(BASE_DIR, 'Euclid_BP_Bold.ttf')))
+pdfmetrics.registerFont(TTFont('OCRB', os.path.join(BASE_DIR, 'ocr-b-10-pitch-bt.ttf')))
 
 MARGIN = 1*cm
 LOGO_WIDTH = 5.6*cm
@@ -23,6 +26,10 @@ LOGO_HEIGHT = LOGO_WIDTH*469./676
 BV_WIDTH = 210*mm
 BV_HEIGHT = 106*mm
 FONT_SIZE = 10
+BV_LINE = 1./6*inch
+BV_COLUMN = 0.1*inch
+BV_REF_X = 60.14*mm
+BV_REF_Y = BV_HEIGHT
 
 DEFAULT_STYLE = ParagraphStyle('default', fontName='EuclidBPBold', fontSize=FONT_SIZE)
 COPIE_STYLE = ParagraphStyle('default', fontName='EuclidBPBold', fontSize=FONT_SIZE+2)
@@ -48,6 +55,53 @@ def fixed(canvas, doc):
     canvas.drawRightString(doc.pagesize[0]-doc.rightMargin, doc.pagesize[1]-doc.topMargin-FONT_SIZE, u"Lausanne, le "+datetime.date.today().strftime(u'%d.%m.%y'))
     if doc.with_bv and doc.page == 1:
         canvas.drawImage(os.path.join(BASE_DIR, "441_02_ES_LAC_105_quer_CMYK.png"), 0, 0, BV_WIDTH, BV_HEIGHT)
+        canvas.saveState()
+        # CCP
+        canvas.setFont('OCRB', FONT_SIZE)
+        canvas.drawString(12*BV_COLUMN, BV_REF_Y - 11*BV_LINE, CCP)
+        canvas.drawString(BV_REF_X + 12*BV_COLUMN, BV_REF_Y - 11*BV_LINE, CCP)
+        # Lignes de codage
+        v, x, c = CCP.split('-')
+        codage = u''.join((v, u'0'*(6-len(x)), x, c, u'>'))
+        canvas.drawString(BV_REF_X + 46*BV_COLUMN, BV_REF_Y - 21*BV_LINE, codage)
+        canvas.drawString(BV_REF_X + 46*BV_COLUMN, BV_REF_Y - 23*BV_LINE, codage)
+        canvas.setFont('EuclidBPBold', FONT_SIZE-1)
+        # Versé pour
+        text_obj = canvas.beginText()
+        text_obj.setTextOrigin(BV_COLUMN, BV_REF_Y - 3*BV_LINE)
+        text_obj.textLines(doc.therapeute)
+        canvas.drawText(text_obj)
+        text_obj = canvas.beginText()
+        text_obj.setTextOrigin(BV_REF_X+BV_COLUMN, BV_REF_Y - 3*BV_LINE)
+        text_obj.textLines(doc.therapeute)
+        canvas.drawText(text_obj)
+        # Motif
+        canvas.drawString(BV_REF_X + 25*BV_COLUMN, BV_REF_Y - 4*BV_LINE, u"Consultation du "+unicode(doc.date))
+        # Versé par
+        text_obj = canvas.beginText()
+        text_obj.setTextOrigin(BV_COLUMN, BV_REF_Y - 16*BV_LINE)
+        text_obj.setLeading(1.5*BV_LINE)
+        text_obj.textLines(doc.patient)
+        canvas.drawText(text_obj)
+        text_obj = canvas.beginText()
+        text_obj.setTextOrigin(BV_REF_X + 25*BV_COLUMN, BV_REF_Y - 13*BV_LINE)
+        text_obj.setLeading(1.5*BV_LINE)
+        text_obj.textLines(doc.patient)
+        canvas.drawText(text_obj)
+        # Le montant
+        montant = '%11.2f' % doc.prix
+        montant = '00000000.00'
+        text_obj = canvas.beginText()
+        text_obj.setTextOrigin(BV_COLUMN, BV_REF_Y - 13*BV_LINE)
+        text_obj.setCharSpace(1.4*BV_COLUMN)
+        text_obj.textLine(montant)
+        canvas.drawText(text_obj)
+        text_obj = canvas.beginText()
+        text_obj.setTextOrigin(BV_REF_X + BV_COLUMN, BV_REF_Y - 13*BV_LINE)
+        text_obj.setCharSpace(1.4*BV_COLUMN)
+        text_obj.textLine(montant)
+        canvas.drawText(text_obj)
+        canvas.restoreState()
     else:
         canvas.drawImage(os.path.join(BASE_DIR, "logo_pog.png"), doc.pagesize[0]+doc.leftMargin, doc.pagesize[1]-doc.topMargin-LOGO_HEIGHT, LOGO_WIDTH, LOGO_HEIGHT)
         canvas.drawRightString(2*doc.pagesize[0]-doc.rightMargin, doc.pagesize[1]-doc.topMargin-FONT_SIZE, u"Lausanne, le "+datetime.date.today().strftime('%d.%m.%y'))
@@ -72,6 +126,11 @@ def fixed(canvas, doc):
 def facture(filename, therapeute, patient, duree, accident, prix_cts, majoration_cts, date, with_bv=False):
     doc = BaseDocTemplate(filename, pagesize=A4, leftMargin=MARGIN, rightMargin=MARGIN, topMargin=MARGIN, bottomMargin=MARGIN)
     doc.with_bv = with_bv
+    doc.prix = (prix_cts + majoration_cts) / 100.
+    doc.therapeute = therapeute
+    doc.patient = patient
+    doc.date = date
+    doc.duree = duree
     if with_bv:
         templates = [PageTemplate(id='bv', frames=[Frame(doc.leftMargin, doc.rightMargin, doc.width, doc.height)], onPage=fixed),
                      PageTemplate(id='copie', frames=[Frame(doc.leftMargin, doc.rightMargin, doc.width, doc.height)], onPage=fixed),
@@ -124,11 +183,11 @@ if __name__ == '__main__':
     therapeute = u'Tibor Csernay\nDipl. CDS-GDK\n\nAv. de la gare 5\n1003 Lausanne\n021 510 50 50\n021 510 50 49 (N° direct)\n\nRCC U905461'
     patient = u'Jean Dupont\nRoute de Quelque Part\n1234 Perdu'
     duree = u'entre 21 et 30 minutes'
-    prix = u'100.00 CHF'
+    prix_cts = 10000
+    majoration_cts = 2000
     accident = True
     date = datetime.date.today()
-    facture(filename, therapeute, patient, duree, accident, prix, date, with_bv=True)
-    #facture(filename, therapeute, patient, duree, accident, prix, date, with_bv=False)
+    facture(filename, therapeute, patient, duree, accident, prix_cts, majoration_cts, date, with_bv=True)
 
     import mailcap
     import time
