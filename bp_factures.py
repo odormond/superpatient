@@ -18,7 +18,7 @@ SQRT2 = sqrt(2)
 
 BASE_DIR = os.path.join(os.path.dirname(__file__), 'pdfs')
 pdfmetrics.registerFont(TTFont('EuclidBPBold', os.path.join(BASE_DIR, 'Euclid_BP_Bold.ttf')))
-pdfmetrics.registerFont(TTFont('OCRB', os.path.join(BASE_DIR, 'ocr-b-10-pitch-bt.ttf')))
+pdfmetrics.registerFont(TTFont('OCRB', os.path.join(BASE_DIR, 'OCRB10PitchBT-Regular.ttf')))
 
 MARGIN = 1*cm
 LOGO_WIDTH = 5.6*cm
@@ -28,7 +28,7 @@ BV_HEIGHT = 106*mm
 FONT_SIZE = 10
 BV_LINE = 1./6*inch
 BV_COLUMN = 0.1*inch
-BV_REF_X = 60.14*mm
+BV_REF_X = 61*mm
 BV_REF_Y = BV_HEIGHT
 
 DEFAULT_STYLE = ParagraphStyle('default', fontName='EuclidBPBold', fontSize=FONT_SIZE)
@@ -89,18 +89,21 @@ def fixed(canvas, doc):
         text_obj.textLines(doc.patient)
         canvas.drawText(text_obj)
         # Le montant
+        offset = 1.4
+        spacing = 1.16
+        canvas.setFont('OCRB', FONT_SIZE)
         montant = '%11.2f' % doc.prix
-        montant = '00000000.00'
         text_obj = canvas.beginText()
-        text_obj.setTextOrigin(BV_COLUMN, BV_REF_Y - 13*BV_LINE)
-        text_obj.setCharSpace(1.4*BV_COLUMN)
+        text_obj.setTextOrigin(offset*BV_COLUMN, BV_REF_Y - 13*BV_LINE)
+        text_obj.setCharSpace(spacing*BV_COLUMN)
         text_obj.textLine(montant)
         canvas.drawText(text_obj)
         text_obj = canvas.beginText()
-        text_obj.setTextOrigin(BV_REF_X + BV_COLUMN, BV_REF_Y - 13*BV_LINE)
-        text_obj.setCharSpace(1.4*BV_COLUMN)
+        text_obj.setTextOrigin(BV_REF_X + offset*BV_COLUMN, BV_REF_Y - 13*BV_LINE)
+        text_obj.setCharSpace(spacing*BV_COLUMN)
         text_obj.textLine(montant)
         canvas.drawText(text_obj)
+        canvas.setFont('EuclidBPBold', FONT_SIZE-1)
         canvas.restoreState()
     else:
         canvas.drawImage(os.path.join(BASE_DIR, "logo_pog.png"), doc.pagesize[0]+doc.leftMargin, doc.pagesize[1]-doc.topMargin-LOGO_HEIGHT, LOGO_WIDTH, LOGO_HEIGHT)
