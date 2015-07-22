@@ -52,16 +52,6 @@ CREATE TABLE `consultations` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Dumping data for table `consultations`
---
-
-LOCK TABLES `consultations` WRITE;
-/*!40000 ALTER TABLE `consultations` DISABLE KEYS */;
-INSERT INTO `consultations` VALUES (0,0,'2015-07-11','Vérification anciennes données\n','sakdfjlaskj\n','alsdkfjalsd\n','asldkfjlasdk\n','lasdkfjalsdk\n','lsdkfjalsdk\n','sldkfjalskdf\n','alsdkfjasldkfj\n','alksdfjlask\n','kasjdflksj\n','lsakdjflak\n','lsakdfjglak\n','alskdfjladk\n','aklsdjfl\n',NULL,0,0,NULL,NULL,0),(1,0,'2015-07-11','Seconde consultation de test\n','ajsdhfkajsdh\n','kjasdfhksj\n','askjdhfkas\n','skdjfhaks\n','skdjfhaskj\n','kadsjfhkasdj\n','askdjfhkasj\n','asdjkfhkasjd\n','lasdkjflakjh\n','sakdjfhkaj\n','sakdjfhksadj\n','aksjdfhkasdjh\n','234\n',NULL,0,0,NULL,NULL,0),(2,1,'2015-07-11','Avoir plus d\'un patient\n','askdjfhka\n','sadkjhfkasjd\n','aksjdfhskj\n','skjdhfkjsf\n','kjshkjfaf\n','skdjhfkasjdfh\n','aksjdhfkaj\n','sakjfhskdj\n','skdjflkajdslfk\n','asldkfjlasdk\n','saldkfjalsdk\n','asdjfhkaj\n','123\n',NULL,0,0,NULL,NULL,0),(3,0,'2015-07-11','Test accident','','','','','','','','','','','','','','tib',10000,0,'Carte','2015-07-11',1),(4,0,'2015-07-11','Test maladie','','','','','','','','','','','','','','tib',11000,1000,'BVR',NULL,0),(5,1,'2015-07-11','Test majoration','','asdfasdf','','asdfasdfadf','','asdfadf','','adfadfa','','','','','','tib',10000,1000,'BVR',NULL,0),(6,1,'2015-07-11','Test non majoré puis majoré','','asdfa','asdfadf','','adsfasd','','adsfasdf','','','adsfasdf','','','','tib',10000,1000,'Carte','2015-07-11',0);
-/*!40000 ALTER TABLE `consultations` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
 -- Table structure for table `medical`
 --
 
@@ -86,15 +76,6 @@ CREATE TABLE `medical` (
   PRIMARY KEY (`ID`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `medical`
---
-
-LOCK TABLES `medical` WRITE;
-/*!40000 ALTER TABLE `medical` DISABLE KEYS */;
-/*!40000 ALTER TABLE `medical` ENABLE KEYS */;
-UNLOCK TABLES;
 
 --
 -- Table structure for table `patients`
@@ -130,16 +111,6 @@ CREATE TABLE `patients` (
   KEY `nom_prenom` (`nom`(15),`prenom`(15))
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `patients`
---
-
-LOCK TABLES `patients` WRITE;
-/*!40000 ALTER TABLE `patients` DISABLE KEYS */;
-INSERT INTO `patients` VALUES (0,'2015-07-11','tib','Mr','Ancien','Soft','1900-01-01','sdlkfjaldk','asldkfjal','skjdfhakj\n','skadjfhkadj\n','234523','398319','9182938','safkjh@sadkfj','kasjdfhksaj\n','skdjfhakj','aksjdhf','kasjdhf','skjdfh','skjdfhaksdj jsdhfk sjd fkjsahdf kjsahdfk jh\n','alskdjflaksd!!'),(1,'2015-07-11','tib','Mr','Ancien','Programme','2000-01-01','sdkjfhakdj','askdjfh','afskdjfhk\n','asjdfhksajdhf\n\n','928479','291839418','19839183','jaskfj@asdkfj','skajdfhkadjsh\nkajsdhfasd\naksjdfhkadj\n\n','kasjdhfkaj','aksdjfhkasdj','kajsdhfk','akdsjfhak','sakdjfhksdj asjdfh sakjdfh kasjdhfkjasdhfkajsf kjsadhf kjsad fkjdhsfasjdhf kj kasjhdf a\n','sdjkfhaksdjhf\nsladkf');
-/*!40000 ALTER TABLE `patients` ENABLE KEYS */;
-UNLOCK TABLES;
 
 --
 -- Table structure for table `tarifs`
