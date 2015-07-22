@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python2
 # coding:UTF-8
 
 import os
@@ -193,7 +193,7 @@ if __name__ == '__main__':
     majoration_cts = 2000
     accident = True
     date = datetime.date.today()
-    facture(filename, therapeute, patient, duree, accident, prix_cts, majoration_cts, date, with_bv=True)
+    facture(filename, therapeute, patient, duree, accident, prix_cts, majoration_cts, date, with_bv=False)
 
     import mailcap
     import time
