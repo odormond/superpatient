@@ -98,6 +98,8 @@ except:
     tkMessageBox.showwarning(u"MySQL", u"Cannot connect to database")
     sys.exit()
 
+db.autocommit(True)
+
 cursorS = db.cursor()
 cursorI = db.cursor()
 cursorU = db.cursor()
