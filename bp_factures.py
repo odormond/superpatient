@@ -27,23 +27,27 @@ LOGO_WIDTH = 5.6*cm
 LOGO_HEIGHT = LOGO_WIDTH*469./676
 BV_WIDTH = 210*mm
 BV_HEIGHT = 106*mm
-FONT_SIZE = 10
+FONT_SIZE = 14
+FONT_SIZE_BV = 12
 BV_LINE = 1./6*inch
 BV_COLUMN = 0.1*inch
 BV_REF_X = 61*mm
 BV_REF_Y = BV_HEIGHT
 
-DEFAULT_STYLE = ParagraphStyle('default', fontName='EuclidBPBold', fontSize=FONT_SIZE)
-COPIE_STYLE = ParagraphStyle('default', fontName='EuclidBPBold', fontSize=FONT_SIZE+2)
-FACTURE_STYLE = ParagraphStyle('title', fontName='EuclidBPBold', fontSize=FONT_SIZE+4)
 
-DEFAULT_TABLE_STYLE = [('FONT', (0, 0), (-1, -1), 'EuclidBPBold', FONT_SIZE),
-                       ('ALIGN', (1, 0), (1, -1), 'RIGHT')]
-MAJORATION_TABLE_STYLE = [('FONT', (0, 0), (-1, -1), 'EuclidBPBold', FONT_SIZE),
-                          ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
-                          ('ALIGN', (0, 2), (0, 2), 'RIGHT'),
-                          ('LINEABOVE', (1, 2), (1, 2), 2, colors.black),
-                          ]
+def make_styles(font_size):
+    DEFAULT_STYLE = ParagraphStyle('default', fontName='EuclidBPBold', fontSize=font_size, leading=font_size*1.2)
+    COPIE_STYLE = ParagraphStyle('default', fontName='EuclidBPBold', fontSize=font_size+2)
+    FACTURE_STYLE = ParagraphStyle('title', fontName='EuclidBPBold', fontSize=font_size+4)
+
+    DEFAULT_TABLE_STYLE = [('FONT', (0, 0), (-1, -1), 'EuclidBPBold', font_size),
+                           ('ALIGN', (1, 0), (1, -1), 'RIGHT')]
+    MAJORATION_TABLE_STYLE = [('FONT', (0, 0), (-1, -1), 'EuclidBPBold', font_size),
+                              ('ALIGN', (2, 0), (2, -1), 'RIGHT'),
+                              ('ALIGN', (1, 2), (1, 2), 'RIGHT'),
+                              ('LINEABOVE', (2, 2), (2, 2), 2, colors.black),
+                              ]
+    return DEFAULT_STYLE, COPIE_STYLE, FACTURE_STYLE, DEFAULT_TABLE_STYLE, MAJORATION_TABLE_STYLE
 
 
 def fixed(canvas, doc):
@@ -51,16 +55,22 @@ def fixed(canvas, doc):
         canvas.translate(0, doc.pagesize[1])
         canvas.rotate(-90)
         canvas.scale(1/SQRT2, 1/SQRT2)
+        font_size = FONT_SIZE
+    else:
+        font_size = FONT_SIZE_BV
+
+    DEFAULT_STYLE, COPIE_STYLE, FACTURE_STYLE, DEFAULT_TABLE_STYLE, MAJORATION_TABLE_STYLE = make_styles(font_size)
+
     canvas.saveState()
     canvas.drawImage(os.path.join(BASE_DIR, "logo_pog.png"), doc.leftMargin, doc.pagesize[1]-doc.topMargin-LOGO_HEIGHT, LOGO_WIDTH, LOGO_HEIGHT)
-    canvas.setFont('EuclidBPBold', FONT_SIZE)
-    canvas.drawRightString(doc.pagesize[0]-doc.rightMargin, doc.pagesize[1]-doc.topMargin-FONT_SIZE, u"Lausanne, le "+datetime.date.today().strftime(u'%d.%m.%y'))
+    canvas.setFont('EuclidBPBold', font_size)
+    canvas.drawRightString(doc.pagesize[0]-doc.rightMargin, doc.pagesize[1]-doc.topMargin-font_size, u"Lausanne, le "+datetime.date.today().strftime(u'%d.%m.%y'))
     if doc.with_bv and doc.page == 1:
         if PRINT_BV_BG:
             canvas.drawImage(os.path.join(BASE_DIR, "441_02_ES_LAC_105_quer_CMYK.png"), 0, 0, BV_WIDTH, BV_HEIGHT)
         canvas.saveState()
         # CCP
-        canvas.setFont('OCRB', FONT_SIZE)
+        canvas.setFont('OCRB', 10)
         canvas.drawString(12*BV_COLUMN, BV_REF_Y - 11*BV_LINE, CCP)
         canvas.drawString(BV_REF_X + 12*BV_COLUMN, BV_REF_Y - 11*BV_LINE, CCP)
         # Lignes de codage
@@ -68,14 +78,16 @@ def fixed(canvas, doc):
         codage = u''.join((v, u'0'*(6-len(x)), x, c, u'>'))
         canvas.drawString(BV_REF_X + 46*BV_COLUMN, BV_REF_Y - 21*BV_LINE, codage)
         canvas.drawString(BV_REF_X + 46*BV_COLUMN, BV_REF_Y - 23*BV_LINE, codage)
-        canvas.setFont('EuclidBPBold', FONT_SIZE-1)
+        canvas.setFont('EuclidBPBold', 10-1)
         # Versé pour
         text_obj = canvas.beginText()
         text_obj.setTextOrigin(BV_COLUMN, BV_REF_Y - 3*BV_LINE)
+        text_obj.setLeading(0.9*10)
         text_obj.textLines(doc.therapeute)
         canvas.drawText(text_obj)
         text_obj = canvas.beginText()
         text_obj.setTextOrigin(BV_REF_X+BV_COLUMN, BV_REF_Y - 3*BV_LINE)
+        text_obj.setLeading(0.9*10)
         text_obj.textLines(doc.therapeute)
         canvas.drawText(text_obj)
         # Motif
@@ -94,7 +106,7 @@ def fixed(canvas, doc):
         # Le montant
         offset = 1.4
         spacing = 1.16
-        canvas.setFont('OCRB', FONT_SIZE)
+        canvas.setFont('OCRB', 10)
         montant = '%11.2f' % doc.prix
         text_obj = canvas.beginText()
         text_obj.setTextOrigin(offset*BV_COLUMN, BV_REF_Y - 13*BV_LINE)
@@ -106,20 +118,20 @@ def fixed(canvas, doc):
         text_obj.setCharSpace(spacing*BV_COLUMN)
         text_obj.textLine(montant)
         canvas.drawText(text_obj)
-        canvas.setFont('EuclidBPBold', FONT_SIZE-1)
+        canvas.setFont('EuclidBPBold', 10-1)
         canvas.restoreState()
     else:
         canvas.drawImage(os.path.join(BASE_DIR, "logo_pog.png"), doc.pagesize[0]+doc.leftMargin, doc.pagesize[1]-doc.topMargin-LOGO_HEIGHT, LOGO_WIDTH, LOGO_HEIGHT)
-        canvas.drawRightString(2*doc.pagesize[0]-doc.rightMargin, doc.pagesize[1]-doc.topMargin-FONT_SIZE, u"Lausanne, le "+datetime.date.today().strftime('%d.%m.%y'))
+        canvas.drawRightString(2*doc.pagesize[0]-doc.rightMargin, doc.pagesize[1]-doc.topMargin-font_size, u"Lausanne, le "+datetime.date.today().strftime('%d.%m.%y'))
     canvas.restoreState()
 
     def make_italic(canvas, event, label):
         canvas.skew(0, 20)
-        canvas.setFont('EuclidBPBold', FONT_SIZE+4)
+        canvas.setFont('EuclidBPBold', font_size+4)
         canvas.drawString(0, 0, label)
 
     def make_bold(canvas, event, label):
-        canvas.setFont('EuclidBPBold', FONT_SIZE+2)
+        canvas.setFont('EuclidBPBold', font_size+2)
         canvas.drawString(-0.1, 0, label)
         canvas.drawString(0.1, 0, label)
         canvas.drawString(0, -0.1, label)
@@ -141,25 +153,28 @@ def facture(filename, therapeute, patient, duree, accident, prix_cts, majoration
         templates = [PageTemplate(id='bv', frames=[Frame(doc.leftMargin, doc.rightMargin, doc.width, doc.height)], onPage=fixed),
                      PageTemplate(id='copie', frames=[Frame(doc.leftMargin, doc.rightMargin, doc.width, doc.height)], onPage=fixed),
                      ]
+        DEFAULT_STYLE, COPIE_STYLE, FACTURE_STYLE, DEFAULT_TABLE_STYLE, MAJORATION_TABLE_STYLE = make_styles(FONT_SIZE_BV)
     else:
         templates = [PageTemplate(id='recu',
                                   frames=[Frame(doc.leftMargin, doc.rightMargin, doc.width, doc.height),
                                           Frame(doc.pagesize[0]+doc.leftMargin, doc.rightMargin, doc.width, doc.height)],
                                   onPage=fixed)]
+        DEFAULT_STYLE, COPIE_STYLE, FACTURE_STYLE, DEFAULT_TABLE_STYLE, MAJORATION_TABLE_STYLE = make_styles(FONT_SIZE)
+
     doc.addPageTemplates(templates)
     prix = u'%0.2f CHF' % (prix_cts/100.)
     tstyle = DEFAULT_TABLE_STYLE
-    data = [[u"Prise en charge ostéopathique %s datée du %s" % (duree, date.strftime(u'%d.%m.%y')), prix], ]
+    data = [[Paragraph(u"Prise en charge ostéopathique %s datée du %s" % (duree, date.strftime(u'%d.%m.%y')), DEFAULT_STYLE), None, prix], ]
     if majoration_cts:
         tstyle = MAJORATION_TABLE_STYLE
         majoration = u'%0.2f CHF' % (majoration_cts/100.)
         total = u'%0.2f CHF' % ((prix_cts+majoration_cts)/100.)
-        data += [[u'Majoration week-end', majoration]]
-        data += [[u'TOTAL', total]]
+        data += [[u'Majoration week-end', None, majoration]]
+        data += [[None, u'TOTAL', total]]
     if accident:
-        data += [[u"Raison : accident", ]]
+        data += [[u"Raison : accident", None, ]]
     else:
-        data += [[u"Raison : maladie", ]]
+        data += [[u"Raison : maladie", None, ]]
     if not with_bv:
         data[-1].append(u"payé")
     fact = [Spacer(0, LOGO_HEIGHT),
@@ -168,11 +183,11 @@ def facture(filename, therapeute, patient, duree, accident, prix_cts, majoration
                   style=[('ALIGN', (0, 0), (0, 0), 'LEFT'), ('ALIGN', (1, 0), (1, 0), 'RIGHT')]),
             Spacer(0, MARGIN),
             Paragraph(u'', DEFAULT_STYLE),
-            Spacer(0, 2*MARGIN),
+            Spacer(0, 1*MARGIN),
             Paragraph(u'<onDraw name=make_italic label="FACTURE"/>', FACTURE_STYLE),
             Spacer(0, 1*MARGIN),
-            Table(data, colWidths=[doc.width-3*cm, 3*cm], style=tstyle),
-            Spacer(0, 2*MARGIN),
+            Table(data, colWidths=[doc.width-5*cm, 1.5*cm, 3.5*cm], style=tstyle),
+            Spacer(0, 1.5*MARGIN),
             Paragraph(u"Avec mes remerciements.", DEFAULT_STYLE),
             ]
     recu = fact[:]
@@ -193,7 +208,7 @@ if __name__ == '__main__':
     majoration_cts = 2000
     accident = True
     date = datetime.date.today()
-    facture(filename, therapeute, patient, duree, accident, prix_cts, majoration_cts, date, with_bv=False)
+    facture(filename, therapeute, patient, duree, accident, prix_cts, majoration_cts, date, with_bv=True)
 
     import mailcap
     import time
