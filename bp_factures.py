@@ -14,6 +14,8 @@ from reportlab.pdfbase.ttfonts import TTFont
 
 from bp_custo import CCP
 
+PRINT_BV_BG = True
+
 SQRT2 = sqrt(2)
 
 BASE_DIR = os.path.join(os.path.dirname(__file__), 'pdfs')
@@ -54,7 +56,8 @@ def fixed(canvas, doc):
     canvas.setFont('EuclidBPBold', FONT_SIZE)
     canvas.drawRightString(doc.pagesize[0]-doc.rightMargin, doc.pagesize[1]-doc.topMargin-FONT_SIZE, u"Lausanne, le "+datetime.date.today().strftime(u'%d.%m.%y'))
     if doc.with_bv and doc.page == 1:
-        canvas.drawImage(os.path.join(BASE_DIR, "441_02_ES_LAC_105_quer_CMYK.png"), 0, 0, BV_WIDTH, BV_HEIGHT)
+        if PRINT_BV_BG:
+            canvas.drawImage(os.path.join(BASE_DIR, "441_02_ES_LAC_105_quer_CMYK.png"), 0, 0, BV_WIDTH, BV_HEIGHT)
         canvas.saveState()
         # CCP
         canvas.setFont('OCRB', FONT_SIZE)
