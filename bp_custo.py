@@ -62,6 +62,7 @@ class ErrorsText(Config):
     db_delete = u"Suppression impossible !"
     db_search = u"Recherche impossible !"
     db_show = u"Affichage impossible !"
+    missing_therapeute = u"Veuillez préciser le thérapeute ayant pris en charge le patient"
     missing_payment_info = u"Veuillez préciser le prix et le moyen de payement"
     missing_data = u"Veuillez compléter les champs en rouge"
     invalid_date = u"Veuillez vérifier le format des champs date pour qu'ils suivent la forme : AAAA-MM-JJ"
@@ -77,6 +78,7 @@ class ButtonsText(Config):
     ok_new_consult = u"OK, ouvrir une nouvelle consultation"  # B1
     save_close = u"Enregistrer et fermer"  # B2
     cancel = u"Annuler"  # B3
+    reprint = u"Réimprimmer"
     search = u"Rechercher"  # B7
     add = u"Ajouter"
     change = u"Modifier"  # B11

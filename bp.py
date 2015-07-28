@@ -591,6 +591,8 @@ class Consultation(bp_Dialog.Dialog):
         else:
             tk.Button(box, text=buttons_text.save_close, command=self.modif).pack(side=tk.LEFT)  # Was B11
             tk.Button(box, text=buttons_text.cancel, command=self.cancel).pack(side=tk.LEFT)
+        if self.id_consult is not None:
+            tk.Button(box, text=buttons_text.reprint, command=self.generate_pdf).pack(side=tk.LEFT)
         cursorS.execute("SELECT count(*) FROM consultations WHERE id = %s", [self.id_patient])
         count, = cursorS.fetchone()
         if count > 0:
@@ -598,18 +600,25 @@ class Consultation(bp_Dialog.Dialog):
         self.bind("<Escape>", self.cancel)
         box.pack()
 
+    def get_cost(self):
+        description, prix = self.prixVar.get().split(u' : ')
+        prix_cts = int(float(prix[:-4]) * 100 + 0.5)
+        if self.majorationVar.get():
+            majoration_cts = bp_custo.MAJORATION_CTS
+        else:
+            majoration_cts = 0
+        return description, prix_cts, majoration_cts
+
     def modif(self):
         paye_par = self.paye_parVar.get().strip()
         if not self.prixVar.get().strip() or not paye_par:
             tkMessageBox.showwarning(windows_title.missing_error, errors_text.missing_payment_info)
             return
+        if not self.therapeuteVar.get().strip():
+            tkMessageBox.showwarning(windows_title.missing_error, errors_text.missing_therapeute)
+            return
         try:
-            description, prix = self.prixVar.get().split(u' : ')
-            prix_cts = int(float(prix[:-4]) * 100 + 0.5)
-            if self.majorationVar.get():
-                majoration_cts = bp_custo.MAJORATION_CTS
-            else:
-                majoration_cts = 0
+            description, prix_cts, majoration_cts = self.get_cost()
             if paye_par in (u'BVR', u'CdM'):
                 paye_le = None
             else:
@@ -683,37 +692,48 @@ class Consultation(bp_Dialog.Dialog):
                                 self.ATCD_famVar.get(1.0, tk.END).strip(), self.id_patient])
             self.cancel()
             if generate_pdf:
-                cursorS.execute("""SELECT entete FROM therapeutes WHERE therapeute = %s""", [self.therapeuteVar.get()])
-                entete_therapeute, = cursorS.fetchone()
-                adresse_therapeute = entete_therapeute + u'\n\n' + labels_text.adresse_pog
-                cursorS.execute("""SELECT sex, nom, prenom FROM patients WHERE id=%s""", [self.id_patient])
-                sex, nom, prenom = cursorS.fetchone()
-                cursorS.execute("""SELECT adresse FROM patients WHERE id = %s""", [self.id_patient])
-                adresse_patient, = cursorS.fetchone()
-                if len(u' '.join((sex, prenom, nom))) < 25:
-                    identite = [u' '.join((sex, prenom, nom))]
-                elif len(u' '.join((prenom, nom))) < 25:
-                    identite = [sex, u' '.join((prenom, nom))]
-                else:
-                    identite = [sex, prenom, nom]
-                adresse_patient = u'\n'.join(identite + [adresse_patient])
-                ts = datetime.datetime.now().strftime('%H')
-                filename = os.path.join(bp_custo.PDF_DIR, (u'%s_%s_%s_%s_%sh.pdf' % (nom, prenom, sex, date_ouvc, ts)).encode('UTF-8'))
-                facture(filename, adresse_therapeute, adresse_patient, description, self.MC_accidentVar.get(),
-                        prix_cts, majoration_cts, date_ouvc, with_bv=(paye_par == u'BVR'))
-                cmd, cap = mailcap.findmatch(mailcap.getcaps(), 'application/pdf', 'view', filename)
-                os.system(cmd)
+                self.generate_pdf()
         except:
             traceback.print_exc()
             tkMessageBox.showwarning(windows_title.db_error, errors_text.db_update)
+
+    def generate_pdf(self):
+        paye_par = self.paye_parVar.get().strip()
+        if not self.prixVar.get().strip() or not paye_par:
+            tkMessageBox.showwarning(windows_title.missing_error, errors_text.missing_payment_info)
+            return
+        if not self.therapeuteVar.get().strip():
+            tkMessageBox.showwarning(windows_title.missing_error, errors_text.missing_therapeute)
+            return
+        description, prix_cts, majoration_cts = self.get_cost()
+        date_ouvc = datetime.date(*map(int, self.date_ouvcVar.get().strip().split(u'-')))
+        cursorS.execute("""SELECT entete FROM therapeutes WHERE therapeute = %s""", [self.therapeuteVar.get()])
+        entete_therapeute, = cursorS.fetchone()
+        adresse_therapeute = entete_therapeute + u'\n\n' + labels_text.adresse_pog
+        cursorS.execute("""SELECT sex, nom, prenom FROM patients WHERE id=%s""", [self.id_patient])
+        sex, nom, prenom = cursorS.fetchone()
+        cursorS.execute("""SELECT adresse FROM patients WHERE id = %s""", [self.id_patient])
+        adresse_patient, = cursorS.fetchone()
+        if len(u' '.join((sex, prenom, nom))) < 25:
+            identite = [u' '.join((sex, prenom, nom))]
+        elif len(u' '.join((prenom, nom))) < 25:
+            identite = [sex, u' '.join((prenom, nom))]
+        else:
+            identite = [sex, prenom, nom]
+        adresse_patient = u'\n'.join(identite + [adresse_patient])
+        ts = datetime.datetime.now().strftime('%H')
+        filename = os.path.join(bp_custo.PDF_DIR, (u'%s_%s_%s_%s_%sh.pdf' % (nom, prenom, sex, date_ouvc, ts)).encode('UTF-8'))
+        facture(filename, adresse_therapeute, adresse_patient, description, self.MC_accidentVar.get(), prix_cts, majoration_cts, date_ouvc, with_bv=(paye_par == u'BVR'))
+        cmd, cap = mailcap.findmatch(mailcap.getcaps(), 'application/pdf', 'view', filename)
+        os.system(cmd)
 
     def body(self, master):
         self.geometry("+200+5")
         # self.geometry("1024x900")
 
         try:
-            cursorS.execute("""SELECT therapeute FROM therapeutes""")
-            therapeutes = [t for t, in cursorS]
+            cursorS.execute("""SELECT therapeute FROM therapeutes ORDER BY therapeute""")
+            therapeutes = [u''] + [t for t, in cursorS]
             cursorS.execute("""SELECT sex, nom, prenom, date_naiss, important, ATCD_perso, ATCD_fam, therapeute
                                  FROM patients
                                 WHERE id=%s""",
@@ -733,6 +753,8 @@ class Consultation(bp_Dialog.Dialog):
                 date_consult = MC = EG = exam_pclin = exam_phys = traitement = APT_thorax = APT_abdomen = APT_tete = APT_MS = APT_MI = APT_system = A_osteo = divers = paye = prix_cts = majoration_cts = paye_par = paye_le = None
                 MC_accident = False
                 title = windows_title.new_consultation % (sex, nom)
+            if therapeute is not None:
+                therapeute = therapeute.strip()  # Sanity guard against old data
         except:
             traceback.print_exc()
             tkMessageBox.showwarning(windows_title.db_error, errors_text.db_read)
