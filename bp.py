@@ -690,7 +690,13 @@ class Consultation(bp_Dialog.Dialog):
                 sex, nom, prenom = cursorS.fetchone()
                 cursorS.execute("""SELECT adresse FROM patients WHERE id = %s""", [self.id_patient])
                 adresse_patient, = cursorS.fetchone()
-                adresse_patient = u' '.join((sex, prenom, nom)) + u'\n' + adresse_patient
+                if len(u' '.join((sex, prenom, nom))) < 25:
+                    identite = [u' '.join((sex, prenom, nom))]
+                elif len(u' '.join((prenom, nom))) < 25:
+                    identite = [sex, u' '.join((prenom, nom))]
+                else:
+                    identite = [sex, prenom, nom]
+                adresse_patient = u'\n'.join(identite + [adresse_patient])
                 ts = datetime.datetime.now().strftime('%H')
                 filename = os.path.join(bp_custo.PDF_DIR, (u'%s_%s_%s_%s_%sh.pdf' % (nom, prenom, sex, date_ouvc, ts)).encode('UTF-8'))
                 facture(filename, adresse_therapeute, adresse_patient, description, self.MC_accidentVar.get(),
