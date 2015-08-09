@@ -67,7 +67,7 @@ class ErrorsText(Config):
     missing_therapeute = u"Veuillez préciser le thérapeute ayant pris en charge le patient"
     missing_payment_info = u"Veuillez préciser le prix et le moyen de payement"
     missing_data = u"Veuillez compléter les champs en rouge"
-    invalid_date = u"Veuillez vérifier le format des champs date pour qu'ils suivent la forme : AAAA-MM-JJ"
+    invalid_date = u"Veuillez vérifier le format des champs date"
     invalid_tarif = u"Tarif invalide"
 
 
@@ -127,7 +127,7 @@ class LabelsText(Config):
     therapeute = u"Thérapeute"
     nom = u"Nom"
     prenom = u"Prénom"
-    naissance_le = u"Naissance le (AAAA-MM-JJ)"
+    naissance_le = u"Naissance le"
     naissance = u"Naissance"
     date_ouverture = u"Date d'ouverture"
     tel_fix = u"Téléphone fixe"
@@ -169,7 +169,6 @@ class LabelsText(Config):
     accident = u"Accident"
     # Divers
     ttes_cons = u"Toutes les consultations du patient"
-    date_format = u"AAAA-MM-JJ"
     suppr_def_1 = u"Supprimer définitivement"
     suppr_def_2 = u", né(e) le "
     suppr_def_3 = u"ainsi que toutes ses consultations ?"

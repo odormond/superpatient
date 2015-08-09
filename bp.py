@@ -82,7 +82,7 @@ except:
     sys.exit()
 
 try:
-    from dateutil.parser import parse as parse_date, parserinfo
+    from dateutil.parser import parse as du_parse, parserinfo
 except:
     tkMessageBox.showwarning(u"Missing dependency", u"The dateutil module is missing")
     sys.exit()
@@ -95,6 +95,9 @@ class FrenchParserInfo(parserinfo):
     JUMP = [u' ', u'.', u',', u';', u'-', u'/', u"'", u"le", u"er", u"ième"]
 
 datesFR = FrenchParserInfo()
+
+def parse_date(s):
+    return du_parse(s, parserinfo=datesFR).date()
 
 
 try:
@@ -211,8 +214,8 @@ class Patient(bp_Dialog.Dialog):
 
     def addEntry(self, avec_anamnese=False):
         try:
-            date_naiss = parse_date(self.date_naissVar.get().strip(), parserinfo=datesFR)
-            date_ouv = parse_date(self.date_ouvVar.get().strip(), parserinfo=datesFR)
+            date_naiss = parse_date(self.date_naissVar.get().strip())
+            date_ouv = parse_date(self.date_ouvVar.get().strip())
         except:
             traceback.print_exc()
             tkMessageBox.showwarning(windows_title.invalid_error, errors_text.invalid_date)
@@ -276,8 +279,8 @@ class Patient(bp_Dialog.Dialog):
                                         divers=%s
                                 WHERE id=%s""",
                             [self.sexVar.get(), self.nomVar.get().strip(), self.prenomVar.get().strip(),
-                                self.therapeuteVar.get(), parse_date(self.date_naissVar.get().strip(), parserinfo=datesFR),
-                                parse_date(self.date_ouvVar.get().strip(), parserinfo=datesFR), self.adresseVar.get(1.0, tk.END).strip(),
+                                self.therapeuteVar.get(), parse_date(self.date_naissVar.get().strip()),
+                                parse_date(self.date_ouvVar.get().strip()), self.adresseVar.get(1.0, tk.END).strip(),
                                 self.importantVar.get(1.0, tk.END).strip(), self.medecinVar.get(1.0, tk.END).strip(),
                                 self.autre_medecinVar.get(1.0, tk.END).strip(), self.phoneVar.get().strip(),
                                 self.portableVar.get().strip(), self.profes_phoneVar.get().strip(),
@@ -329,7 +332,7 @@ class Patient(bp_Dialog.Dialog):
              autre_medecin, ass_compl, profes, etat, envoye, divers, important, date_ouv) = cursorS.fetchone()
 
             EntryWidget(master, key='id', row=0, column=2, value=self.id_patient, readonly=True)
-        self.sexVar, focus_widget = RadioWidget(master, key='sexe', row=0, column=0, fg=mandatory(sexe), options=[(u'Mme', u'F'), (u'Mr', u'M')], value=sexe, readonly=self.readonly, want_widget=True)
+        self.sexVar, focus_widget = RadioWidget(master, key='sexe', row=0, column=0, fg=mandatory(sexe), options=[(u'Mme', u'F'), (u'Mr', u'M'), (u'Enfant', u'E')], value=sexe, readonly=self.readonly, want_widget=True)
 
         self.nomVar = EntryWidget(master, key='nom', row=1, column=0, fg=mandatory(nom), value=nom, readonly=self.readonly)
         self.therapeuteVar = OptionWidget(master, key='therapeute', row=1, column=2, fg=mandatory(therapeute), value=therapeute, options=therapeutes, readonly=self.readonly)
@@ -343,7 +346,7 @@ class Patient(bp_Dialog.Dialog):
         else:
             key = 'naissance_le'
             fg = 'red'
-            date_naiss = labels_text.date_format
+            date_naiss = ""
         self.date_naissVar = EntryWidget(master, key=key, row=3, column=0, fg=fg, value=date_naiss, readonly=self.readonly)
         self.date_ouvVar = EntryWidget(master, key='date_ouverture', row=3, column=2, value=date_ouv.strftime(DATE_FMT), readonly=self.readonly)
 
@@ -640,7 +643,7 @@ class Consultation(bp_Dialog.Dialog):
                 paye_le = None
             else:
                 paye_le = datetime.date.today()
-            date_ouvc = parse_date(self.date_ouvcVar.get().strip(), parserinfo=datesFR)
+            date_ouvc = parse_date(self.date_ouvcVar.get().strip())
             new_consult = self.id_consult is None
             if new_consult:
                 try:
@@ -723,21 +726,20 @@ class Consultation(bp_Dialog.Dialog):
             tkMessageBox.showwarning(windows_title.missing_error, errors_text.missing_therapeute)
             return
         description, prix_cts, majoration_cts = self.get_cost()
-        date_ouvc = parse_date(self.date_ouvcVar.get().strip(), parserinfo=datesFR)
+        date_ouvc = parse_date(self.date_ouvcVar.get().strip())
         cursorS.execute("""SELECT entete FROM therapeutes WHERE therapeute = %s""", [self.therapeuteVar.get()])
         entete_therapeute, = cursorS.fetchone()
         adresse_therapeute = entete_therapeute + u'\n\n' + labels_text.adresse_pog
-        cursorS.execute("""SELECT sex, nom, prenom FROM patients WHERE id=%s""", [self.id_patient])
-        sex, nom, prenom = cursorS.fetchone()
+        cursorS.execute("""SELECT sex, nom, prenom, date_naiss FROM patients WHERE id=%s""", [self.id_patient])
+        sex, nom, prenom, date_naiss = cursorS.fetchone()
         cursorS.execute("""SELECT adresse FROM patients WHERE id = %s""", [self.id_patient])
         adresse_patient, = cursorS.fetchone()
-        if len(u' '.join((sex, prenom, nom))) < 25:
-            identite = [u' '.join((sex, prenom, nom))]
-        elif len(u' '.join((prenom, nom))) < 25:
-            identite = [sex, u' '.join((prenom, nom))]
+        titre = {u'Mr': u'Monsieur', u'Mme': u'Madame', u'Enfant': u'Aux parents de'}[sex]
+        if len(u' '.join((prenom, nom))) < 25:
+            identite = [u' '.join((prenom, nom))]
         else:
-            identite = [sex, prenom, nom]
-        adresse_patient = u'\n'.join(identite + [adresse_patient])
+            identite = [prenom, nom]
+        adresse_patient = u'\n'.join([titre] + identite + [adresse_patient, "", date_naiss.strftime(DATE_FMT)])
         ts = datetime.datetime.now().strftime('%H')
         filename = os.path.join(bp_custo.PDF_DIR, (u'%s_%s_%s_%s_%sh.pdf' % (nom, prenom, sex, date_ouvc, ts)).encode('UTF-8'))
         facture(filename, adresse_therapeute, adresse_patient, description, self.MC_accidentVar.get(), prix_cts, majoration_cts, date_ouvc, with_bv=(paye_par == u'BVR'))
@@ -767,7 +769,8 @@ class Consultation(bp_Dialog.Dialog):
                  paye_par, paye_le) = cursorS.fetchone()
                 title = windows_title.consultation % (date_consult, sex, nom)
             else:
-                date_consult = MC = EG = exam_pclin = exam_phys = traitement = APT_thorax = APT_abdomen = APT_tete = APT_MS = APT_MI = APT_system = A_osteo = divers = paye = prix_cts = majoration_cts = paye_par = paye_le = None
+                date_consult = datetime.date.today()
+                MC = EG = exam_pclin = exam_phys = traitement = APT_thorax = APT_abdomen = APT_tete = APT_MS = APT_MI = APT_system = A_osteo = divers = paye = prix_cts = majoration_cts = paye_par = paye_le = None
                 MC_accident = False
                 title = windows_title.new_consultation % (sex, nom)
             if therapeute is not None:

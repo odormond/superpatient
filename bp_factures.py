@@ -12,7 +12,7 @@ from reportlab.lib import colors
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 
-from bp_custo import CCP
+from bp_custo import CCP, DATE_FMT
 
 PRINT_BV_BG = True
 
@@ -91,7 +91,7 @@ def fixed(canvas, doc):
         text_obj.textLines(doc.therapeute)
         canvas.drawText(text_obj)
         # Motif
-        canvas.drawString(BV_REF_X + 25*BV_COLUMN, BV_REF_Y - 4*BV_LINE, u"Consultation du "+unicode(doc.date))
+        canvas.drawString(BV_REF_X + 25*BV_COLUMN, BV_REF_Y - 4*BV_LINE, u"Consultation du "+unicode(doc.date.strftime(DATE_FMT)))
         # Versé par
         text_obj = canvas.beginText()
         text_obj.setTextOrigin(BV_COLUMN, BV_REF_Y - 16*BV_LINE)
@@ -164,7 +164,7 @@ def facture(filename, therapeute, patient, duree, accident, prix_cts, majoration
     doc.addPageTemplates(templates)
     prix = u'%0.2f CHF' % (prix_cts/100.)
     tstyle = DEFAULT_TABLE_STYLE
-    data = [[Paragraph(u"Prise en charge ostéopathique %s datée du %s" % (duree, date.strftime(u'%d.%m.%y')), DEFAULT_STYLE), None, prix], ]
+    data = [[Paragraph(u"Prise en charge ostéopathique %s datée du %s" % (duree, date.strftime(DATE_FMT)), DEFAULT_STYLE), None, prix], ]
     if majoration_cts:
         tstyle = MAJORATION_TABLE_STYLE
         majoration = u'%0.2f CHF' % (majoration_cts/100.)
