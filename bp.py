@@ -94,7 +94,7 @@ class FrenchParserInfo(parserinfo):
     HMS = [(u'h', u'heure', u'heures'), (u'm', u'minute', u'minutes'), (u's', u'seconde', u'secondes')]
     JUMP = [u' ', u'.', u',', u';', u'-', u'/', u"'", u"le", u"er", u"ième"]
 
-datesFR = FrenchParserInfo()
+datesFR = FrenchParserInfo(dayfirst=True)
 
 
 def parse_date(s):
