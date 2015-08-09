@@ -18,7 +18,6 @@ TEXT_DEFAULT = ENTRY_DEFAULT
 LISTBOX_DEFAULT = (FIXED_FONT_NAME, FIXED_FONT_SIZE)
 
 CCP = u'12-3456-7'
-MAJORATION_CTS = 1000
 MOYEN_DE_PAYEMENT = [u'Cash', u'Carte', u'BVR', u'CdM']
 ETAT_PAYEMENT = [u'Tous', u'Comptabilisé', u'Non-comptabilisé']
 
@@ -49,6 +48,7 @@ class WindowsTitle(Config):
     done = u"Fait"
     cons_pat = u"Consultation patient"
     manage_colleagues = u"Gérer les collaborateurs"
+    manage_majorations = u"Gérer les majorations"
     manage_tarifs = u"Gérer les tarifs"
     compta = u"Gestion comptable"
 
@@ -68,6 +68,7 @@ class ErrorsText(Config):
     missing_payment_info = u"Veuillez préciser le prix et le moyen de payement"
     missing_data = u"Veuillez compléter les champs en rouge"
     invalid_date = u"Veuillez vérifier le format des champs date"
+    invalid_majoration = u"Majoration invalide"
     invalid_tarif = u"Tarif invalide"
 
 
@@ -107,6 +108,7 @@ buttons_text = ButtonsText()
 
 class MenusText(Config):
     manage_colleagues = u"Gestion des collaborateurs"
+    manage_majorations = u"Gestion des majorations"
     manage_tarifs = u"Gestion des tarifs"
     delete_data = u"Supprimer des données"
     save_db = u"Sauvegarder la base de données"
@@ -178,6 +180,8 @@ class LabelsText(Config):
     cons_sup = u"Consultation supprimée de la base"
     collabos = u"Collaborateurs"
     entete = u"Entête d'adresse"
+    majorations = u"Majorations"
+    majoration = u"Majoration"
     tarifs = u"Tarifs"
     tarif = u"Tarif"
     description = u"Description"
@@ -232,7 +236,7 @@ class LabelsFont(Config):
     mc = eg = expc = atcdp = atcdf = thorax = abdomen = tete = ms = mi = LABEL_BOLD
     gen = a_osteo = exph = ttt = important = paye = ttes_cons = seance = LABEL_BOLD
     paye_par = paye_le = entete = collabos = date_du = date_au = etat_payement = LABEL_BOLD
-    total = tarifs = tarif = description = majoration = LABEL_BOLD
+    total = majorations = majoration = tarifs = tarif = description = majoration = LABEL_BOLD
 
 
 labels_font = LabelsFont()
@@ -243,11 +247,11 @@ class FieldsFont(Config):
     date_ouverture = tel_fix = portable = tel_prof = mail = ENTRY_DEFAULT
     ass_comp = profes = etat = envoye = seance = total = ENTRY_DEFAULT
     paye_par = paye_le = date_du = date_au = etat_payement = ENTRY_DEFAULT
-    tarif = description = ENTRY_DEFAULT
+    majoration = tarif = description = ENTRY_DEFAULT
     important = medecin = adr_priv = medecinS = remarques = ttes_cons = TEXT_DEFAULT
     mc = eg = expc = atcdp = atcdf = thorax = abdomen = tete = ms = TEXT_DEFAULT
     mi = gen = a_osteo = exph = ttt = paye = entete = TEXT_DEFAULT
-    rp = rc = collabos = tarifs = consultations = LISTBOX_DEFAULT
+    rp = rc = collabos = majorations = tarifs = consultations = LISTBOX_DEFAULT
 
 
 fields_font = FieldsFont()
@@ -279,6 +283,8 @@ class FieldsHeight(Config):
     ttes_cons = 39
     entete = 6
     collabos = 10
+    majorations = 10
+    majoration = 6
     tarifs = 10
     tarif = 6
     description = 6
@@ -292,6 +298,7 @@ class FieldsWidth(Config):
     rp = 75
     rc = 75
     collabos = 75
+    majorations = 40
     tarifs = 40
     consultations = 100
 

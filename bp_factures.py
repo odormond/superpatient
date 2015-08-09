@@ -141,7 +141,7 @@ def fixed(canvas, doc):
     canvas.make_bold = make_bold
 
 
-def facture(filename, therapeute, patient, duree, accident, prix_cts, majoration_cts, date, with_bv=False):
+def facture(filename, therapeute, patient, duree, accident, prix_cts, description_majoration, majoration_cts, date, with_bv=False):
     doc = BaseDocTemplate(filename, pagesize=A4, leftMargin=MARGIN, rightMargin=MARGIN, topMargin=MARGIN, bottomMargin=MARGIN)
     doc.with_bv = with_bv
     doc.prix = (prix_cts + majoration_cts) / 100.
@@ -169,7 +169,7 @@ def facture(filename, therapeute, patient, duree, accident, prix_cts, majoration
         tstyle = MAJORATION_TABLE_STYLE
         majoration = u'%0.2f CHF' % (majoration_cts/100.)
         total = u'%0.2f CHF' % ((prix_cts+majoration_cts)/100.)
-        data += [[u'Majoration week-end', None, majoration]]
+        data += [[description_majoration, None, majoration]]
         data += [[None, u'TOTAL', total]]
     if accident:
         data += [[u"Raison : accident", None, ]]

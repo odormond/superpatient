@@ -96,6 +96,7 @@ class FrenchParserInfo(parserinfo):
 
 datesFR = FrenchParserInfo()
 
+
 def parse_date(s):
     return du_parse(s, parserinfo=datesFR).date()
 
@@ -160,7 +161,39 @@ def MCWidget(parent, key, row, column, rowspan=1, columnspan=1, value=None, acci
     return var, radiovar
 
 
-def PriceWidget(parent, key, row, column, value=None, readonly=False, side_by_side=True, fg='black', field_fg='black', want_widget=False):
+def MajorationWidget(parent, key, row, column, value=None, readonly=False, side_by_side=True, fg='black', field_fg='black', want_widget=False):
+    if side_by_side:
+        rowshift, colshift = 0, 1
+    else:
+        rowshift, colshift = 1, 0
+    tk.Label(parent, text=labels_text[key], font=labels_font[key], fg=fg).grid(row=row, column=column, sticky=tk.W)
+    try:
+        cursorS.execute("""SELECT description, prix_cts FROM majorations ORDER BY prix_cts""")
+        majorations = [(0, u"Pas de majoration", u"Pas de majoration")]
+        for description, prix_cts in cursorS:
+            label = u'%s : %0.2f CHF' % (description, prix_cts/100.)
+            majorations.append((prix_cts, description, label))
+    except:
+        traceback.print_exc()
+        tkMessageBox.showwarning(windows_title.db_error, errors_text.db_read)
+        majorations = [u"-- ERREUR --"]
+    var = tk.StringVar()
+    try:
+        idx = [p for p, d, l in majorations].index(value)
+        var.set(majorations[idx][2])
+    except ValueError:
+        pass
+
+    widget = tk.OptionMenu(parent, var, *[l for p, d, l in majorations])
+    if readonly:
+        widget.config(state=tk.DISABLED)
+    widget.grid(row=row+rowshift, column=column+colshift, sticky=tk.W+tk.E)
+    if want_widget:
+        return var, widget
+    return var
+
+
+def TarifWidget(parent, key, row, column, value=None, readonly=False, side_by_side=True, fg='black', field_fg='black', want_widget=False):
     if side_by_side:
         rowshift, colshift = 0, 1
     else:
@@ -621,13 +654,15 @@ class Consultation(bp_Dialog.Dialog):
         box.pack()
 
     def get_cost(self):
-        description, prix = self.prixVar.get().split(u' : ')
+        description_prix, prix = self.prixVar.get().split(u' : ')
         prix_cts = int(float(prix[:-4]) * 100 + 0.5)
-        if self.majorationVar.get():
-            majoration_cts = bp_custo.MAJORATION_CTS
-        else:
+        try:
+            description_majoration, majoration = self.majorationVar.get().split(u' : ')
+            majoration_cts = int(float(majoration[:-4]) * 100 + 0.5)
+        except ValueError:
+            description_majoration = ""
             majoration_cts = 0
-        return description, prix_cts, majoration_cts
+        return description_prix, prix_cts, description_majoration, majoration_cts
 
     def modif(self):
         paye_par = self.paye_parVar.get().strip()
@@ -638,7 +673,7 @@ class Consultation(bp_Dialog.Dialog):
             tkMessageBox.showwarning(windows_title.missing_error, errors_text.missing_therapeute)
             return
         try:
-            description, prix_cts, majoration_cts = self.get_cost()
+            description_prix, prix_cts, description_majoration, majoration_cts = self.get_cost()
             if paye_par in (u'BVR', u'CdM'):
                 paye_le = None
             else:
@@ -725,7 +760,7 @@ class Consultation(bp_Dialog.Dialog):
         if not self.therapeuteVar.get().strip():
             tkMessageBox.showwarning(windows_title.missing_error, errors_text.missing_therapeute)
             return
-        description, prix_cts, majoration_cts = self.get_cost()
+        description_prix, prix_cts, description_majoration, majoration_cts = self.get_cost()
         date_ouvc = parse_date(self.date_ouvcVar.get().strip())
         cursorS.execute("""SELECT entete FROM therapeutes WHERE therapeute = %s""", [self.therapeuteVar.get()])
         entete_therapeute, = cursorS.fetchone()
@@ -742,7 +777,7 @@ class Consultation(bp_Dialog.Dialog):
         adresse_patient = u'\n'.join([titre] + identite + [adresse_patient, "", date_naiss.strftime(DATE_FMT)])
         ts = datetime.datetime.now().strftime('%H')
         filename = os.path.join(bp_custo.PDF_DIR, (u'%s_%s_%s_%s_%sh.pdf' % (nom, prenom, sex, date_ouvc, ts)).encode('UTF-8'))
-        facture(filename, adresse_therapeute, adresse_patient, description, self.MC_accidentVar.get(), prix_cts, majoration_cts, date_ouvc, with_bv=(paye_par == u'BVR'))
+        facture(filename, adresse_therapeute, adresse_patient, description_prix, self.MC_accidentVar.get(), prix_cts, description_majoration, majoration_cts, date_ouvc, with_bv=(paye_par == u'BVR'))
         cmd, cap = mailcap.findmatch(mailcap.getcaps(), 'application/pdf', 'view', filename)
         os.system(cmd)
 
@@ -831,11 +866,8 @@ class Consultation(bp_Dialog.Dialog):
         else:
             self.majorationVar.set(0)
         f = tk.Frame(master)
-        check_btn = tk.Checkbutton(f, text=labels_text['majoration'], font=labels_font['majoration'], variable=self.majorationVar)
-        check_btn.grid(row=1, column=0)
-        if self.readonly:
-            check_btn.config(state=tk.DISABLED)
-        self.prixVar = PriceWidget(f, key='seance', row=0, column=1, side_by_side=False, value=prix_cts, readonly=self.readonly)
+        self.prixVar = TarifWidget(f, key='seance', row=0, column=0, side_by_side=True, value=prix_cts, readonly=self.readonly)
+        self.majorationVar = MajorationWidget(f, key='majoration', row=1, column=0, side_by_side=True, value=majoration_cts, readonly=self.readonly)
         f.grid(row=14, column=0, rowspan=2, sticky=tk.W+tk.E)
         f.grid_columnconfigure(1, weight=1)
 
@@ -944,6 +976,109 @@ class GererConsultations(bp_Dialog.Dialog):
         master.grid_rowconfigure(3, weight=1)
 
         self.affiche_toutes()
+
+
+class GererMajorations(bp_Dialog.Dialog):
+    def buttonbox(self):
+        box = tk.Button(self, text=buttons_text.done, command=self.cancel)
+        self.bind("<Escape>", self.cancel)
+        return box
+
+    def populate(self):
+        self.listbox.delete(0, tk.END)
+        d_width = 0
+        for description, prix_cts in self.majorations:
+            d_width = max(d_width, len(description))
+        for description, prix_cts in self.majorations:
+            self.listbox.insert(tk.END, u"%*s    %7.2f" % (-d_width, description, prix_cts/100.))
+        self.listbox.selection_clear(0, tk.END)
+
+    def select_majoration(self, event):
+        indexes = self.listbox.curselection()
+        self.majoration.set(u"")
+        self.description.set(u"")
+        if indexes:
+            index = indexes[0]
+            if index == self.index:
+                self.listbox.selection_clear(0, tk.END)
+                self.index = None
+                self.update.config(text=buttons_text.add)
+                return
+            self.index = index
+            self.update.config(text=buttons_text.change)
+            description, prix_cts = self.majorations[index]
+            self.description.set(description)
+            self.majoration.set('%0.2f' % (prix_cts/100.))
+        else:
+            self.index = None
+            self.update.config(text=buttons_text.add)
+
+    def update_majoration(self):
+        indexes = self.listbox.curselection()
+        update = bool(indexes)
+        description = self.description.get().strip()
+        try:
+            prix_cts = int(float(self.majoration.get().strip()) * 100)
+        except:
+            traceback.print_exc()
+            tkMessageBox.showwarning(windows_title.invalid_error, errors_text.invalid_majoration)
+            return
+        try:
+            if update:
+                key, _ = self.majorations[indexes[0]]
+                cursorU.execute("""UPDATE majorations SET description = %s, prix_cts = %s WHERE description = %s""",
+                                [description, prix_cts, key])
+                self.majorations[indexes[0]] = (description, prix_cts)
+            else:
+                cursorI.execute("""INSERT INTO majorations (description, prix_cts) VALUES (%s, %s)""",
+                                [description, prix_cts])
+                self.majorations.append((description, prix_cts))
+        except:
+            traceback.print_exc()
+            tkMessageBox.showwarning(windows_title.db_error, errors_text.db_update)
+        self.populate()
+        self.select_majoration('ignore')
+
+    def delete_majoration(self):
+        indexes = self.listbox.curselection()
+        if indexes:
+            try:
+                key, _ = self.majorations[indexes[0]]
+                cursorU.execute("""DELETE FROM majorations WHERE description = %s""", [key])
+                del self.majorations[indexes[0]]
+            except:
+                traceback.print_exc()
+                tkMessageBox.showwarning(windows_title.db_error, errors_text.db_delete)
+        self.populate()
+        self.select_majoration('ignore')
+
+    def body(self, master):
+        try:
+            cursorS.execute("""SELECT description, prix_cts FROM majorations""")
+            self.majorations = list(cursorS)
+        except:
+            traceback.print_exc()
+            tkMessageBox.showwarning(windows_title.db_error, errors_text.db_read)
+            return
+
+        self.title(windows_title.manage_majorations)
+        self.listbox = ListboxWidget(master, key='majorations', row=0, column=0, columnspan=3)
+        self.listbox.config(selectmode=tk.SINGLE)
+        self.listbox.bind('<<ListboxSelect>>', self.select_majoration)
+        self.index = None
+        self.populate()
+        self.description = EntryWidget(master, key='description', row=2, column=0, side_by_side=False)
+        self.majoration = EntryWidget(master, key='majoration', row=2, column=1, side_by_side=False)
+        self.update = tk.Button(master, text=buttons_text.add, command=self.update_majoration)
+        self.update.grid(row=3, column=2)
+        self.delete = tk.Button(master, text=buttons_text.delete, command=self.delete_majoration)
+        self.delete.grid(row=4, column=2)
+
+        master.grid_rowconfigure(1, weight=2)
+        master.grid_rowconfigure(3, weight=1)
+        master.grid_rowconfigure(4, weight=1)
+        master.grid_columnconfigure(0, weight=1)
+        master.grid_columnconfigure(1, weight=1)
 
 
 class GererTarifs(bp_Dialog.Dialog):
@@ -1191,6 +1326,7 @@ class Application(tk.Tk):
         adminmenu.add_separator()
         adminmenu.add_command(label=menus_text.manage_colleagues, command=lambda: GererCollegues(self))
         adminmenu.add_command(label=menus_text.manage_tarifs, command=lambda: GererTarifs(self))
+        adminmenu.add_command(label=menus_text.manage_majorations, command=lambda: GererMajorations(self))
         adminmenu.add_command(label=menus_text.delete_data, command=lambda: GererPatients(self, 'supprimer'), foreground='red')
         adminmenu.add_command(label=menus_text.save_db, command=save_db)
         adminmenu.add_command(label=menus_text.restore_db, command=restore_db)
