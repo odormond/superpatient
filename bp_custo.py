@@ -3,6 +3,8 @@
 import os
 PDF_DIR = os.path.join(os.path.dirname(__file__), 'factures')
 
+DATE_FMT = u"%d.%m.%Y"
+
 DEFAULT_LABEL_SIZE = 9
 DEFAULT_ENTRY_SIZE = 10
 DEFAULT_FONT_NAME = "Helvetica"

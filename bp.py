@@ -48,6 +48,7 @@ try:
     import bp_custo
     from bp_custo import buttons_text, menus_text, labels_text, labels_font
     from bp_custo import windows_title, errors_text, fields_font, fields_height
+    from bp_custo import DATE_FMT
 except:
     tkMessageBox.showwarning(u"Missing file", u"bp_custo.py is missing")
     sys.exit()
@@ -79,6 +80,22 @@ try:
 except:
     tkMessageBox.showwarning(u"Missing dependency", u"The reportlab library is missing")
     sys.exit()
+
+try:
+    from dateutil.parser import parse as parse_date, parserinfo
+except:
+    tkMessageBox.showwarning(u"Missing dependency", u"The dateutil module is missing")
+    sys.exit()
+
+
+class FrenchParserInfo(parserinfo):
+    MONTHS = [(u'jan', u'janvier'), (u'fév', u'février'), (u'mar', u'mars'), (u'avr', u'avril'), (u'mai', u'mai'), (u'jui', u'juin'), (u'jul', u'juillet'), (u'aoû', u'août'), (u'sep', u'septembre'), (u'oct', u'octobre'), (u'nov', u'novembre'), (u'déc', u'décembre')]
+    WEEKDAYS = [(u'Lun', u'Lundi'), (u'Mar', u'Mardi'), (u'Mer', u'Mercredi'), (u'Jeu', u'Jeudi'), (u'Ven', u'Vendredi'), (u'Sam', u'Samedi'), (u'Dim', u'Dimanche')]
+    HMS = [(u'h', u'heure', u'heures'), (u'm', u'minute', u'minutes'), (u's', u'seconde', u'secondes')]
+    JUMP = [u' ', u'.', u',', u';', u'-', u'/', u"'", u"le", u"er", u"ième"]
+
+datesFR = FrenchParserInfo()
+
 
 try:
     from bp_factures import facture
@@ -193,11 +210,9 @@ class Patient(bp_Dialog.Dialog):
         box.pack()
 
     def addEntry(self, avec_anamnese=False):
-        date_naiss = self.date_naissVar.get().strip()
-        date_ouv = self.date_ouvVar.get().strip()
         try:
-            date_naiss = datetime.date(*map(int, date_naiss.split(u'-')))
-            date_ouv = datetime.date(*map(int, date_ouv.split(u'-')))
+            date_naiss = parse_date(self.date_naissVar.get().strip(), parserinfo=datesFR)
+            date_ouv = parse_date(self.date_ouvVar.get().strip(), parserinfo=datesFR)
         except:
             traceback.print_exc()
             tkMessageBox.showwarning(windows_title.invalid_error, errors_text.invalid_date)
@@ -261,8 +276,8 @@ class Patient(bp_Dialog.Dialog):
                                         divers=%s
                                 WHERE id=%s""",
                             [self.sexVar.get(), self.nomVar.get().strip(), self.prenomVar.get().strip(),
-                                self.therapeuteVar.get(), self.date_naissVar.get().strip(),
-                                self.date_ouvVar.get().strip(), self.adresseVar.get(1.0, tk.END).strip(),
+                                self.therapeuteVar.get(), parse_date(self.date_naissVar.get().strip(), parserinfo=datesFR),
+                                parse_date(self.date_ouvVar.get().strip(), parserinfo=datesFR), self.adresseVar.get(1.0, tk.END).strip(),
                                 self.importantVar.get(1.0, tk.END).strip(), self.medecinVar.get(1.0, tk.END).strip(),
                                 self.autre_medecinVar.get(1.0, tk.END).strip(), self.phoneVar.get().strip(),
                                 self.portableVar.get().strip(), self.profes_phoneVar.get().strip(),
@@ -324,12 +339,13 @@ class Patient(bp_Dialog.Dialog):
         if date_naiss:
             key = 'naissance'
             fg = 'black'
+            date_naiss = date_naiss.strftime(DATE_FMT)
         else:
             key = 'naissance_le'
             fg = 'red'
             date_naiss = labels_text.date_format
         self.date_naissVar = EntryWidget(master, key=key, row=3, column=0, fg=fg, value=date_naiss, readonly=self.readonly)
-        self.date_ouvVar = EntryWidget(master, key='date_ouverture', row=3, column=2, value=date_ouv, readonly=self.readonly)
+        self.date_ouvVar = EntryWidget(master, key='date_ouverture', row=3, column=2, value=date_ouv.strftime(DATE_FMT), readonly=self.readonly)
 
         self.phoneVar = EntryWidget(master, key='tel_fix', row=4, column=0, value=phone, readonly=self.readonly)
         self.importantVar = TextWidget(master, key='important', row=4, column=2, rowspan=2, value=important, readonly=self.readonly, field_fg='red')
@@ -452,7 +468,7 @@ class GererPatients(bp_Dialog.Dialog):
                 traceback.print_exc()
                 tkMessageBox.showwarning(windows_title.db_error, errors_text.db_search)
                 return
-            if tkMessageBox.askyesno(windows_title.delete, labels_text.suppr_def_1+u'\n'+str(sex+u" "+prenom+u" "+nom)+labels_text.suppr_def_2+str(date_naiss)+u'\n'+labels_text.suppr_def_3):
+            if tkMessageBox.askyesno(windows_title.delete, labels_text.suppr_def_1+u'\n'+str(sex+u" "+prenom+u" "+nom)+labels_text.suppr_def_2+date_naiss.strftime(DATE_FMT)+u'\n'+labels_text.suppr_def_3):
                 try:
                     cursorR.execute("DELETE FROM consultations WHERE id=%s", [id])
                     cursorR.execute("DELETE FROM patients WHERE id=%s", [id])
@@ -509,7 +525,7 @@ class ListeConsultations(bp_Dialog.Dialog):
         self.toutes.tag_config("titre", foreground="blue", font=("Helvetica", 15))
         self.toutes.tag_config("personne", foreground="black", font=("Helvetica", 15, "bold"))
         self.toutes.tag_config("important", foreground="darkblue", font=("Helvetica", 15, "bold"))
-        self.toutes.insert(tk.END, sex+u' '+prenom+u' '+nom+u', '+str(date_naiss)+u'\n', "personne")
+        self.toutes.insert(tk.END, sex+u' '+prenom+u' '+nom+u', '+date_naiss.strftime(DATE_FMT)+u'\n', "personne")
         self.toutes.insert(tk.END, labels_text.atcdp+u'\n', "titre")
         self.toutes.insert(tk.END, ATCD_perso+u'\n')
         self.toutes.insert(tk.END, labels_text.atcdf+u'\n', "titre")
@@ -517,7 +533,7 @@ class ListeConsultations(bp_Dialog.Dialog):
         self.toutes.insert(tk.END, labels_text.important+u'\n', "important")
         self.toutes.insert(tk.END, Important+u'\n')
         for id_consult, date_consult, MC, MC_accident, EG, APT_thorax, APT_abdomen, APT_tete, APT_MS, APT_MI, APT_system, A_osteo, exam_phys, traitement, divers, exam_pclin, paye in cursorS:
-            self.toutes.insert(tk.END, u'\n********** '+labels_text.date_consult+str(date_consult)+u' **********'+u'\n', "date")
+            self.toutes.insert(tk.END, u'\n********** '+labels_text.date_consult+date_consult.strftime(DATE_FMT)+u' **********'+u'\n', "date")
             if EG.strip():
                 self.toutes.insert(tk.END, labels_text.eg+u'\n', "titre")
                 self.toutes.insert(tk.END, EG+u'\n')
@@ -623,7 +639,7 @@ class Consultation(bp_Dialog.Dialog):
                 paye_le = None
             else:
                 paye_le = datetime.date.today()
-            date_ouvc = datetime.date(*map(int, self.date_ouvcVar.get().strip().split(u'-')))
+            date_ouvc = parse_date(self.date_ouvcVar.get().strip(), parserinfo=datesFR)
             new_consult = self.id_consult is None
             if new_consult:
                 try:
@@ -706,7 +722,7 @@ class Consultation(bp_Dialog.Dialog):
             tkMessageBox.showwarning(windows_title.missing_error, errors_text.missing_therapeute)
             return
         description, prix_cts, majoration_cts = self.get_cost()
-        date_ouvc = datetime.date(*map(int, self.date_ouvcVar.get().strip().split(u'-')))
+        date_ouvc = parse_date(self.date_ouvcVar.get().strip(), parserinfo=datesFR)
         cursorS.execute("""SELECT entete FROM therapeutes WHERE therapeute = %s""", [self.therapeuteVar.get()])
         entete_therapeute, = cursorS.fetchone()
         adresse_therapeute = entete_therapeute + u'\n\n' + labels_text.adresse_pog
@@ -801,7 +817,7 @@ class Consultation(bp_Dialog.Dialog):
         self.traitementVar = TextWidget(master, key='ttt', row=10, column=1, side_by_side=False, fg='darkgreen', value=traitement, readonly=self.readonly)
         self.diversVar = TextWidget(master, key='remarques', row=10, column=2, side_by_side=False, value=divers, readonly=self.readonly)
 
-        self.date_ouvcVar = EntryWidget(master, key='date_ouverture', row=12, column=0, side_by_side=False, value=datetime.date.today(), readonly=self.readonly)
+        self.date_ouvcVar = EntryWidget(master, key='date_ouverture', row=12, column=0, side_by_side=False, value=date_consult.strftime(DATE_FMT), readonly=self.readonly)
         self.therapeuteVar = OptionWidget(master, key='therapeute', row=12, column=1, side_by_side=False, value=therapeute, options=therapeutes, readonly=self.readonly)
         self.payeVar = TextWidget(master, key='paye', row=12, column=2, rowspan=3, side_by_side=False, value=paye, field_fg='red', readonly=self.readonly)
 
@@ -870,7 +886,7 @@ class GererConsultations(bp_Dialog.Dialog):
         self.results = []
         self.select_consult.delete(0, tk.END)
         for id_consult, date_consult, MC in cursorS:
-            self.select_consult.insert(tk.END, str(date_consult)+u' '+MC)
+            self.select_consult.insert(tk.END, date_consult.strftime(DATE_FMT)+u' '+MC)
             self.results.append(id_consult)
 
     def affiche(self):
@@ -915,7 +931,7 @@ class GererConsultations(bp_Dialog.Dialog):
         else:
             self.title(windows_title.delete_consultation % (sex, nom))
         tk.Label(master, text=sex+u' '+prenom+u' '+nom, font=bp_custo.LABEL_BOLD).grid(row=0, column=0, sticky=tk.W)
-        tk.Label(master, text=labels_text.naissance+u' '+str(date_naiss), font=bp_custo.LABEL_NORMAL).grid(row=1, column=0, sticky=tk.W)
+        tk.Label(master, text=labels_text.naissance+u' '+date_naiss.strftime(DATE_FMT), font=bp_custo.LABEL_NORMAL).grid(row=1, column=0, sticky=tk.W)
         tk.Label(master, text=labels_text.therapeute+u' '+therapeute, font=bp_custo.LABEL_NORMAL).grid(row=2, column=0, sticky=tk.W)
 
         self.select_consult = ListboxWidget(master, key='rc', row=3, column=0)
