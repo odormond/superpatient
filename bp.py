@@ -415,6 +415,7 @@ class GererPatients(bp_Dialog.Dialog):
             tk.Button(box, text=buttons_text.show_all_consult, command=self.liste_consultations).pack(side=tk.LEFT)
         tk.Button(box, text=buttons_text.cancel, command=self.cancel).pack(side=tk.LEFT)
         self.bind("<Escape>", self.cancel)
+        self.bind("<Return>", lambda event: self.recherche())
         box.pack()
 
     def recherche(self):
