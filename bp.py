@@ -95,10 +95,14 @@ class FrenchParserInfo(parserinfo):
     JUMP = [u' ', u'.', u',', u';', u'-', u'/', u"'", u"le", u"er", u"ième"]
 
 datesFR = FrenchParserInfo(dayfirst=True)
+MIN_DATE = datetime.date(1900, 1, 1)  # Cannot strftime before that date
 
 
 def parse_date(s):
-    return du_parse(s, parserinfo=datesFR).date()
+    d = du_parse(s, parserinfo=datesFR).date()
+    if d < MIN_DATE:
+        raise ValueError("Date too old")
+    return d
 
 
 try:
