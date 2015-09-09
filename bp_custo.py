@@ -219,10 +219,10 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with BasicPatient; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA"""
-    adresse_pog = u"""Permanence Osteopathique de la Gare
+    adresse_pog = u"""Permanence Ostéopathique de la Gare
 Av. de la gare 5
 1003 Lausanne
-www.permanance-lausanne.ch
+www.permanence-lausanne.ch
 021 510 50 50"""
 
 

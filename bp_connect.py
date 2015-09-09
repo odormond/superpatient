@@ -28,7 +28,7 @@
 serveur = 'localhost'
 identifiant = 'bpuser'
 secret = 'bppass'
-base = 'basicpatient'
+base = 'basicpatient3'
 
 
 class connecte:
