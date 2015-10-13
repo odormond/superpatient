@@ -42,6 +42,29 @@ except:
     sys.exit()
 
 try:
+    from dateutil.parser import parse as du_parse, parserinfo
+except:
+    tkMessageBox.showwarning(u"Missing dependency", u"The dateutil module is missing")
+    sys.exit()
+
+
+class FrenchParserInfo(parserinfo):
+    MONTHS = [(u'jan', u'janvier'), (u'fév', u'février'), (u'mar', u'mars'), (u'avr', u'avril'), (u'mai', u'mai'), (u'jui', u'juin'), (u'jul', u'juillet'), (u'aoû', u'août'), (u'sep', u'septembre'), (u'oct', u'octobre'), (u'nov', u'novembre'), (u'déc', u'décembre')]
+    WEEKDAYS = [(u'Lun', u'Lundi'), (u'Mar', u'Mardi'), (u'Mer', u'Mercredi'), (u'Jeu', u'Jeudi'), (u'Ven', u'Vendredi'), (u'Sam', u'Samedi'), (u'Dim', u'Dimanche')]
+    HMS = [(u'h', u'heure', u'heures'), (u'm', u'minute', u'minutes'), (u's', u'seconde', u'secondes')]
+    JUMP = [u' ', u'.', u',', u';', u'-', u'/', u"'", u"le", u"er", u"ième"]
+
+datesFR = FrenchParserInfo(dayfirst=True)
+MIN_DATE = datetime.date(1900, 1, 1)  # Cannot strftime before that date
+
+
+def parse_date(s):
+    d = du_parse(s, parserinfo=datesFR).date()
+    if d < MIN_DATE:
+        raise ValueError("Date too old")
+    return d
+
+try:
     import MySQLdb
 except:
     tkMessageBox.showwarning("Error", "Module mysqldb is not correctly installed !")
@@ -113,8 +136,8 @@ class Application(tk.Tk):
 
         # Middle block: list display
         tk.Label(self, font=bp_custo.LISTBOX_DEFAULT,
-                 text="    Nom                            Prénom                    Consultation du   Prix Payé le").grid(row=3, column=0, columnspan=4, sticky=tk.W)
-        self.list_format = "%-3s %-30s %-30s %s %6.2f %s"
+                 text="       Nom                            Prénom                    Consultation du   Prix Payé le").grid(row=3, column=0, columnspan=4, sticky=tk.W)
+        self.list_format = "%-6s %-30s %-30s %s %6.2f %s"
         self.list = ListboxWidget(self, 'consultations', 4, 0, columnspan=4)
         self.list.config(selectmode=tk.MULTIPLE)
         self.total = EntryWidget(self, 'total', 5, 2, readonly=True)
@@ -133,8 +156,8 @@ class Application(tk.Tk):
     def update_list(self, *args):
         therapeute = self.therapeute.get()
         paye_par = self.paye_par.get()
-        date_du = self.date_du.get().strip()
-        date_au = self.date_au.get().strip()
+        date_du = parse_date(self.date_du.get().strip())
+        date_au = parse_date(self.date_au.get().strip())
         etat = self.etat.get().encode('UTF-8')
         conditions = ['TRUE']
         args = []
@@ -148,6 +171,8 @@ class Application(tk.Tk):
             conditions.append('date_consult >= %s')
             args.append(date_du)
         if date_au:
+            if date_au == date_du:
+                date_au = date_du + datetime.timedelta(days=1)
             conditions.append('date_consult < %s')
             args.append(date_au)
         if etat == 'Comptabilisé':
@@ -160,20 +185,20 @@ class Application(tk.Tk):
         self.data = []
         total = 0
         try:
-            cursor.execute("""SELECT id_consult, date_consult, paye_le, prix_cts, sex, nom, prenom
+            cursor.execute("""SELECT id_consult, date_consult, paye_le, prix_cts, majoration_cts, sex, nom, prenom
                                 FROM consultations INNER JOIN patients ON consultations.id = patients.id
                                WHERE %s""" % ' AND '.join(conditions), args)
-            for id_consult, date_consult, paye_le, prix_cts, sex, nom, prenom in cursor:
-                self.list.insert(tk.END, self.list_format % (sex, nom, prenom, date_consult, prix_cts/100., paye_le))
+            for id_consult, date_consult, paye_le, prix_cts, majoration_cts, sex, nom, prenom in cursor:
+                self.list.insert(tk.END, self.list_format % (sex, nom, prenom, date_consult, (prix_cts+majoration_cts)/100., paye_le))
                 self.data.append(id_consult)
-                total += prix_cts
+                total += prix_cts + majoration_cts
         except:
             traceback.print_exc()
             tkMessageBox.showwarning(windows_title.db_error, errors_text.db_read)
         self.total.set('%0.2f CHF' % (total/100.))
 
     def mark_paid(self, *args):
-        paye_le = self.paye_le.get()
+        paye_le = parse_date(self.paye_le.get())
         ids = [id_consult for i, id_consult in enumerate(self.data) if self.list.selection_includes(i)]
         try:
             if len(ids) > 1:
