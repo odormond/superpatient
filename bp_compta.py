@@ -133,12 +133,14 @@ class Application(tk.Tk):
         w_date_du.bind('<KeyRelease-Return>', self.update_list)
         w_date_au.bind('<KeyRelease-Return>', self.update_list)
         self.etat.trace('w', self.update_list)
+        tk.Button(self, text="📅", command=lambda:self.popup_calendar(self.date_du, w_date_du), borderwidth=0, relief=tk.FLAT).grid(row=0, column=4)
+        tk.Button(self, text="📅", command=lambda:self.popup_calendar(self.date_au, w_date_au), borderwidth=0, relief=tk.FLAT).grid(row=1, column=4)
 
         # Middle block: list display
         tk.Label(self, font=bp_custo.LISTBOX_DEFAULT,
                  text="       Nom                            Prénom                    Consultation du   Prix Payé le").grid(row=3, column=0, columnspan=4, sticky=tk.W)
         self.list_format = "%-6s %-30s %-30s %s %6.2f %s"
-        self.list = ListboxWidget(self, 'consultations', 4, 0, columnspan=4)
+        self.list = ListboxWidget(self, 'consultations', 4, 0, columnspan=5)
         self.list.config(selectmode=tk.MULTIPLE)
         self.total = EntryWidget(self, 'total', 5, 2, readonly=True)
 
@@ -211,6 +213,22 @@ class Application(tk.Tk):
             traceback.print_exc()
             tkMessageBox.showwarning(windows_title.db_error, errors_text.db_update)
         self.update_list()
+
+    def popup_calendar(self, var, widget):
+        import ttkcalendar
+        geometry = widget.winfo_geometry()
+        geometry = geometry[geometry.find('+'):]
+        win = tk.Toplevel(self)
+        win.geometry(geometry)
+        win.title("Date")
+        win.transient(self)
+        date = parse_date(var.get())
+        ttkcal = ttkcalendar.Calendar(win, locale="fr_CH", year=date.year, month=date.month)
+        ttkcal.pack(expand=1, fill='both')
+        win.update()
+        win.wait_window()
+        if ttkcal.selection:
+            var.set(ttkcal.selection.strftime("%Y-%m-%d"))
 
 
 app = Application()
