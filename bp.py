@@ -678,10 +678,8 @@ class Consultation(bp_Dialog.Dialog):
             return
         try:
             description_prix, prix_cts, description_majoration, majoration_cts = self.get_cost()
-            if paye_par in (u'BVR', u'CdM'):
-                paye_le = None
-            else:
-                paye_le = datetime.date.today()
+            if self.paye_le is None and paye_par not in (u'BVR', u'CdM'):
+                    self.paye_le = datetime.date.today()
             date_ouvc = parse_date(self.date_ouvcVar.get().strip())
             new_consult = self.id_consult is None
             if new_consult:
@@ -709,7 +707,7 @@ class Consultation(bp_Dialog.Dialog):
                                     self.APT_MSVar.get(1.0, tk.END).strip(), self.APT_MIVar.get(1.0, tk.END).strip(),
                                     self.APT_systemVar.get(1.0, tk.END).strip(), self.A_osteoVar.get(1.0, tk.END).strip(),
                                     self.traitementVar.get(1.0, tk.END).strip(), self.therapeuteVar.get(),
-                                    prix_cts, majoration_cts, paye_par, paye_le])
+                                    prix_cts, majoration_cts, paye_par, self.paye_le])
                 generate_pdf = paye_par != u'CdM'
             else:
                 cursorS.execute("""SELECT paye_par FROM consultations WHERE id_consult=%s""", [self.id_consult])
@@ -745,7 +743,7 @@ class Consultation(bp_Dialog.Dialog):
                                     self.APT_teteVar.get(1.0, tk.END).strip(), self.APT_MSVar.get(1.0, tk.END).strip(),
                                     self.APT_MIVar.get(1.0, tk.END).strip(), self.APT_systemVar.get(1.0, tk.END).strip(),
                                     self.A_osteoVar.get(1.0, tk.END).strip(), self.traitementVar.get(1.0, tk.END).strip(),
-                                    date_ouvc, self.therapeuteVar.get(), prix_cts, majoration_cts, paye_par, paye_le, self.id_consult])
+                                    date_ouvc, self.therapeuteVar.get(), prix_cts, majoration_cts, paye_par, self.paye_le, self.id_consult])
             cursorU.execute("UPDATE patients SET important=%s, ATCD_perso=%s, ATCD_fam=%s WHERE id=%s",
                             [self.importantVar.get(1.0, tk.END).strip(), self.ATCD_persoVar.get(1.0, tk.END).strip(),
                                 self.ATCD_famVar.get(1.0, tk.END).strip(), self.id_patient])
@@ -812,6 +810,7 @@ class Consultation(bp_Dialog.Dialog):
                 MC = EG = exam_pclin = exam_phys = traitement = APT_thorax = APT_abdomen = APT_tete = APT_MS = APT_MI = APT_system = A_osteo = divers = paye = prix_cts = majoration_cts = paye_par = paye_le = None
                 MC_accident = False
                 title = windows_title.new_consultation % (sex, nom)
+            self.paye_le = paye_le
             if therapeute is not None:
                 therapeute = therapeute.strip()  # Sanity guard against old data
         except:
