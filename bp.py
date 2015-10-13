@@ -383,7 +383,7 @@ class Patient(bp_Dialog.Dialog):
         else:
             key = 'naissance_le'
             fg = 'red'
-            date_naiss = ""
+            date_naiss = "JJ.MM.AAAA"
         self.date_naissVar = EntryWidget(master, key=key, row=3, column=0, fg=fg, value=date_naiss, readonly=self.readonly)
         self.date_ouvVar = EntryWidget(master, key='date_ouverture', row=3, column=2, value=date_ouv.strftime(DATE_FMT), readonly=self.readonly)
 
