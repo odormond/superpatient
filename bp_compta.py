@@ -223,7 +223,7 @@ class Application(tk.Tk):
         win.title("Date")
         win.transient(self)
         date = parse_date(var.get())
-        ttkcal = ttkcalendar.Calendar(win, locale="fr_CH", year=date.year, month=date.month)
+        ttkcal = ttkcalendar.Calendar(win, locale="fr_CH.UTF-8", year=date.year, month=date.month)
         ttkcal.pack(expand=1, fill='both')
         win.update()
         win.wait_window()
