@@ -130,7 +130,7 @@ class Application(tk.Tk):
         self.etat = OptionWidget(self, 'etat_payement', 2, 0, bp_custo.ETAT_PAYEMENT, value='Tous')
         self.therapeute.trace('w', self.update_list)
         self.paye_par.trace('w', self.update_list)
-        w_date_du.bind('<KeyRelease-Return>', self.update_list)
+        w_date_du.bind('<KeyRelease-Return>', self.date_du_changed)
         w_date_au.bind('<KeyRelease-Return>', self.update_list)
         self.etat.trace('w', self.update_list)
         tk.Button(self, text="📅", command=lambda:self.popup_calendar(self.date_du, w_date_du), borderwidth=0, relief=tk.FLAT).grid(row=0, column=4)
@@ -155,6 +155,10 @@ class Application(tk.Tk):
         self.grid_rowconfigure(4, weight=2)
         self.update_list()
 
+    def date_du_changed(self, *args):
+        self.date_au.set(self.date_du.get().strip())
+        self.update_list()
+
     def update_list(self, *args):
         therapeute = self.therapeute.get()
         paye_par = self.paye_par.get()
@@ -173,10 +177,8 @@ class Application(tk.Tk):
             conditions.append('date_consult >= %s')
             args.append(date_du)
         if date_au:
-            if date_au == date_du:
-                date_au = date_du + datetime.timedelta(days=1)
             conditions.append('date_consult < %s')
-            args.append(date_au)
+            args.append(date_au + datetime.timedelta(days=1))
         if etat == 'Comptabilisé':
             conditions.append('paye_le IS NOT NULL')
         elif etat == 'Non-comptabilisé':
@@ -229,6 +231,9 @@ class Application(tk.Tk):
         win.wait_window()
         if ttkcal.selection:
             var.set(ttkcal.selection.strftime("%Y-%m-%d"))
+            if var == self.date_du:
+                self.date_au.set(self.date_du.get())
+            self.update_list()
 
 
 app = Application()
