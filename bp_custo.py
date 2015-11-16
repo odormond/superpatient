@@ -171,7 +171,6 @@ class LabelsText(Config):
     maladie = u"Maladie"
     accident = u"Accident"
     # Divers
-    ttes_cons = u"Toutes les consultations du patient"
     suppr_def_1 = u"Supprimer définitivement"
     suppr_def_2 = u", né(e) le "
     suppr_def_3 = u"ainsi que toutes ses consultations ?"
@@ -302,6 +301,7 @@ class FieldsWidth(Config):
     majorations = 40
     tarifs = 40
     consultations = 100
+    ttes_cons = 100
 
 
 fields_width = FieldsWidth()

@@ -559,7 +559,7 @@ class ListeConsultations(bp_Dialog.Dialog):
             cursorS.execute("""SELECT sex, nom, prenom, date_naiss, ATCD_perso, ATCD_fam, important FROM patients WHERE id = %s""", [self.id_patient])
             sex, nom, prenom, date_naiss, ATCD_perso, ATCD_fam, Important = cursorS.fetchone()
             cursorS.execute("""SELECT id_consult, date_consult, MC, MC_accident, EG, APT_thorax, APT_abdomen, APT_tete, APT_MS,
-                                      APT_MI, APT_system, A_osteo, exam_phys, traitement, divers, exam_pclin, paye, therapeute
+                                      APT_MI, APT_system, A_osteo, exam_phys, traitement, divers, exam_pclin, paye, therapeute, paye_le
                                  FROM consultations
                                 WHERE id=%s
                              ORDER BY date_consult DESC""",
@@ -570,6 +570,7 @@ class ListeConsultations(bp_Dialog.Dialog):
             tkMessageBox.showwarning(windows_title.db_error, errors_text.db_show)
             return
         self.toutes.tag_config("date", foreground="red", font=("Helvetica", 15, "bold"))
+        self.toutes.tag_config("non_paye", foreground="darkred", font=("Helvetica", 15, "bold"))
         self.toutes.tag_config("titre", foreground="blue", font=("Helvetica", 15))
         self.toutes.tag_config("personne", foreground="black", font=("Helvetica", 15, "bold"))
         self.toutes.tag_config("important", foreground="darkblue", font=("Helvetica", 15, "bold"))
@@ -580,8 +581,10 @@ class ListeConsultations(bp_Dialog.Dialog):
         self.toutes.insert(tk.END, ATCD_fam+u'\n')
         self.toutes.insert(tk.END, labels_text.important+u'\n', "important")
         self.toutes.insert(tk.END, Important+u'\n')
-        for id_consult, date_consult, MC, MC_accident, EG, APT_thorax, APT_abdomen, APT_tete, APT_MS, APT_MI, APT_system, A_osteo, exam_phys, traitement, divers, exam_pclin, paye, therapeute in cursorS:
+        for id_consult, date_consult, MC, MC_accident, EG, APT_thorax, APT_abdomen, APT_tete, APT_MS, APT_MI, APT_system, A_osteo, exam_phys, traitement, divers, exam_pclin, paye, therapeute, paye_le in cursorS:
             self.toutes.insert(tk.END, u'\n********** '+labels_text.date_consult+date_consult.strftime(DATE_FMT)+u' **********'+u'\n', "date")
+            if paye_le is None:
+                self.toutes.insert(tk.END, u'!!!!! Non-payé !!!!!\n', "non_paye")
             if EG.strip():
                 self.toutes.insert(tk.END, labels_text.eg+u'\n', "titre")
                 self.toutes.insert(tk.END, EG+u'\n')
@@ -927,7 +930,7 @@ class GererConsultations(bp_Dialog.Dialog):
 
     def affiche_toutes(self):
         try:
-            cursorS.execute("""SELECT id_consult, date_consult, MC
+            cursorS.execute("""SELECT id_consult, date_consult, MC, paye_le
                                  FROM consultations
                                 WHERE id=%s
                              ORDER BY date_consult DESC""",
@@ -937,8 +940,10 @@ class GererConsultations(bp_Dialog.Dialog):
             tkMessageBox.showwarning(windows_title.db_error, errors_text.db_show)
         self.results = []
         self.select_consult.delete(0, tk.END)
-        for id_consult, date_consult, MC in cursorS:
+        for id_consult, date_consult, MC, paye_le in cursorS:
             self.select_consult.insert(tk.END, date_consult.strftime(DATE_FMT)+u' '+MC)
+            if paye_le is None:
+                self.select_consult.itemconfig(tk.END, fg="darkred")
             self.results.append(id_consult)
 
     def affiche(self):
