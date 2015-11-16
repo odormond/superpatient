@@ -23,9 +23,12 @@
 
 import os
 import sys
+import pwd
 import mailcap
 import datetime
 import traceback
+
+LOGIN = pwd.getpwuid(os.geteuid())[0]
 
 sys.path.insert(0, os.path.dirname(__file__))
 
@@ -346,8 +349,12 @@ class Patient(bp_Dialog.Dialog):
         date_ouv = datetime.date.today()
 
         try:
-            cursorS.execute("""SELECT therapeute FROM therapeutes""")
-            therapeutes = [t for t, in cursorS]
+            cursorS.execute("""SELECT therapeute, login FROM therapeutes""")
+            therapeutes = []
+            for t, login in cursorS:
+                therapeutes.append(t)
+                if login == LOGIN:
+                    therapeute = t
         except:
             traceback.print_exc()
             tkMessageBox.showwarning(windows_title.db_error, errors_text.db_read)
@@ -788,13 +795,17 @@ class Consultation(bp_Dialog.Dialog):
         # self.geometry("1024x900")
 
         try:
-            cursorS.execute("""SELECT therapeute FROM therapeutes ORDER BY therapeute""")
-            therapeutes = [u''] + [t for t, in cursorS]
             cursorS.execute("""SELECT sex, nom, prenom, date_naiss, important, ATCD_perso, ATCD_fam, therapeute
                                  FROM patients
                                 WHERE id=%s""",
                             [self.id_patient])
             sex, nom, prenom, date_naiss, important, ATCD_perso, ATCD_fam, therapeute = cursorS.fetchone()
+            cursorS.execute("""SELECT therapeute, login FROM therapeutes ORDER BY therapeute""")
+            therapeutes = [u'']
+            for t, login in cursorS:
+                therapeutes.append(t)
+                if login == LOGIN:
+                    therapeute = t
             if self.id_consult:
                 cursorS.execute("""SELECT date_consult, MC, MC_accident, EG, exam_pclin, exam_phys, traitement, APT_thorax, APT_abdomen,
                                         APT_tete, APT_MS, APT_MI, APT_system, A_osteo, divers, paye, therapeute, prix_cts, majoration_cts, paye_par, paye_le
@@ -1195,17 +1206,19 @@ class GererCollegues(bp_Dialog.Dialog):
 
     def populate(self):
         self.listbox.delete(0, tk.END)
-        t_width = 0
-        for therapeute, entete in self.collegues:
+        t_width = l_width = 0
+        for therapeute, login, entete in self.collegues:
             t_width = max(t_width, len(therapeute))
-        for therapeute, entete in self.collegues:
-            self.listbox.insert(tk.END, u"%*s    %s" % (-t_width, therapeute, entete))
+            l_width = max(l_width, len(login))
+        for therapeute, login, entete in self.collegues:
+            self.listbox.insert(tk.END, u"%*s    %*s    %s" % (-t_width, therapeute, -l_width, login, entete))
         self.listbox.selection_clear(0, tk.END)
 
     def select_collegue(self, event):
         indexes = self.listbox.curselection()
         self.entete.delete('1.0', tk.END)
         self.therapeute.set(u"")
+        self.login.set(u"")
         if indexes:
             index = indexes[0]
             if index == self.index:
@@ -1215,28 +1228,28 @@ class GererCollegues(bp_Dialog.Dialog):
                 return
             self.index = index
             self.update.config(text=buttons_text.change)
-            therapeute, entete = self.collegues[index]
+            therapeute, login, entete = self.collegues[index]
             self.therapeute.set(therapeute)
+            self.login.set(login)
             self.entete.insert(tk.END, entete)
         else:
             self.index = None
             self.update.config(text=buttons_text.add)
 
     def update_collegue(self):
-        indexes = self.listbox.curselection()
-        update = bool(indexes)
         therapeute = self.therapeute.get().strip()
+        login = self.login.get().strip()
         entete = self.entete.get('1.0', tk.END).strip()
         try:
-            if update:
-                key, _ = self.collegues[indexes[0]]
-                cursorU.execute("""UPDATE therapeutes SET therapeute = %s, entete = %s WHERE therapeute = %s""",
-                                [therapeute, entete, key])
-                self.collegues[indexes[0]] = (therapeute, entete)
+            if self.index:
+                key, _, _ = self.collegues[self.index]
+                cursorU.execute("""UPDATE therapeutes SET therapeute = %s, login = %s, entete = %s WHERE therapeute = %s""",
+                                [therapeute, login, entete, key])
+                self.collegues[self.index] = (therapeute, login, entete)
             else:
-                cursorI.execute("""INSERT INTO therapeutes (therapeute, entete) VALUES (%s, %s)""",
-                                [therapeute, entete])
-                self.collegues.append((therapeute, entete))
+                cursorI.execute("""INSERT INTO therapeutes (therapeute, login, entete) VALUES (%s, %s, %s)""",
+                                [therapeute, login, entete])
+                self.collegues.append((therapeute, login, entete))
         except:
             traceback.print_exc()
             tkMessageBox.showwarning(windows_title.db_error, errors_text.db_update)
@@ -1244,12 +1257,11 @@ class GererCollegues(bp_Dialog.Dialog):
         self.select_collegue('ignore')
 
     def delete_collegue(self):
-        indexes = self.listbox.curselection()
-        if indexes:
+        if self.index:
             try:
-                key, _ = self.collegues[indexes[0]]
+                key, _, _ = self.collegues[self.index]
                 cursorU.execute("""DELETE FROM therapeutes WHERE therapeute = %s""", [key])
-                del self.collegues[indexes[0]]
+                del self.collegues[self.index]
             except:
                 traceback.print_exc()
                 tkMessageBox.showwarning(windows_title.db_error, errors_text.db_delete)
@@ -1258,7 +1270,7 @@ class GererCollegues(bp_Dialog.Dialog):
 
     def body(self, master):
         try:
-            cursorS.execute("""SELECT therapeute, entete FROM therapeutes ORDER BY therapeute""")
+            cursorS.execute("""SELECT therapeute, login, entete FROM therapeutes ORDER BY therapeute""")
             self.collegues = list(cursorS)
         except:
             traceback.print_exc()
@@ -1266,17 +1278,18 @@ class GererCollegues(bp_Dialog.Dialog):
             return
 
         self.title(windows_title.manage_colleagues)
-        self.listbox = ListboxWidget(master, key='collabos', row=0, column=0, columnspan=3)
+        self.listbox = ListboxWidget(master, key='collabos', row=0, column=0, columnspan=4)
         self.listbox.config(selectmode=tk.SINGLE)
         self.listbox.bind('<<ListboxSelect>>', self.select_collegue)
         self.index = None
         self.populate()
         self.therapeute = EntryWidget(master, key='therapeute', row=2, column=0, side_by_side=False)
-        self.entete = TextWidget(master, key='entete', row=2, column=1, rowspan=2, side_by_side=False)
+        self.login = EntryWidget(master, key='login', row=2, column=1, side_by_side=False)
+        self.entete = TextWidget(master, key='entete', row=2, column=2, rowspan=2, side_by_side=False)
         self.update = tk.Button(master, text=buttons_text.add, command=self.update_collegue)
-        self.update.grid(row=3, column=2)
+        self.update.grid(row=3, column=3)
         self.delete = tk.Button(master, text=buttons_text.delete, command=self.delete_collegue)
-        self.delete.grid(row=4, column=2)
+        self.delete.grid(row=4, column=3)
 
         master.grid_rowconfigure(1, weight=2)
         master.grid_rowconfigure(3, weight=1)

@@ -127,6 +127,7 @@ class LabelsText(Config):
     id = u"ID patient"
     sexe = u"Sexe"
     therapeute = u"Thérapeute"
+    login = u"Login"
     nom = u"Nom"
     prenom = u"Prénom"
     naissance_le = u"Naissance le"
@@ -230,7 +231,7 @@ labels_text = LabelsText()
 
 
 class LabelsFont(Config):
-    id = sexe = therapeute = nom = prenom = naissance_le = naissance = LABEL_BOLD
+    id = sexe = therapeute = login = nom = prenom = naissance_le = naissance = LABEL_BOLD
     date_ouverture = tel_fix = medecin = portable = tel_prof = mail = LABEL_BOLD
     adr_priv = medecinS = ass_comp = profes = etat = envoye = remarques = LABEL_BOLD
     mc = eg = expc = atcdp = atcdf = thorax = abdomen = tete = ms = mi = LABEL_BOLD
@@ -243,7 +244,7 @@ labels_font = LabelsFont()
 
 
 class FieldsFont(Config):
-    id = sexe = therapeute = nom = prenom = naissance_le = naissance = ENTRY_DEFAULT
+    id = sexe = therapeute = login = nom = prenom = naissance_le = naissance = ENTRY_DEFAULT
     date_ouverture = tel_fix = portable = tel_prof = mail = ENTRY_DEFAULT
     ass_comp = profes = etat = envoye = seance = total = ENTRY_DEFAULT
     paye_par = paye_le = date_du = date_au = etat_payement = ENTRY_DEFAULT
