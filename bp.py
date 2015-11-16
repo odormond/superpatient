@@ -559,7 +559,7 @@ class ListeConsultations(bp_Dialog.Dialog):
             cursorS.execute("""SELECT sex, nom, prenom, date_naiss, ATCD_perso, ATCD_fam, important FROM patients WHERE id = %s""", [self.id_patient])
             sex, nom, prenom, date_naiss, ATCD_perso, ATCD_fam, Important = cursorS.fetchone()
             cursorS.execute("""SELECT id_consult, date_consult, MC, MC_accident, EG, APT_thorax, APT_abdomen, APT_tete, APT_MS,
-                                      APT_MI, APT_system, A_osteo, exam_phys, traitement, divers, exam_pclin, paye
+                                      APT_MI, APT_system, A_osteo, exam_phys, traitement, divers, exam_pclin, paye, therapeute
                                  FROM consultations
                                 WHERE id=%s
                              ORDER BY date_consult DESC""",
@@ -580,11 +580,13 @@ class ListeConsultations(bp_Dialog.Dialog):
         self.toutes.insert(tk.END, ATCD_fam+u'\n')
         self.toutes.insert(tk.END, labels_text.important+u'\n', "important")
         self.toutes.insert(tk.END, Important+u'\n')
-        for id_consult, date_consult, MC, MC_accident, EG, APT_thorax, APT_abdomen, APT_tete, APT_MS, APT_MI, APT_system, A_osteo, exam_phys, traitement, divers, exam_pclin, paye in cursorS:
+        for id_consult, date_consult, MC, MC_accident, EG, APT_thorax, APT_abdomen, APT_tete, APT_MS, APT_MI, APT_system, A_osteo, exam_phys, traitement, divers, exam_pclin, paye, therapeute in cursorS:
             self.toutes.insert(tk.END, u'\n********** '+labels_text.date_consult+date_consult.strftime(DATE_FMT)+u' **********'+u'\n', "date")
             if EG.strip():
                 self.toutes.insert(tk.END, labels_text.eg+u'\n', "titre")
                 self.toutes.insert(tk.END, EG+u'\n')
+            self.toutes.insert(tk.END, labels_text.therapeute+u'\n', "titre")
+            self.toutes.insert(tk.END, therapeute+u'\n')
             self.toutes.insert(tk.END, labels_text.mc+u'\n', "titre")
             if MC_accident:
                 self.toutes.insert(tk.END, labels_text.accident+u'\n')
