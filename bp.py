@@ -790,7 +790,10 @@ class Consultation(bp_Dialog.Dialog):
             identite = [prenom, nom]
         adresse_patient = u'\n'.join([titre] + identite + [adresse_patient, "", date_naiss.strftime(DATE_FMT)])
         ts = datetime.datetime.now().strftime('%H')
-        filename = os.path.join(bp_custo.PDF_DIR, (u'%s_%s_%s_%s_%sh.pdf' % (nom, prenom, sex, date_ouvc, ts)).encode('UTF-8'))
+        filename = (u'%s_%s_%s_%s_%sh.pdf' % (nom, prenom, sex, date_ouvc, ts)).encode('UTF-8')
+        for char in '\'"/`!$[]{}':
+            filename = filename.replace(char, '-')
+        filename = os.path.join(bp_custo.PDF_DIR, filename)
         facture(filename, adresse_therapeute, adresse_patient, description_prix, self.MC_accidentVar.get(), prix_cts, description_majoration, majoration_cts, date_ouvc, with_bv=(paye_par == u'BVR'))
         cmd, cap = mailcap.findmatch(mailcap.getcaps(), 'application/pdf', 'view', filename)
         os.system(cmd)
