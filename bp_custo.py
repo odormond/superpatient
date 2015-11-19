@@ -302,6 +302,26 @@ class FieldsWidth(Config):
     tarifs = 40
     consultations = 100
     ttes_cons = 100
+    important = 60
+    medecin = 60
+    adr_priv = 60
+    medecinS = 60
+    remarques = 60
+    eg = 60
+    expc = 60
+    atcdp = 60
+    atcdf = 60
+    thorax = 60
+    abdomen = 60
+    exph = 60
+    tete = 60
+    ms = 60
+    mi = 60
+    gen = 60
+    a_osteo = 60
+    ttt = 60
+    paye = 60
+    entete = 60
 
 
 fields_width = FieldsWidth()
