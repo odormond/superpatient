@@ -35,6 +35,11 @@ BV_REF_X = 61*mm
 BV_REF_Y = BV_HEIGHT
 
 
+def ParagraphOrSpacer(text, style):
+    if text.strip():
+        return Paragraph(text, style)
+    return Spacer(0, FONT_SIZE)
+
 def make_styles(font_size):
     DEFAULT_STYLE = ParagraphStyle('default', fontName='EuclidBPBold', fontSize=font_size, leading=font_size*1.2)
     COPIE_STYLE = ParagraphStyle('default', fontName='EuclidBPBold', fontSize=font_size+2)
@@ -177,8 +182,10 @@ def facture(filename, therapeute, patient, duree, accident, prix_cts, descriptio
         data += [[u"Raison : maladie", None, ]]
     if not with_bv:
         data[-1].append(u"payé")
+    therapeute = [ParagraphOrSpacer(line, DEFAULT_STYLE) for line in therapeute.splitlines()]
+    patient = [ParagraphOrSpacer(line, DEFAULT_STYLE) for line in patient.splitlines()]
     fact = [Spacer(0, LOGO_HEIGHT),
-            Table([[Preformatted(therapeute, DEFAULT_STYLE), Preformatted(patient, DEFAULT_STYLE)]],
+            Table([[therapeute, patient]],
                   colWidths=[doc.width*2/3, doc.width/3],
                   style=[('ALIGN', (0, 0), (0, 0), 'LEFT'), ('ALIGN', (1, 0), (1, 0), 'RIGHT')]),
             Spacer(0, MARGIN),
