@@ -588,8 +588,9 @@ class ListeConsultations(bp_Dialog.Dialog):
             if EG.strip():
                 self.toutes.insert(tk.END, labels_text.eg+u'\n', "titre")
                 self.toutes.insert(tk.END, EG+u'\n')
-            self.toutes.insert(tk.END, labels_text.therapeute+u'\n', "titre")
-            self.toutes.insert(tk.END, therapeute+u'\n')
+            if therapeute:
+                self.toutes.insert(tk.END, labels_text.therapeute+u'\n', "titre")
+                self.toutes.insert(tk.END, therapeute+u'\n')
             self.toutes.insert(tk.END, labels_text.mc+u'\n', "titre")
             if MC_accident:
                 self.toutes.insert(tk.END, labels_text.accident+u'\n')
