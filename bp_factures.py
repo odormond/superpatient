@@ -4,7 +4,7 @@
 import os
 import datetime
 from math import sqrt
-from reportlab.platypus import BaseDocTemplate, PageTemplate, Frame, Paragraph, Preformatted, Table, Spacer, PageBreak, FrameBreak
+from reportlab.platypus import BaseDocTemplate, PageTemplate, Frame, Paragraph, Table, Spacer, PageBreak, FrameBreak
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm, cm, inch
@@ -13,6 +13,7 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 
 from bp_custo import CCP, DATE_FMT
+from bp_bvr import checksum
 
 PRINT_BV_BG = True
 
@@ -56,7 +57,7 @@ def make_styles(font_size):
 
 
 def fixed(canvas, doc):
-    if not doc.with_bv:
+    if not doc.patient_bv:
         canvas.translate(0, doc.pagesize[1])
         canvas.rotate(-90)
         canvas.scale(1/SQRT2, 1/SQRT2)
@@ -70,19 +71,27 @@ def fixed(canvas, doc):
     canvas.drawImage(os.path.join(BASE_DIR, "logo_pog.png"), doc.leftMargin, doc.pagesize[1]-doc.topMargin-LOGO_HEIGHT, LOGO_WIDTH, LOGO_HEIGHT)
     canvas.setFont('EuclidBPBold', font_size)
     canvas.drawRightString(doc.pagesize[0]-doc.rightMargin, doc.pagesize[1]-doc.topMargin-font_size, u"Lausanne, le "+datetime.date.today().strftime(u'%d.%m.%y'))
-    if doc.with_bv and doc.page == 1:
+    if doc.patient_bv and doc.page == 1:
         if PRINT_BV_BG:
-            canvas.drawImage(os.path.join(BASE_DIR, "441_02_ES_LAC_105_quer_CMYK.png"), 0, 0, BV_WIDTH, BV_HEIGHT)
+            if doc.bv_ref:
+                canvas.drawImage(os.path.join(BASE_DIR, "442_05_LAC_609_quer_CMYK.png"), 0, 0, BV_WIDTH, BV_HEIGHT)
+            else:
+                canvas.drawImage(os.path.join(BASE_DIR, "441_02_ES_LAC_105_quer_CMYK.png"), 0, 0, BV_WIDTH, BV_HEIGHT)
         canvas.saveState()
         # CCP
-        canvas.setFont('OCRB', 10)
+        canvas.setFont('OCRB', 12)
         canvas.drawString(12*BV_COLUMN, BV_REF_Y - 11*BV_LINE, CCP)
         canvas.drawString(BV_REF_X + 12*BV_COLUMN, BV_REF_Y - 11*BV_LINE, CCP)
         # Lignes de codage
         v, x, c = CCP.split('-')
         codage = u''.join((v, u'0'*(6-len(x)), x, c, u'>'))
-        canvas.drawString(BV_REF_X + 46*BV_COLUMN, BV_REF_Y - 21*BV_LINE, codage)
-        canvas.drawString(BV_REF_X + 46*BV_COLUMN, BV_REF_Y - 23*BV_LINE, codage)
+        if doc.bv_ref:
+            prix = u'01%010d' % (doc.prix * 100)
+            codage = u'%s%d>%026d%d+ %s' % (prix, checksum(prix), doc.bv_ref, checksum(doc.bv_ref), codage)
+            canvas.drawString(BV_REF_X + 3*BV_COLUMN, BV_REF_Y - 21*BV_LINE, codage)
+        else:
+            canvas.drawString(BV_REF_X + 46*BV_COLUMN, BV_REF_Y - 21*BV_LINE, codage)
+            canvas.drawString(BV_REF_X + 46*BV_COLUMN, BV_REF_Y - 23*BV_LINE, codage)
         canvas.setFont('EuclidBPBold', 10-1)
         # Versé pour
         text_obj = canvas.beginText()
@@ -96,22 +105,39 @@ def fixed(canvas, doc):
         text_obj.textLines(doc.therapeute)
         canvas.drawText(text_obj)
         # Motif
-        canvas.drawString(BV_REF_X + 25*BV_COLUMN, BV_REF_Y - 4*BV_LINE, u"Consultation du "+unicode(doc.date.strftime(DATE_FMT)))
+        if not doc.bv_ref:
+            canvas.drawString(BV_REF_X + 25*BV_COLUMN, BV_REF_Y - 4*BV_LINE, u"Consultation du "+unicode(doc.date.strftime(DATE_FMT)))
         # Versé par
+        if doc.bv_ref:
+            ref = list(u'%026d%d' % (doc.bv_ref, checksum(doc.bv_ref)))
+            for i in (2, 8, 14, 20, 26):
+                ref.insert(i, u' ')
+            ref = u''.join(ref)
+            canvas.setFont('OCRB', 8)
+            text_obj = canvas.beginText()
+            text_obj.setTextOrigin(BV_COLUMN, BV_REF_Y - 15*BV_LINE)
+            text_obj.textLines(ref)
+            canvas.drawText(text_obj)
+            canvas.setFont('OCRB', 12)
+            text_obj = canvas.beginText()
+            text_obj.setTextOrigin(BV_REF_X + 25*BV_COLUMN, BV_REF_Y - 9*BV_LINE)
+            text_obj.textLines(ref)
+            canvas.drawText(text_obj)
+            canvas.setFont('EuclidBPBold', 10-1)
         text_obj = canvas.beginText()
         text_obj.setTextOrigin(BV_COLUMN, BV_REF_Y - 16*BV_LINE)
         text_obj.setLeading(1.5*BV_LINE)
-        text_obj.textLines(doc.patient)
+        text_obj.textLines(doc.patient_bv)
         canvas.drawText(text_obj)
         text_obj = canvas.beginText()
         text_obj.setTextOrigin(BV_REF_X + 25*BV_COLUMN, BV_REF_Y - 13*BV_LINE)
         text_obj.setLeading(1.5*BV_LINE)
-        text_obj.textLines(doc.patient)
+        text_obj.textLines(doc.patient_bv)
         canvas.drawText(text_obj)
         # Le montant
-        offset = 1.4
-        spacing = 1.16
-        canvas.setFont('OCRB', 10)
+        offset = 1.3 # 1.4
+        spacing = 1.0
+        canvas.setFont('OCRB', 12)
         montant = '%11.2f' % doc.prix
         text_obj = canvas.beginText()
         text_obj.setTextOrigin(offset*BV_COLUMN, BV_REF_Y - 13*BV_LINE)
@@ -146,15 +172,16 @@ def fixed(canvas, doc):
     canvas.make_bold = make_bold
 
 
-def facture(filename, therapeute, patient, duree, accident, prix_cts, description_majoration, majoration_cts, date, with_bv=False):
+def facture(filename, therapeute, patient, duree, accident, prix_cts, description_majoration, majoration_cts, date, patient_bv=None, bv_ref=None):
     doc = BaseDocTemplate(filename, pagesize=A4, leftMargin=MARGIN, rightMargin=MARGIN, topMargin=MARGIN, bottomMargin=MARGIN)
-    doc.with_bv = with_bv
     doc.prix = (prix_cts + majoration_cts) / 100.
     doc.therapeute = therapeute
     doc.patient = patient
+    doc.patient_bv = patient_bv
+    doc.bv_ref = bv_ref
     doc.date = date
     doc.duree = duree
-    if with_bv:
+    if patient_bv:
         templates = [PageTemplate(id='bv', frames=[Frame(doc.leftMargin, doc.rightMargin, doc.width, doc.height)], onPage=fixed),
                      PageTemplate(id='copie', frames=[Frame(doc.leftMargin, doc.rightMargin, doc.width, doc.height)], onPage=fixed),
                      ]
@@ -180,7 +207,7 @@ def facture(filename, therapeute, patient, duree, accident, prix_cts, descriptio
         data += [[u"Raison : accident", None, ]]
     else:
         data += [[u"Raison : maladie", None, ]]
-    if not with_bv:
+    if not patient_bv:
         data[-1].append(u"payé")
     therapeute = [ParagraphOrSpacer(line, DEFAULT_STYLE) for line in therapeute.splitlines()]
     patient = [ParagraphOrSpacer(line, DEFAULT_STYLE) for line in patient.splitlines()]
@@ -199,7 +226,7 @@ def facture(filename, therapeute, patient, duree, accident, prix_cts, descriptio
             ]
     recu = fact[:]
     recu[3] = Paragraph(u'<onDraw name=make_bold label="COPIE"/>', COPIE_STYLE)
-    if with_bv:
+    if patient_bv:
         story = fact + [PageBreak()] + recu
     else:
         story = fact + [FrameBreak()] + recu
@@ -209,13 +236,16 @@ def facture(filename, therapeute, patient, duree, accident, prix_cts, descriptio
 if __name__ == '__main__':
     filename = os.tempnam()+'.pdf'
     therapeute = u'Tibor Csernay\nDipl. CDS-GDK\n\nAv. de la gare 5\n1003 Lausanne\n021 510 50 50\n021 510 50 49 (N° direct)\n\nRCC U905461'
-    patient = u'Jean Dupont\nRoute de Quelque Part\n1234 Perdu'
+    patient = u'Monsieur\nJean Dupont\nRoute de Quelque Part\n1234 Perdu\n\n12.03.1974'
+    bv_ref = 1234567890
+    patient_bv = u'Jean Dupont\nRoute de Quelque Part\n1234 Perdu'
     duree = u'entre 21 et 30 minutes'
-    prix_cts = 10000
+    prix_cts = 1234567890
     majoration_cts = 2000
+    description_majoration = u"Supplément test"
     accident = True
     date = datetime.date.today()
-    facture(filename, therapeute, patient, duree, accident, prix_cts, majoration_cts, date, with_bv=True)
+    facture(filename, therapeute, patient, duree, accident, prix_cts, description_majoration, majoration_cts, date, patient_bv, bv_ref)
 
     import mailcap
     import time
