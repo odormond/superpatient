@@ -133,26 +133,31 @@ class Application(tk.Tk):
         w_date_du.bind('<KeyRelease-Return>', self.date_du_changed)
         w_date_au.bind('<KeyRelease-Return>', self.update_list)
         self.etat.trace('w', self.update_list)
-        tk.Button(self, text="📅", command=lambda:self.popup_calendar(self.date_du, w_date_du), borderwidth=0, relief=tk.FLAT).grid(row=0, column=4)
-        tk.Button(self, text="📅", command=lambda:self.popup_calendar(self.date_au, w_date_au), borderwidth=0, relief=tk.FLAT).grid(row=1, column=4)
+        tk.Button(self, text="📅", command=lambda: self.popup_calendar(self.date_du, w_date_du), borderwidth=0, relief=tk.FLAT).grid(row=0, column=4)
+        tk.Button(self, text="📅", command=lambda: self.popup_calendar(self.date_au, w_date_au), borderwidth=0, relief=tk.FLAT).grid(row=1, column=4)
+        self.nom, widget = EntryWidget(self, 'nom', 3, 0, want_widget=True)
+        widget.bind('<Return>', self.update_list)
+        self.prenom, widget = EntryWidget(self, 'prenom', 3, 2, want_widget=True)
+        widget.bind('<Return>', self.update_list)
+        tk.Button(self, text="🔎", command=self.update_list, borderwidth=0, relief=tk.FLAT).grid(row=3, column=4)
 
         # Middle block: list display
         tk.Label(self, font=bp_custo.LISTBOX_DEFAULT,
-                 text="       Nom                            Prénom                    Consultation du   Prix Payé le").grid(row=3, column=0, columnspan=4, sticky=tk.W)
+                 text="       Nom                            Prénom                    Consultation du   Prix Payé le").grid(row=4, column=0, columnspan=4, sticky=tk.W)
         self.list_format = "%-6s %-30s %-30s %s %6.2f %s"
-        self.list = ListboxWidget(self, 'consultations', 4, 0, columnspan=5)
+        self.list = ListboxWidget(self, 'consultations', 5, 0, columnspan=5)
         self.list.config(selectmode=tk.MULTIPLE)
-        self.total = EntryWidget(self, 'total', 5, 2, readonly=True)
+        self.total = EntryWidget(self, 'total', 6, 2, readonly=True)
 
         # Bottom block: available action on selected items
-        self.paye_le = EntryWidget(self, 'paye_le', 6, 0, value=today)
-        tk.Button(self, text=buttons_text.mark_paye, command=self.mark_paid).grid(row=6, column=2, sticky=tk.W)
+        self.paye_le = EntryWidget(self, 'paye_le', 7, 0, value=today)
+        tk.Button(self, text=buttons_text.mark_paye, command=self.mark_paid).grid(row=7, column=2, sticky=tk.W)
 
         self.grid_columnconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
         self.grid_columnconfigure(2, weight=1)
         self.grid_columnconfigure(3, weight=1)
-        self.grid_rowconfigure(4, weight=2)
+        self.grid_rowconfigure(5, weight=2)
         self.update_list()
 
     def date_du_changed(self, *args):
@@ -165,6 +170,8 @@ class Application(tk.Tk):
         date_du = parse_date(self.date_du.get().strip())
         date_au = parse_date(self.date_au.get().strip())
         etat = self.etat.get().encode('UTF-8')
+        prenom = self.prenom.get().strip()
+        nom = self.nom.get().strip()
         conditions = ['TRUE']
         args = []
         if therapeute != 'Tous':
@@ -183,6 +190,12 @@ class Application(tk.Tk):
             conditions.append('paye_le IS NOT NULL')
         elif etat == 'Non-comptabilisé':
             conditions.append('paye_le IS NULL')
+        if prenom:
+            conditions.append('prenom LIKE %s')
+            args.append(prenom.replace('*', '%'))
+        if nom:
+            conditions.append('nom LIKE %s')
+            args.append(nom.replace('*', '%'))
         self.list.delete(0, tk.END)
         self.list.selection_clear(0, tk.END)
         self.total.set('')
