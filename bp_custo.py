@@ -51,6 +51,7 @@ class WindowsTitle(Config):
     manage_majorations = u"Gérer les majorations"
     manage_tarifs = u"Gérer les tarifs"
     compta = u"Gestion comptable"
+    really_cancel = u"Confirmation d'annulation"
 
 
 windows_title = WindowsTitle()
@@ -224,6 +225,8 @@ Av. de la gare 5
 1003 Lausanne
 www.permanence-lausanne.ch
 021 510 50 50"""
+    really_cancel = u"""Voulez-vous vraiment annuler ?
+Les données de cette consultation ne seront pas enregistrées."""
 
 
 labels_text = LabelsText()

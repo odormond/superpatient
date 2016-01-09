@@ -660,15 +660,19 @@ class Consultation(bp_Dialog.Dialog):
             tk.Button(box, text=buttons_text.ok, command=self.cancel).pack(side=tk.LEFT)
         else:
             tk.Button(box, text=buttons_text.save_close, command=self.modif).pack(side=tk.LEFT)  # Was B11
-            tk.Button(box, text=buttons_text.cancel, command=self.cancel).pack(side=tk.LEFT)
+            tk.Button(box, text=buttons_text.cancel, command=self.verify_cancel).pack(side=tk.LEFT)
         if self.id_consult is not None:
             tk.Button(box, text=buttons_text.reprint, command=self.generate_pdf).pack(side=tk.LEFT)
         cursorS.execute("SELECT count(*) FROM consultations WHERE id = %s", [self.id_patient])
         count, = cursorS.fetchone()
         if count > 0:
             tk.Button(box, text=u"Toutes les consultations", command=lambda: ListeConsultations(self.parent, self.id_patient)).pack(side=tk.LEFT)
-        self.bind("<Escape>", self.cancel)
+        self.bind("<Escape>", self.verify_cancel)
         box.pack()
+
+    def verify_cancel(self, *args):
+        if tkMessageBox.askyesno(windows_title.really_cancel, labels_text.really_cancel, default=tkMessageBox.NO):
+            self.cancel()
 
     def get_cost(self):
         description_prix, prix = self.prixVar.get().split(u' : ')
