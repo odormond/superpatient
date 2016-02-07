@@ -51,7 +51,7 @@ try:
     import bp_custo
     from bp_custo import buttons_text, menus_text, labels_text, labels_font
     from bp_custo import windows_title, errors_text, fields_font, fields_height
-    from bp_custo import DATE_FMT
+    from bp_custo import bvr, DATE_FMT
 except:
     tkMessageBox.showwarning(u"Missing file", u"bp_custo.py is missing")
     sys.exit()
@@ -726,7 +726,7 @@ class Consultation(bp_Dialog.Dialog):
                         cursorU.execute("UPDATE bvr_sequence SET counter = @counter := counter + 1")
                         cursorS.execute("SELECT prenom, nom, @counter FROM patients WHERE id = %s", [self.id_patient])
                         firstname, lastname, bvr_counter = cursorS.fetchone()
-                        bv_ref = u'%06d%010d%02d%02d%02d%04d' % (BVR_PREFIX, bvr_counter, alpha_to_num(firstname[0]), alpha_to_num(lastname[0]), date_ouvc.month, date_ouvc.year)
+                        bv_ref = u'%06d%010d%02d%02d%02d%04d' % (bvr.prefix, bvr_counter, alpha_to_num(firstname[0]), alpha_to_num(lastname[0]), date_ouvc.month, date_ouvc.year)
                         bv_ref = bv_ref + str(bvr_checksum(bv_ref))
                     else:
                         bv_ref = None

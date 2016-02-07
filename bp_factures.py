@@ -12,7 +12,7 @@ from reportlab.lib import colors
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 
-from bp_custo import CCP, DATE_FMT
+from bp_custo import bvr, DATE_FMT
 from bp_bvr import bvr_checksum
 
 PRINT_BV_BG = True
@@ -75,16 +75,16 @@ def fixed(canvas, doc):
     if doc.patient_bv and doc.page == 1:
         if PRINT_BV_BG:
             if doc.bv_ref:
-                canvas.drawImage(os.path.join(BASE_DIR, "442_05_LAC_609_quer_CMYK.png"), 0, 0, BV_WIDTH, BV_HEIGHT)
+                canvas.drawImage(os.path.join(BASE_DIR, "442_05_LAC_609_quer_Bank_CMYK.png"), 0, 0, BV_WIDTH, BV_HEIGHT)
             else:
                 canvas.drawImage(os.path.join(BASE_DIR, "441_02_ES_LAC_105_quer_CMYK.png"), 0, 0, BV_WIDTH, BV_HEIGHT)
         canvas.saveState()
         # CCP
         canvas.setFont('OCRB', 12)
-        canvas.drawString(12*BV_COLUMN, BV_REF_Y - 11*BV_LINE, CCP)
-        canvas.drawString(BV_REF_X + 12*BV_COLUMN, BV_REF_Y - 11*BV_LINE, CCP)
+        canvas.drawString(12*BV_COLUMN, BV_REF_Y - 11*BV_LINE, bvr.CCP)
+        canvas.drawString(BV_REF_X + 12*BV_COLUMN, BV_REF_Y - 11*BV_LINE, bvr.CCP)
         # Lignes de codage
-        v, x, c = CCP.split('-')
+        v, x, c = bvr.CCP.split('-')
         codage = u''.join((v, u'0'*(6-len(x)), x, c, u'>'))
         if doc.bv_ref:
             prix = u'01%010d' % (doc.prix * 100)
@@ -98,12 +98,12 @@ def fixed(canvas, doc):
         text_obj = canvas.beginText()
         text_obj.setTextOrigin(BV_COLUMN, BV_REF_Y - 3*BV_LINE)
         text_obj.setLeading(0.9*10)
-        text_obj.textLines(doc.therapeute)
+        text_obj.textLines(bvr.versement_pour+u'\n\n\n'+bvr.en_faveur_de)
         canvas.drawText(text_obj)
         text_obj = canvas.beginText()
         text_obj.setTextOrigin(BV_REF_X+BV_COLUMN, BV_REF_Y - 3*BV_LINE)
         text_obj.setLeading(0.9*10)
-        text_obj.textLines(doc.therapeute)
+        text_obj.textLines(bvr.versement_pour+u'\n\n\n'+bvr.en_faveur_de)
         canvas.drawText(text_obj)
         # Motif
         if not doc.bv_ref:

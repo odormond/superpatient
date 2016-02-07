@@ -17,8 +17,6 @@ ENTRY_DEFAULT = (DEFAULT_FONT_NAME, DEFAULT_ENTRY_SIZE)
 TEXT_DEFAULT = ENTRY_DEFAULT
 LISTBOX_DEFAULT = (FIXED_FONT_NAME, FIXED_FONT_SIZE)
 
-CCP = u'12-3456-7'
-BVR_PREFIX = 123456
 MOYEN_DE_PAYEMENT = [u'Cash', u'Carte', u'BVR', u'CdM']
 ETAT_PAYEMENT = [u'Tous', u'Comptabilisé', u'Non-comptabilisé']
 
@@ -26,6 +24,15 @@ ETAT_PAYEMENT = [u'Tous', u'Comptabilisé', u'Non-comptabilisé']
 class Config(object):
     def __getitem__(self, key):
         return getattr(self, key)
+
+
+class BVR(Config):
+    CCP = u'12-3456-7'
+    prefix = 123456
+    versement_pour = u"UBS SA\n1002 Lausanne"
+    en_faveur_de = u"Permanance ostéopathique de la Gare\nAv. de la gare 5\n1003 Lausanne"
+
+bvr = BVR()
 
 
 class WindowsTitle(Config):
