@@ -18,6 +18,7 @@ TEXT_DEFAULT = ENTRY_DEFAULT
 LISTBOX_DEFAULT = (FIXED_FONT_NAME, FIXED_FONT_SIZE)
 
 CCP = u'12-3456-7'
+BVR_PREFIX = 123456
 MOYEN_DE_PAYEMENT = [u'Cash', u'Carte', u'BVR', u'CdM']
 ETAT_PAYEMENT = [u'Tous', u'Comptabilisé', u'Non-comptabilisé']
 
@@ -118,6 +119,8 @@ class MenusText(Config):
     licence = u"Conditions d'utilisation"
     admin = u"Administration"
     help = u"Aide"
+    bvr = u"BVRs"
+    import_bvr = u"Importer les payements"
 
 
 menus_text = MenusText()

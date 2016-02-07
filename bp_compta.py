@@ -93,6 +93,59 @@ class licence(bp_Dialog.Dialog):
         tk.Label(master, text=labels_text.licence_description, font=("Helvetica", 13, 'bold')).grid(row=0, column=0, sticky=tk.W)
 
 
+class import_bvr(object):
+    def __init__(self, parent):
+        self.parent = parent
+        filename = tkFileDialog.askopenfilename(title=menus_text.import_bvr)
+        if not filename:
+            return
+        records = []
+        total_line = None
+        with open(filename) as f:
+            try:
+                line_no = 0
+                for line in f:
+                    line_no += 1
+                    transaction_type, line = line[:3], line[3:]
+                    bvr_client_no, line = line[:9], line[9:]
+                    ref_no, line = line[:27], line[27:]
+                    if transaction_type[0] in '01' and transaction_type[1] in '01' and transaction_type[2] in '258':
+                        amount_cts, line = int(line[:10]), line[10:]
+                        depot_ref, line = line[:10], line[10:]
+                        depot_date, line = line[:6], line[6:]
+                        processing_date, line = line[:6], line[6:]
+                        credit_date, line = line[:6], line[6:]
+                        microfilm_no, line = line[:9], line[9:]
+                        reject_code, line = line[:1], line[1:]
+                        zeros, line = line[:9], line[9:]
+                        postal_fee_cts, line = int(line[:4]), line[4:]
+                        records.append((transaction_type, bvr_client_no, ref_no, amount_cts, depot_ref, depot_date, processing_date, credit_date, microfilm_no, reject_code, postal_fee_cts))
+                    elif transaction_type in ('995', '999'):
+                        total_cts, line = int(line[:12]), line[12:]
+                        count, line = int(line[:12]), line[12:]
+                        date, line = line[:6], line[6:]
+                        postal_fees_cts, line = int(line[:9]), line[9:]
+                        hw_postal_fees_cts, line = int(line[:9]), line[9:]
+                        reserved, line = line[:13], line[13:]
+                        assert total_line is None, "Multiple total line found"
+                        total_line = (transaction_type, bvr_client_no, ref_no, total_cts, count, date, postal_fees_cts, hw_postal_fees_cts)
+                    assert line in ('', '\n'), "Garbage at end of line %d" % line_no
+                assert total_line is not None and len(records) == count, "Records count does not match total line indication"
+            except Exception, e:
+                print e
+                tkMessageBox.showerror("Fichier corrompu", "Une erreur s'est produite lors de la lecture du fichier de payement.\n%r" % args)
+                return
+        ignored = []
+        not_found = []
+        found = []
+        for transaction_type, bvr_client_no, ref_no, amount_cts, depot_ref, depot_date, processing_date, credit_date, microfilm_no, reject_code, postal_fee_cts in records:
+            if transaction_type[2] != 2:
+                ignored.append((transaction_type, bvr_client_no, ref_no, amount_cts, depot_ref, depot_date, processing_date, credit_date, microfilm_no, reject_code, postal_fee_cts))
+                continue
+
+
+
+
 class Application(tk.Tk):
     def __init__(self):
         tk.Tk.__init__(self)
@@ -103,6 +156,11 @@ class Application(tk.Tk):
         self.title(windows_title.compta)
 
         menubar = tk.Menu(self)
+
+        bvrmenu = tk.Menu(menubar, tearoff=0)
+        bvrmenu.add_command(label=menus_text.import_bvr, command=lambda: import_bvr(self))
+
+        menubar.add_cascade(label=menus_text.bvr, menu=bvrmenu)
 
         helpmenu = tk.Menu(menubar, tearoff=0)
         helpmenu.add_command(label=menus_text.about, command=lambda: apropos(self))

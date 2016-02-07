@@ -13,7 +13,7 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 
 from bp_custo import CCP, DATE_FMT
-from bp_bvr import checksum
+from bp_bvr import bvr_checksum
 
 PRINT_BV_BG = True
 
@@ -40,6 +40,7 @@ def ParagraphOrSpacer(text, style):
     if text.strip():
         return Paragraph(text, style)
     return Spacer(0, FONT_SIZE)
+
 
 def make_styles(font_size):
     DEFAULT_STYLE = ParagraphStyle('default', fontName='EuclidBPBold', fontSize=font_size, leading=font_size*1.2)
@@ -87,7 +88,7 @@ def fixed(canvas, doc):
         codage = u''.join((v, u'0'*(6-len(x)), x, c, u'>'))
         if doc.bv_ref:
             prix = u'01%010d' % (doc.prix * 100)
-            codage = u'%s%d>%026d%d+ %s' % (prix, checksum(prix), doc.bv_ref, checksum(doc.bv_ref), codage)
+            codage = u'%s%d>%s+ %s' % (prix, bvr_checksum(prix), doc.bv_ref, codage)
             canvas.drawString(BV_REF_X + 3*BV_COLUMN, BV_REF_Y - 21*BV_LINE, codage)
         else:
             canvas.drawString(BV_REF_X + 46*BV_COLUMN, BV_REF_Y - 21*BV_LINE, codage)
@@ -109,7 +110,7 @@ def fixed(canvas, doc):
             canvas.drawString(BV_REF_X + 25*BV_COLUMN, BV_REF_Y - 4*BV_LINE, u"Consultation du "+unicode(doc.date.strftime(DATE_FMT)))
         # Versé par
         if doc.bv_ref:
-            ref = list(u'%026d%d' % (doc.bv_ref, checksum(doc.bv_ref)))
+            ref = list(doc.bv_ref)
             for i in (2, 8, 14, 20, 26):
                 ref.insert(i, u' ')
             ref = u''.join(ref)
@@ -135,7 +136,7 @@ def fixed(canvas, doc):
         text_obj.textLines(doc.patient_bv)
         canvas.drawText(text_obj)
         # Le montant
-        offset = 1.3 # 1.4
+        offset = 1.3  # 1.4
         spacing = 1.0
         canvas.setFont('OCRB', 12)
         montant = '%11.2f' % doc.prix
@@ -237,7 +238,7 @@ if __name__ == '__main__':
     filename = os.tempnam()+'.pdf'
     therapeute = u'Tibor Csernay\nDipl. CDS-GDK\n\nAv. de la gare 5\n1003 Lausanne\n021 510 50 50\n021 510 50 49 (N° direct)\n\nRCC U905461'
     patient = u'Monsieur\nJean Dupont\nRoute de Quelque Part\n1234 Perdu\n\n12.03.1974'
-    bv_ref = 1234567890
+    bv_ref = u"012345678901234567890123458"
     patient_bv = u'Jean Dupont\nRoute de Quelque Part\n1234 Perdu'
     duree = u'entre 21 et 30 minutes'
     prix_cts = 1234567890

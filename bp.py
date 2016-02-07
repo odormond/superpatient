@@ -114,6 +114,14 @@ except:
     tkMessageBox.showwarning(u"Missing file", u"bp_factures.py is missing")
     sys.exit()
 
+
+try:
+    from bp_bvr import bvr_checksum
+except:
+    tkMessageBox.showwarning(u"Missing file", u"bp_bvr.py is missing")
+    sys.exit()
+
+
 try:
     import MySQLdb
 except:
@@ -646,6 +654,10 @@ class ListeConsultations(bp_Dialog.Dialog):
         self.auto_affiche()
 
 
+def alpha_to_num(char):
+    return (ord(char) - ord('A')) % 100
+
+
 class Consultation(bp_Dialog.Dialog):
     def __init__(self, parent, id_patient, id_consult=None, readonly=False):
         self.id_patient = id_patient
@@ -696,7 +708,7 @@ class Consultation(bp_Dialog.Dialog):
         try:
             description_prix, prix_cts, description_majoration, majoration_cts = self.get_cost()
             if self.paye_le is None and paye_par not in (u'BVR', u'CdM'):
-                    self.paye_le = datetime.date.today()
+                self.paye_le = datetime.date.today()
             date_ouvc = parse_date(self.date_ouvcVar.get().strip())
             new_consult = self.id_consult is None
             if new_consult:
@@ -709,12 +721,25 @@ class Consultation(bp_Dialog.Dialog):
                     traceback.print_exc()
                     tkMessageBox.showwarning(windows_title.db_error, errors_text.db_id)
                     return
+                try:
+                    if paye_par == u'BVR':
+                        cursorU.execute("UPDATE bvr_sequence SET counter = @counter := counter + 1")
+                        cursorS.execute("SELECT prenom, nom, @counter FROM patients WHERE id = %s", [self.id_patient])
+                        firstname, lastname, bvr_counter = cursorS.fetchone()
+                        bv_ref = u'%06d%010d%02d%02d%02d%04d' % (BVR_PREFIX, bvr_counter, alpha_to_num(firstname[0]), alpha_to_num(lastname[0]), date_ouvc.month, date_ouvc.year)
+                        bv_ref = bv_ref + str(bvr_checksum(bv_ref))
+                    else:
+                        bv_ref = None
+                except:
+                    traceback.print_exc()
+                    tkMessageBox.showwarning(windows_title.db_error, errors_text.db_read)
+                    return
                 cursorI.execute("""INSERT INTO consultations
                                         (id_consult, id, date_consult,
                                             MC, MC_accident, EG, exam_pclin, exam_phys, paye, divers, APT_thorax, APT_abdomen,
                                             APT_tete, APT_MS, APT_MI, APT_system, A_osteo, traitement, therapeute,
-                                            prix_cts, majoration_cts, paye_par, paye_le)
-                                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+                                            prix_cts, majoration_cts, paye_par, paye_le, bv_ref)
+                                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
                                 [self.id_consult, self.id_patient, date_ouvc,
                                     self.MCVar.get(1.0, tk.END).strip(), self.MC_accidentVar.get(),
                                     self.EGVar.get(1.0, tk.END).strip(), self.exam_pclinVar.get(1.0, tk.END).strip(),
@@ -724,7 +749,7 @@ class Consultation(bp_Dialog.Dialog):
                                     self.APT_MSVar.get(1.0, tk.END).strip(), self.APT_MIVar.get(1.0, tk.END).strip(),
                                     self.APT_systemVar.get(1.0, tk.END).strip(), self.A_osteoVar.get(1.0, tk.END).strip(),
                                     self.traitementVar.get(1.0, tk.END).strip(), self.therapeuteVar.get(),
-                                    prix_cts, majoration_cts, paye_par, self.paye_le])
+                                    prix_cts, majoration_cts, paye_par, self.paye_le, bv_ref])
                 generate_pdf = paye_par != u'CdM'
             else:
                 cursorS.execute("""SELECT paye_par FROM consultations WHERE id_consult=%s""", [self.id_consult])
@@ -793,13 +818,19 @@ class Consultation(bp_Dialog.Dialog):
             identite = [u' '.join((prenom, nom))]
         else:
             identite = [prenom, nom]
+        if paye_par == u'BVR':
+            patient_bv = u'\n'.join(identite + [adresse_patient])
+        else:
+            patient_bv = None
         adresse_patient = u'\n'.join([titre] + identite + [adresse_patient, "", date_naiss.strftime(DATE_FMT)])
         ts = datetime.datetime.now().strftime('%H')
         filename = (u'%s_%s_%s_%s_%sh.pdf' % (nom, prenom, sex, date_ouvc, ts)).encode('UTF-8')
         for char in '\'"/`!$[]{}':
             filename = filename.replace(char, '-')
         filename = os.path.join(bp_custo.PDF_DIR, filename)
-        facture(filename, adresse_therapeute, adresse_patient, description_prix, self.MC_accidentVar.get(), prix_cts, description_majoration, majoration_cts, date_ouvc, with_bv=(paye_par == u'BVR'))
+        cursorS.execute("SELECT bv_ref FROM consultations WHERE id_consult = %s", [self.id_consult])
+        bv_ref, = cursorS.fetchone()
+        facture(filename, adresse_therapeute, adresse_patient, description_prix, self.MC_accidentVar.get(), prix_cts, description_majoration, majoration_cts, date_ouvc, patient_bv, bv_ref)
         cmd, cap = mailcap.findmatch(mailcap.getcaps(), 'application/pdf', 'view', filename)
         os.system(cmd)
 
