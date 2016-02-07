@@ -60,7 +60,7 @@ class WindowsTitle(Config):
     manage_tarifs = u"Gérer les tarifs"
     compta = u"Gestion comptable"
     really_cancel = u"Confirmation d'annulation"
-
+    summaries_import = u"Résumé de l'import"
 
 windows_title = WindowsTitle()
 
@@ -110,6 +110,8 @@ class ButtonsText(Config):
     show_or_change_consult = u"Voir ou modifier une consultation"  # B28
     done = u"Terminé"
     mark_paye = u"Marquer payé"
+    valider_import = u"Valider l'import"
+    details = u"Détails"
 
 
 buttons_text = ButtonsText()

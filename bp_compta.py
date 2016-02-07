@@ -76,6 +76,7 @@ except:
     tkMessageBox.showwarning("MySQL", "Cannot connect to database")
     sys.exit()
 
+db.autocommit(True)
 cursor = db.cursor()
 
 
@@ -137,13 +138,150 @@ class import_bvr(object):
                 return
         ignored = []
         not_found = []
-        found = []
+        ok = []
+        ko = []
+        doubled = []
         for transaction_type, bvr_client_no, ref_no, amount_cts, depot_ref, depot_date, processing_date, credit_date, microfilm_no, reject_code, postal_fee_cts in records:
             if transaction_type[2] != 2:
                 ignored.append((transaction_type, bvr_client_no, ref_no, amount_cts, depot_ref, depot_date, processing_date, credit_date, microfilm_no, reject_code, postal_fee_cts))
                 continue
+            cursor.execute("SELECT id_consult, prix_cts, majoration_cts, paye_le FROM consultations WHERE bv_ref = %s", [ref_no])
+            if cursor.rowcount == 0:
+                not_found.append((transaction_type, bvr_client_no, ref_no, amount_cts, depot_ref, depot_date, processing_date, credit_date, microfilm_no, reject_code, postal_fee_cts))
+                continue
+            id_consult, prix_cts, majoration_cts = cursor.fetchone()
+            if prix_cts + majoration_cts != amount_cts:
+                l = ko
+            elif paye_le is None:
+                l = ok
+            else:
+                l = doubled
+            l.append((id_consult, prix_cts, majoration_cts, transaction_type, bvr_client_no, ref_no, amount_cts, depot_ref, depot_date, processing_date, credit_date, microfilm_no, reject_code, postal_fee_cts))
+
+        SummariesImport(parent, ok, ko, doubled, not_found, ignored)
 
 
+def sum_found(positions):
+    return sum(p[6] for p in positions) / 100.0
+
+
+def sum_notfound(positions):
+    return sum(p[3] for p in positions) / 100.0
+
+
+class SummariesImport(bp_Dialog.Dialog):
+    def __init__(self, parent, ok, ko, doubled, not_found, ignored):
+        self.ok = ok
+        self.ko = ko
+        self.doubled = doubled
+        self.not_found = not_found
+        self.ignored = ignored
+        bp_Dialog.Dialog.__init__(self, parent)
+
+    def buttonbox(self):
+        box = tk.Frame(self)
+        tk.Button(box, text=buttons_text.valider_import, command=self.validate).pack(side=tk.LEFT)
+        tk.Button(box, text=buttons_text.cancel, command=self.cancel).pack(side=tk.LEFT)
+        self.bind("<Escape>" ,self.cancel)
+        box.pack()
+
+    def validate(self):
+        try:
+            for payment in self.ok:
+                id_consult = payement[0]
+                credit_date = payement[10]
+                cursor.execute("UPDATE consultations SET paye_le = %s WHERE id_consult = %s", [credit_date, id_consult])
+        except:
+            traceback.print_exc()
+            tkMessageBox.showwarning(windows_title.db_error, errors_text.db_update)
+
+    def body(self, master):
+        self.title(windows_title.summaries_import)
+        tk.Label(master, text=u"Volume").grid(row=0, column=1)
+        tk.Label(master, text=u"Revenu").grid(row=0, column=2)
+
+        tk.Label(master, text=u"Payements en ordre").grid(row=1, column=0)
+        tk.Label(master, text=str(len(self.ok))).grid(row=1, column=1)
+        tk.Label(master, text=u"%0.2f CHF" % sum_found(self.ok)).grid(row=1, column=2)
+        tk.Button(master, text=buttons_text.details, command=lambda: Details(self, self.ok)).grid(row=1, column=3, sticky=tk.W)
+
+        tk.Label(master, text=u"Payements ne correspondant pas au montant attendu").grid(row=2, column=0)
+        tk.Label(master, text=str(len(self.ko))).grid(row=2, column=1)
+        tk.Label(master, text=u"%0.2f CHF" % sum_found(self.ko)).grid(row=2, column=2)
+        tk.Button(master, text=buttons_text.details, command=lambda: Details(self, self.ko)).grid(row=2, column=3, sticky=tk.W)
+
+        tk.Label(master, text=u"Payements déjà encaissés").grid(row=3, column=0)
+        tk.Label(master, text=str(len(self.doubled))).grid(row=3, column=1)
+        tk.Label(master, text=u"%0.2f CHF" % sum_found(self.doubled)).grid(row=3, column=2)
+        tk.Button(master, text=buttons_text.details, command=lambda: Details(self, self.doubled)).grid(row=3, column=3, sticky=tk.W)
+
+        tk.Label(master, text=u"Payements non trouvés").grid(row=4, column=0)
+        tk.Label(master, text=str(len(self.not_found))).grid(row=4, column=1)
+        tk.Label(master, text=u"%0.2f CHF" % sum_notfound(self.not_found)).grid(row=4, column=2)
+        tk.Button(master, text=buttons_text.details, command=lambda: Details(self, self.not_found)).grid(row=4, column=3, sticky=tk.W)
+
+        tk.Label(master, text=u"Ordres ignorés").grid(row=5, column=0)
+        tk.Label(master, text=str(len(self.ignored))).grid(row=5, column=1)
+        tk.Button(master, text=buttons_text.details, command=lambda: Details(self, self.ignored)).grid(row=5, column=3, sticky=tk.W)
+
+        master.grid_columnconfigure(0, weight=1)
+        master.grid_columnconfigure(1, weight=1)
+        master.grid_columnconfigure(2, weight=1)
+
+
+class Details(bp_Dialog.Dialog):
+    def __init__(self, parent, positions):
+        self.positions = positions
+        bp_Dialog.Dialog.__init__(self, parent)
+
+    def buttonbox(self):
+        self.bind("<Escape>", self.cancel)
+        return tk.Button(self, text=buttons_text.done, command=self.cancel)
+
+    def body(self, master):
+        hscroll = tk.Scrollbar(master, orient=tk.HORIZONTAL)
+        vscroll = tk.Scrollbar(master, orient=tk.VERTICAL)
+        self.list_box = tk.Listbox(master, xscrollcommand=hscroll.set, yscrollcommand=vscroll.set)
+        hscroll.config(command=self.list_box.xview)
+        vscroll.config(command=self.list_box.yview)
+        self.list_box.grid(row=0, column=0, sticky=tk.NSEW)
+        hscroll.grid(row=1, column=0, sticky=tk.EW)
+        vscroll.grid(row=0, column=1, sticky=tk.NS)
+        master.grid_rowconfigure(0, weight=1)
+        master.grid_columnconfigure(0, weight=1)
+
+        if len(self.positions[0]) == 14:
+            self.populate_found()
+        else:
+            self.populate_notfound()
+
+    def populate_found(self):
+        self.list_box.delete(0, tk.END)
+        data = []
+        columns = [u"Sex", u"Nom", u"Prénom", u"Naissance", u"Consultation du", u"Facturé CHF", u"Payé CHF", u"Crédité le", u"Comtabilisé le", u"Numéro de référence"]
+        widths = [len(c) for c in columns]
+        for id_consult, prix_cts, majoration_cts, transaction_type, bvr_client_no, ref_no, amount_cts, depot_ref, depot_date, processing_date, credit_date, microfilm_no, reject_code, postal_fee_cts in self.positions:
+            cursor.execute("SELECT sex, nom, prenom, date_naiss, date_consult, paye_le FROM consultations INNER JOIN patients ON patients.id = consultations.id WHERE id_consult = %s", [id_consult])
+            sex, nom, prenom, date_naiss, date_consult, paye_le = cursor.fetch_one()
+            data.append((sex, nom, prenom, date_naiss, date_consult, prix_cts+majoration_cts, amount_cts, credit_date, paye_le, ref_no))
+            widths = [max(a, len(unicode(b))) for a, b in zip(widths, data[-1])]
+
+        self.list_box.insert(tk.END, u"  ".join(u"%*s" % (-w, c) for w, c in zip(widths, columns)))
+        for values in data:
+            self.list_box.insert(tk.END, u"  ".join(u"%*s" % (-w, unicode(v)) for w, v in zip(widths, values)))
+
+    def populate_notfound(self):
+        self.list_box.delete(0, tk.END)
+        data = []
+        columns = [u"Type de transaction", u"Payé CHF", u"Crédité le", u"Numéro de référence"]
+        widths = [len(c) for c in columns]
+        for transaction_type, bvr_client_no, ref_no, amount_cts, depot_ref, depot_date, processing_date, credit_date, microfilm_no, reject_code, postal_fee_cts in self.positions:
+            data.append((transaction_type, amount_cts, credit_date, ref_no))
+            widths = [max(a, len(unicode(b))) for a, b in zip(widths, data[-1])]
+
+        self.list_box.insert(tk.END, u"  ".join(u"%*s" % (-w, c) for w, c in zip(widths, columns)))
+        for values in data:
+            self.list_box.insert(tk.END, u"  ".join(u"%*s" % (-w, unicode(v)) for w, v in zip(widths, values)))
 
 
 class Application(tk.Tk):
