@@ -11,6 +11,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 try:
     import Tkinter as tk
     import tkMessageBox
+    import tkFileDialog
 
 except:
     tkMessageBox.showwarning("Error", "Tkinter is not correctly installed !")
@@ -94,73 +95,6 @@ class licence(bp_Dialog.Dialog):
         tk.Label(master, text=labels_text.licence_description, font=("Helvetica", 13, 'bold')).grid(row=0, column=0, sticky=tk.W)
 
 
-class import_bvr(object):
-    def __init__(self, parent):
-        self.parent = parent
-        filename = tkFileDialog.askopenfilename(title=menus_text.import_bvr)
-        if not filename:
-            return
-        records = []
-        total_line = None
-        with open(filename) as f:
-            try:
-                line_no = 0
-                for line in f:
-                    line_no += 1
-                    transaction_type, line = line[:3], line[3:]
-                    bvr_client_no, line = line[:9], line[9:]
-                    ref_no, line = line[:27], line[27:]
-                    if transaction_type[0] in '01' and transaction_type[1] in '01' and transaction_type[2] in '258':
-                        amount_cts, line = int(line[:10]), line[10:]
-                        depot_ref, line = line[:10], line[10:]
-                        depot_date, line = line[:6], line[6:]
-                        processing_date, line = line[:6], line[6:]
-                        credit_date, line = line[:6], line[6:]
-                        microfilm_no, line = line[:9], line[9:]
-                        reject_code, line = line[:1], line[1:]
-                        zeros, line = line[:9], line[9:]
-                        postal_fee_cts, line = int(line[:4]), line[4:]
-                        records.append((transaction_type, bvr_client_no, ref_no, amount_cts, depot_ref, depot_date, processing_date, credit_date, microfilm_no, reject_code, postal_fee_cts))
-                    elif transaction_type in ('995', '999'):
-                        total_cts, line = int(line[:12]), line[12:]
-                        count, line = int(line[:12]), line[12:]
-                        date, line = line[:6], line[6:]
-                        postal_fees_cts, line = int(line[:9]), line[9:]
-                        hw_postal_fees_cts, line = int(line[:9]), line[9:]
-                        reserved, line = line[:13], line[13:]
-                        assert total_line is None, "Multiple total line found"
-                        total_line = (transaction_type, bvr_client_no, ref_no, total_cts, count, date, postal_fees_cts, hw_postal_fees_cts)
-                    assert line in ('', '\n'), "Garbage at end of line %d" % line_no
-                assert total_line is not None and len(records) == count, "Records count does not match total line indication"
-            except Exception, e:
-                print e
-                tkMessageBox.showerror("Fichier corrompu", "Une erreur s'est produite lors de la lecture du fichier de payement.\n%r" % args)
-                return
-        ignored = []
-        not_found = []
-        ok = []
-        ko = []
-        doubled = []
-        for transaction_type, bvr_client_no, ref_no, amount_cts, depot_ref, depot_date, processing_date, credit_date, microfilm_no, reject_code, postal_fee_cts in records:
-            if transaction_type[2] != 2:
-                ignored.append((transaction_type, bvr_client_no, ref_no, amount_cts, depot_ref, depot_date, processing_date, credit_date, microfilm_no, reject_code, postal_fee_cts))
-                continue
-            cursor.execute("SELECT id_consult, prix_cts, majoration_cts, paye_le FROM consultations WHERE bv_ref = %s", [ref_no])
-            if cursor.rowcount == 0:
-                not_found.append((transaction_type, bvr_client_no, ref_no, amount_cts, depot_ref, depot_date, processing_date, credit_date, microfilm_no, reject_code, postal_fee_cts))
-                continue
-            id_consult, prix_cts, majoration_cts = cursor.fetchone()
-            if prix_cts + majoration_cts != amount_cts:
-                l = ko
-            elif paye_le is None:
-                l = ok
-            else:
-                l = doubled
-            l.append((id_consult, prix_cts, majoration_cts, transaction_type, bvr_client_no, ref_no, amount_cts, depot_ref, depot_date, processing_date, credit_date, microfilm_no, reject_code, postal_fee_cts))
-
-        SummariesImport(parent, ok, ko, doubled, not_found, ignored)
-
-
 def sum_found(positions):
     return sum(p[6] for p in positions) / 100.0
 
@@ -182,15 +116,16 @@ class SummariesImport(bp_Dialog.Dialog):
         box = tk.Frame(self)
         tk.Button(box, text=buttons_text.valider_import, command=self.validate).pack(side=tk.LEFT)
         tk.Button(box, text=buttons_text.cancel, command=self.cancel).pack(side=tk.LEFT)
-        self.bind("<Escape>" ,self.cancel)
+        self.bind("<Escape>", self.cancel)
         box.pack()
 
     def validate(self):
         try:
             for payment in self.ok:
-                id_consult = payement[0]
-                credit_date = payement[10]
+                id_consult = payment[0]
+                credit_date = payment[10]
                 cursor.execute("UPDATE consultations SET paye_le = %s WHERE id_consult = %s", [credit_date, id_consult])
+            self.cancel()
         except:
             traceback.print_exc()
             tkMessageBox.showwarning(windows_title.db_error, errors_text.db_update)
@@ -202,27 +137,32 @@ class SummariesImport(bp_Dialog.Dialog):
 
         tk.Label(master, text=u"Payements en ordre").grid(row=1, column=0)
         tk.Label(master, text=str(len(self.ok))).grid(row=1, column=1)
-        tk.Label(master, text=u"%0.2f CHF" % sum_found(self.ok)).grid(row=1, column=2)
-        tk.Button(master, text=buttons_text.details, command=lambda: Details(self, self.ok)).grid(row=1, column=3, sticky=tk.W)
+        tk.Label(master, text=u"%0.2f CHF" % sum_found(self.ok)).grid(row=1, column=2, sticky=tk.E)
+        if self.ok:
+            tk.Button(master, text=buttons_text.details, command=lambda: Details(self, self.ok)).grid(row=1, column=3, sticky=tk.W)
 
         tk.Label(master, text=u"Payements ne correspondant pas au montant attendu").grid(row=2, column=0)
         tk.Label(master, text=str(len(self.ko))).grid(row=2, column=1)
-        tk.Label(master, text=u"%0.2f CHF" % sum_found(self.ko)).grid(row=2, column=2)
-        tk.Button(master, text=buttons_text.details, command=lambda: Details(self, self.ko)).grid(row=2, column=3, sticky=tk.W)
+        tk.Label(master, text=u"%0.2f CHF" % sum_found(self.ko)).grid(row=2, column=2, sticky=tk.E)
+        if self.ko:
+            tk.Button(master, text=buttons_text.details, command=lambda: Details(self, self.ko)).grid(row=2, column=3, sticky=tk.W)
 
         tk.Label(master, text=u"Payements déjà encaissés").grid(row=3, column=0)
         tk.Label(master, text=str(len(self.doubled))).grid(row=3, column=1)
-        tk.Label(master, text=u"%0.2f CHF" % sum_found(self.doubled)).grid(row=3, column=2)
-        tk.Button(master, text=buttons_text.details, command=lambda: Details(self, self.doubled)).grid(row=3, column=3, sticky=tk.W)
+        tk.Label(master, text=u"%0.2f CHF" % sum_found(self.doubled)).grid(row=3, column=2, sticky=tk.E)
+        if self.doubled:
+            tk.Button(master, text=buttons_text.details, command=lambda: Details(self, self.doubled)).grid(row=3, column=3, sticky=tk.W)
 
         tk.Label(master, text=u"Payements non trouvés").grid(row=4, column=0)
         tk.Label(master, text=str(len(self.not_found))).grid(row=4, column=1)
-        tk.Label(master, text=u"%0.2f CHF" % sum_notfound(self.not_found)).grid(row=4, column=2)
-        tk.Button(master, text=buttons_text.details, command=lambda: Details(self, self.not_found)).grid(row=4, column=3, sticky=tk.W)
+        tk.Label(master, text=u"%0.2f CHF" % sum_notfound(self.not_found)).grid(row=4, column=2, sticky=tk.E)
+        if self.not_found:
+            tk.Button(master, text=buttons_text.details, command=lambda: Details(self, self.not_found)).grid(row=4, column=3, sticky=tk.W)
 
         tk.Label(master, text=u"Ordres ignorés").grid(row=5, column=0)
         tk.Label(master, text=str(len(self.ignored))).grid(row=5, column=1)
-        tk.Button(master, text=buttons_text.details, command=lambda: Details(self, self.ignored)).grid(row=5, column=3, sticky=tk.W)
+        if self.ignored:
+            tk.Button(master, text=buttons_text.details, command=lambda: Details(self, self.ignored)).grid(row=5, column=3, sticky=tk.W)
 
         master.grid_columnconfigure(0, weight=1)
         master.grid_columnconfigure(1, weight=1)
@@ -230,6 +170,13 @@ class SummariesImport(bp_Dialog.Dialog):
 
 
 class Details(bp_Dialog.Dialog):
+    transaction_types = {
+        '002': u'Crédit B préimp', '005': u'Extourne B préimp', '008': u'Correction B préimp',
+        '012': u'Crédit P préimp', '015': u'Extourne P préimp', '018': u'Correction P préimp',
+        '102': u'Crédit B', '105': u'Extourne B', '108': u'Correction B',
+        '112': u'Crédit P', '115': u'Extourne P', '118': u'Correction P',
+    }
+
     def __init__(self, parent, positions):
         self.positions = positions
         bp_Dialog.Dialog.__init__(self, parent)
@@ -241,7 +188,7 @@ class Details(bp_Dialog.Dialog):
     def body(self, master):
         hscroll = tk.Scrollbar(master, orient=tk.HORIZONTAL)
         vscroll = tk.Scrollbar(master, orient=tk.VERTICAL)
-        self.list_box = tk.Listbox(master, xscrollcommand=hscroll.set, yscrollcommand=vscroll.set)
+        self.list_box = tk.Listbox(master, xscrollcommand=hscroll.set, yscrollcommand=vscroll.set, font=(bp_custo.FIXED_FONT_NAME, 10))
         hscroll.config(command=self.list_box.xview)
         vscroll.config(command=self.list_box.yview)
         self.list_box.grid(row=0, column=0, sticky=tk.NSEW)
@@ -255,6 +202,19 @@ class Details(bp_Dialog.Dialog):
         else:
             self.populate_notfound()
 
+    def format_date(self, date):
+        if date is None:
+            return u''
+        elif isinstance(date, basestring):
+            return u'20' + date[:2] + u'-' + date[2:4] + u'-' + date[4:]
+        return unicode(date)
+
+    def format_ref(self, ref):
+        ref = list(ref)
+        for pos in (2, 8, 14, 20, 26):
+            ref.insert(pos, ' ')
+        return ''.join(ref)
+
     def populate_found(self):
         self.list_box.delete(0, tk.END)
         data = []
@@ -262,9 +222,12 @@ class Details(bp_Dialog.Dialog):
         widths = [len(c) for c in columns]
         for id_consult, prix_cts, majoration_cts, transaction_type, bvr_client_no, ref_no, amount_cts, depot_ref, depot_date, processing_date, credit_date, microfilm_no, reject_code, postal_fee_cts in self.positions:
             cursor.execute("SELECT sex, nom, prenom, date_naiss, date_consult, paye_le FROM consultations INNER JOIN patients ON patients.id = consultations.id WHERE id_consult = %s", [id_consult])
-            sex, nom, prenom, date_naiss, date_consult, paye_le = cursor.fetch_one()
-            data.append((sex, nom, prenom, date_naiss, date_consult, prix_cts+majoration_cts, amount_cts, credit_date, paye_le, ref_no))
+            sex, nom, prenom, date_naiss, date_consult, paye_le = cursor.fetchone()
+            data.append((sex, nom, prenom, date_naiss, date_consult, u'%0.2f' % ((prix_cts+majoration_cts)/100.), u'%0.2f' % (amount_cts/100.), self.format_date(credit_date), self.format_date(paye_le), self.format_ref(ref_no)))
             widths = [max(a, len(unicode(b))) for a, b in zip(widths, data[-1])]
+        self.list_box.config(width=min(120, sum(widths)+2*9))
+        widths[5] *= -1
+        widths[6] *= -1
 
         self.list_box.insert(tk.END, u"  ".join(u"%*s" % (-w, c) for w, c in zip(widths, columns)))
         for values in data:
@@ -276,8 +239,10 @@ class Details(bp_Dialog.Dialog):
         columns = [u"Type de transaction", u"Payé CHF", u"Crédité le", u"Numéro de référence"]
         widths = [len(c) for c in columns]
         for transaction_type, bvr_client_no, ref_no, amount_cts, depot_ref, depot_date, processing_date, credit_date, microfilm_no, reject_code, postal_fee_cts in self.positions:
-            data.append((transaction_type, amount_cts, credit_date, ref_no))
+            data.append((self.transaction_types.get(transaction_type, transaction_type), u'%0.2f' % (amount_cts/100.), self.format_date(credit_date), self.format_ref(ref_no)))
             widths = [max(a, len(unicode(b))) for a, b in zip(widths, data[-1])]
+        self.list_box.config(width=sum(widths)+2*3)
+        widths[1] *= -1
 
         self.list_box.insert(tk.END, u"  ".join(u"%*s" % (-w, c) for w, c in zip(widths, columns)))
         for values in data:
@@ -296,7 +261,7 @@ class Application(tk.Tk):
         menubar = tk.Menu(self)
 
         bvrmenu = tk.Menu(menubar, tearoff=0)
-        bvrmenu.add_command(label=menus_text.import_bvr, command=lambda: import_bvr(self))
+        bvrmenu.add_command(label=menus_text.import_bvr, command=self.import_bvr)
 
         menubar.add_cascade(label=menus_text.bvr, menu=bvrmenu)
 
@@ -443,6 +408,75 @@ class Application(tk.Tk):
             if var == self.date_du:
                 self.date_au.set(self.date_du.get())
             self.update_list()
+
+    def import_bvr(self):
+        filename = tkFileDialog.askopenfilename(title=menus_text.import_bvr)
+        if not filename:
+            return
+        records = []
+        total_line = None
+        with open(filename) as f:
+            try:
+                line_no = 0
+                for line in f:
+                    line_no += 1
+                    transaction_type, line = line[:3], line[3:]
+                    bvr_client_no, line = line[:9], line[9:]
+                    ref_no, line = line[:27], line[27:]
+                    if transaction_type[0] in '01' and transaction_type[1] in '01' and transaction_type[2] in '258':
+                        amount_cts, line = int(line[:10]), line[10:]
+                        if transaction_type[2] == '5':
+                            amount_cts = -amount_cts
+                        depot_ref, line = line[:10], line[10:]
+                        depot_date, line = line[:6], line[6:]
+                        processing_date, line = line[:6], line[6:]
+                        credit_date, line = line[:6], line[6:]
+                        microfilm_no, line = line[:9], line[9:]
+                        reject_code, line = line[:1], line[1:]
+                        zeros, line = line[:9], line[9:]
+                        postal_fee_cts, line = int(line[:4]), line[4:]
+                        records.append((transaction_type, bvr_client_no, ref_no, amount_cts, depot_ref, depot_date, processing_date, credit_date, microfilm_no, reject_code, postal_fee_cts))
+                    elif transaction_type in ('995', '999'):
+                        total_cts, line = int(line[:12]), line[12:]
+                        if transaction_type == '995':
+                            total_cts = -total_cts
+                        count, line = int(line[:12]), line[12:]
+                        date, line = line[:6], line[6:]
+                        postal_fees_cts, line = int(line[:9]), line[9:]
+                        hw_postal_fees_cts, line = int(line[:9]), line[9:]
+                        reserved, line = line[:13], line[13:]
+                        assert total_line is None, "Multiple total line found"
+                        total_line = (transaction_type, bvr_client_no, ref_no, total_cts, count, date, postal_fees_cts, hw_postal_fees_cts)
+                    assert line in ('', '\n'), "Garbage at end of line %d" % line_no
+                assert total_line is not None and len(records) == count, "Records count does not match total line indication"
+            except Exception, e:
+                print e
+                tkMessageBox.showerror("Fichier corrompu", "Une erreur s'est produite lors de la lecture du fichier de payement.\n%r" % e.args)
+                return
+        ignored = []
+        not_found = []
+        ok = []
+        ko = []
+        doubled = []
+        for transaction_type, bvr_client_no, ref_no, amount_cts, depot_ref, depot_date, processing_date, credit_date, microfilm_no, reject_code, postal_fee_cts in records:
+            if transaction_type[2] != '2':
+                ignored.append((transaction_type, bvr_client_no, ref_no, amount_cts, depot_ref, depot_date, processing_date, credit_date, microfilm_no, reject_code, postal_fee_cts))
+                continue
+            cursor.execute("SELECT id_consult, prix_cts, majoration_cts, paye_le FROM consultations WHERE bv_ref = %s", [ref_no])
+            if cursor.rowcount == 0:
+                not_found.append((transaction_type, bvr_client_no, ref_no, amount_cts, depot_ref, depot_date, processing_date, credit_date, microfilm_no, reject_code, postal_fee_cts))
+                continue
+            id_consult, prix_cts, majoration_cts, paye_le = cursor.fetchone()
+            if prix_cts + majoration_cts != amount_cts:
+                l = ko
+            elif paye_le is None:
+                l = ok
+            else:
+                l = doubled
+            l.append((id_consult, prix_cts, majoration_cts, transaction_type, bvr_client_no, ref_no, amount_cts, depot_ref, depot_date, processing_date, credit_date, microfilm_no, reject_code, postal_fee_cts))
+
+        SummariesImport(self, ok, ko, doubled, not_found, ignored)
+        self.update_list()
 
 
 app = Application()
