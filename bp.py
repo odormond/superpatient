@@ -707,7 +707,7 @@ class Consultation(bp_Dialog.Dialog):
             return
         try:
             description_prix, prix_cts, description_majoration, majoration_cts = self.get_cost()
-            if self.paye_le is None and paye_par not in (u'BVR', u'CdM'):
+            if self.paye_le is None and paye_par not in (u'BVR', u'CdM', u'Dû'):
                 self.paye_le = datetime.date.today()
             date_ouvc = parse_date(self.date_ouvcVar.get().strip())
             new_consult = self.id_consult is None
@@ -750,7 +750,7 @@ class Consultation(bp_Dialog.Dialog):
                                     self.APT_systemVar.get(1.0, tk.END).strip(), self.A_osteoVar.get(1.0, tk.END).strip(),
                                     self.traitementVar.get(1.0, tk.END).strip(), self.therapeuteVar.get(),
                                     prix_cts, majoration_cts, paye_par, self.paye_le, bv_ref])
-                generate_pdf = paye_par != u'CdM'
+                generate_pdf = paye_par not in (u'CdM', u'Dû')
             else:
                 cursorS.execute("""SELECT paye_par FROM consultations WHERE id_consult=%s""", [self.id_consult])
                 old_paye_par, = cursorS.fetchone()

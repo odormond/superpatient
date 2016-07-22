@@ -285,7 +285,7 @@ class Application(tk.Tk):
         month_end = datetime.date(today.year, today.month, 1) - datetime.timedelta(days=1)
         last_month = datetime.date(month_end.year, month_end.month, 1)
         self.therapeute = OptionWidget(self, 'therapeute', 0, 0, therapeutes, value='Tous')
-        self.paye_par = OptionWidget(self, 'paye_par', 1, 0, [''] + bp_custo.MOYEN_DE_PAYEMENT, value='')
+        self.paye_par = OptionWidget(self, 'paye_par', 1, 0, [''] + bp_custo.MOYEN_DE_PAYEMENT + bp_custo.ANCIEN_MOYEN_DE_PAYEMENT, value='')
         self.date_du, w_date_du = EntryWidget(self, 'date_du', 0, 2, value=last_month, want_widget=True)
         self.date_au, w_date_au = EntryWidget(self, 'date_au', 1, 2, want_widget=True)
         self.etat = OptionWidget(self, 'etat_payement', 2, 0, bp_custo.ETAT_PAYEMENT, value='Tous')
