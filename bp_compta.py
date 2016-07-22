@@ -308,11 +308,14 @@ class Application(tk.Tk):
         self.list_format = "%-6s %-30s %-30s %s %6.2f %s"
         self.list = ListboxWidget(self, 'consultations', 5, 0, columnspan=5)
         self.list.config(selectmode=tk.MULTIPLE)
-        self.total = EntryWidget(self, 'total', 6, 2, readonly=True)
+        self.count = EntryWidget(self, 'count', 6, 0, readonly=True)
+        self.total_consultation = EntryWidget(self, 'total_consultation', 6, 2, readonly=True, justify=tk.RIGHT)
+        self.total_majoration = EntryWidget(self, 'total_majoration', 7, 2, readonly=True, justify=tk.RIGHT)
+        self.total = EntryWidget(self, 'total', 8, 2, readonly=True, justify=tk.RIGHT)
 
         # Bottom block: available action on selected items
-        self.paye_le = EntryWidget(self, 'paye_le', 7, 0, value=today)
-        tk.Button(self, text=buttons_text.mark_paye, command=self.mark_paid).grid(row=7, column=2, sticky=tk.W)
+        self.paye_le = EntryWidget(self, 'paye_le', 9, 0, value=today)
+        tk.Button(self, text=buttons_text.mark_paye, command=self.mark_paid).grid(row=9, column=2, sticky=tk.W)
 
         self.grid_columnconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
@@ -359,9 +362,12 @@ class Application(tk.Tk):
             args.append(nom.replace('*', '%'))
         self.list.delete(0, tk.END)
         self.list.selection_clear(0, tk.END)
+        self.count.set('')
         self.total.set('')
         self.data = []
-        total = 0
+        count = 0
+        total_consultation = 0
+        total_majoration = 0
         try:
             cursor.execute("""SELECT id_consult, date_consult, paye_le, prix_cts, majoration_cts, sex, nom, prenom
                                 FROM consultations INNER JOIN patients ON consultations.id = patients.id
@@ -369,11 +375,16 @@ class Application(tk.Tk):
             for id_consult, date_consult, paye_le, prix_cts, majoration_cts, sex, nom, prenom in cursor:
                 self.list.insert(tk.END, self.list_format % (sex, nom, prenom, date_consult, (prix_cts+majoration_cts)/100., paye_le))
                 self.data.append(id_consult)
-                total += prix_cts + majoration_cts
+                total_consultation += prix_cts
+                total_majoration += majoration_cts
+                count += 1
         except:
             traceback.print_exc()
             tkMessageBox.showwarning(windows_title.db_error, errors_text.db_read)
-        self.total.set('%0.2f CHF' % (total/100.))
+        self.count.set(str(count))
+        self.total_consultation.set('%0.2f CHF' % (total_consultation/100.))
+        self.total_majoration.set('%0.2f CHF' % (total_majoration/100.))
+        self.total.set('%0.2f CHF' % ((total_consultation + total_majoration)/100.))
 
     def mark_paid(self, *args):
         paye_le = parse_date(self.paye_le.get())

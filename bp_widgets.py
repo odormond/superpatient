@@ -34,7 +34,7 @@ def RadioWidget(parent, key, row, column, options, value=None, readonly=False, s
     return radioVar
 
 
-def EntryWidget(parent, key, row, column, value=None, readonly=False, side_by_side=True, fg='black', field_fg='black', want_widget=False):
+def EntryWidget(parent, key, row, column, value=None, readonly=False, side_by_side=True, fg='black', field_fg='black', want_widget=False, justify=tk.LEFT):
     if side_by_side:
         rowshift, colshift = 0, 1
     else:
@@ -43,7 +43,7 @@ def EntryWidget(parent, key, row, column, value=None, readonly=False, side_by_si
     var = tk.StringVar()
     if value:
         var.set(value)
-    entry = tk.Entry(parent, textvariable=var, font=fields_font[key], fg=field_fg, disabledforeground='black')
+    entry = tk.Entry(parent, textvariable=var, font=fields_font[key], fg=field_fg, disabledforeground='black', justify=justify)
     if readonly:
         entry.config(state=tk.DISABLED)
     entry.grid(row=row+rowshift, column=column+colshift, sticky=tk.W+tk.E)

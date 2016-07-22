@@ -202,6 +202,9 @@ class LabelsText(Config):
     date_du = u"Consultations dès le"
     date_au = u"Consultations jusqu'au"
     etat_payement = u"État du payement"
+    count = u"# entrées"
+    total_consultation = u"Total consultation"
+    total_majoration = u"Total majoration"
     total = u"Total"
     # Info sur l'application
     apropos_description = u"""BasicPatient ver. 2.0 est un gestionnaire de patients et de consultations open-source.
@@ -252,7 +255,8 @@ class LabelsFont(Config):
     mc = eg = expc = atcdp = atcdf = thorax = abdomen = tete = ms = mi = LABEL_BOLD
     gen = a_osteo = exph = ttt = important = paye = ttes_cons = seance = LABEL_BOLD
     paye_par = paye_le = entete = collabos = date_du = date_au = etat_payement = LABEL_BOLD
-    total = majorations = majoration = tarifs = tarif = description = majoration = LABEL_BOLD
+    count = total_consultation = total_majoration = total = majorations = LABEL_BOLD
+    majoration = tarifs = tarif = description = LABEL_BOLD
 
 
 labels_font = LabelsFont()
@@ -261,7 +265,8 @@ labels_font = LabelsFont()
 class FieldsFont(Config):
     id = sexe = therapeute = login = nom = prenom = naissance_le = naissance = ENTRY_DEFAULT
     date_ouverture = tel_fix = portable = tel_prof = mail = ENTRY_DEFAULT
-    ass_comp = profes = etat = envoye = seance = total = ENTRY_DEFAULT
+    ass_comp = profes = etat = envoye = seance = count = total_consultation = ENTRY_DEFAULT
+    total_majoration = total = ENTRY_DEFAULT
     paye_par = paye_le = date_du = date_au = etat_payement = ENTRY_DEFAULT
     majoration = tarif = description = ENTRY_DEFAULT
     important = medecin = adr_priv = medecinS = remarques = ttes_cons = TEXT_DEFAULT
