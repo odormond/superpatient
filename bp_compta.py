@@ -434,7 +434,7 @@ class Application(tk.Tk):
                         microfilm_no, line = line[:9], line[9:]
                         reject_code, line = line[:1], line[1:]
                         zeros, line = line[:9], line[9:]
-                        postal_fee_cts, line = int(line[:4]), line[4:]
+                        postal_fee_cts, line = int(line[:4]), line[4:].strip()
                         records.append((transaction_type, bvr_client_no, ref_no, amount_cts, depot_ref, depot_date, processing_date, credit_date, microfilm_no, reject_code, postal_fee_cts))
                     elif transaction_type in ('995', '999'):
                         total_cts, line = int(line[:12]), line[12:]
@@ -444,7 +444,7 @@ class Application(tk.Tk):
                         date, line = line[:6], line[6:]
                         postal_fees_cts, line = int(line[:9]), line[9:]
                         hw_postal_fees_cts, line = int(line[:9]), line[9:]
-                        reserved, line = line[:13], line[13:]
+                        reserved, line = line[:13], line[13:].strip()
                         assert total_line is None, "Multiple total line found"
                         total_line = (transaction_type, bvr_client_no, ref_no, total_cts, count, date, postal_fees_cts, hw_postal_fees_cts)
                     assert line in ('', '\n'), "Garbage at end of line %d" % line_no
