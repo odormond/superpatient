@@ -18,7 +18,7 @@ TEXT_DEFAULT = ENTRY_DEFAULT
 LISTBOX_DEFAULT = (FIXED_FONT_NAME, FIXED_FONT_SIZE)
 
 ANCIEN_MOYEN_DE_PAYEMENT = [u'CdM']
-MOYEN_DE_PAYEMENT = [u'Cash', u'Carte', u'BVR', u'Dû']
+MOYEN_DE_PAYEMENT = [u'Cash', u'Carte', u'BVR', u'Dû', u'PVPE']
 ETAT_PAYEMENT = [u'Tous', u'Comptabilisé', u'Non-comptabilisé']
 
 

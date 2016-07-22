@@ -707,7 +707,7 @@ class Consultation(bp_Dialog.Dialog):
             return
         try:
             description_prix, prix_cts, description_majoration, majoration_cts = self.get_cost()
-            if self.paye_le is None and paye_par not in (u'BVR', u'CdM', u'Dû'):
+            if self.paye_le is None and paye_par not in (u'BVR', u'CdM', u'Dû', u'PVPE'):
                 self.paye_le = datetime.date.today()
             date_ouvc = parse_date(self.date_ouvcVar.get().strip())
             new_consult = self.id_consult is None
