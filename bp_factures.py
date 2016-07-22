@@ -35,6 +35,15 @@ BV_COLUMN = 0.1*inch
 BV_REF_X = 61*mm
 BV_REF_Y = BV_HEIGHT
 
+LEFT_TEXT_SHIFT = 8
+LEFT_TEXT_SCALE = 0.92
+MIDDLE_TEXT_SHIFT = 0
+MIDDLE_TEXT_SCALE = 1
+RIGHT_TEXT_SHIFT = 0
+RIGHT_TEXT_SCALE = 1
+REF_NO_SHIFT = -4
+REF_NO_SCALE = 1.0
+
 
 def ParagraphOrSpacer(text, style):
     if text.strip():
@@ -89,19 +98,22 @@ def fixed(canvas, doc):
         if doc.bv_ref:
             prix = u'01%010d' % (doc.prix * 100)
             codage = u'%s%d>%s+ %s' % (prix, bvr_checksum(prix), doc.bv_ref, codage)
-            canvas.drawString(BV_REF_X + 3*BV_COLUMN, BV_REF_Y - 21*BV_LINE, codage)
+            text_obj = canvas.beginText()
+            text_obj.setTextTransform(REF_NO_SCALE, 0, 0, 1, BV_REF_X + 3*BV_COLUMN + REF_NO_SHIFT, BV_REF_Y - 21*BV_LINE)
+            text_obj.textLines(codage)
+            canvas.drawText(text_obj)
         else:
             canvas.drawString(BV_REF_X + 46*BV_COLUMN, BV_REF_Y - 21*BV_LINE, codage)
             canvas.drawString(BV_REF_X + 46*BV_COLUMN, BV_REF_Y - 23*BV_LINE, codage)
         canvas.setFont('EuclidBPBold', 10-1)
         # Versé pour
         text_obj = canvas.beginText()
-        text_obj.setTextOrigin(BV_COLUMN, BV_REF_Y - 3*BV_LINE)
+        text_obj.setTextTransform(LEFT_TEXT_SCALE, 0, 0, 1, BV_COLUMN + LEFT_TEXT_SHIFT, BV_REF_Y - 3*BV_LINE)
         text_obj.setLeading(0.9*10)
         text_obj.textLines(bvr.versement_pour+u'\n\n\n'+bvr.en_faveur_de)
         canvas.drawText(text_obj)
         text_obj = canvas.beginText()
-        text_obj.setTextOrigin(BV_REF_X+BV_COLUMN, BV_REF_Y - 3*BV_LINE)
+        text_obj.setTextTransform(MIDDLE_TEXT_SCALE, 0, 0, 1, BV_REF_X + BV_COLUMN + MIDDLE_TEXT_SHIFT, BV_REF_Y - 3*BV_LINE)
         text_obj.setLeading(0.9*10)
         text_obj.textLines(bvr.versement_pour+u'\n\n\n'+bvr.en_faveur_de)
         canvas.drawText(text_obj)
@@ -116,27 +128,27 @@ def fixed(canvas, doc):
             ref = u''.join(ref)
             canvas.setFont('OCRB', 8)
             text_obj = canvas.beginText()
-            text_obj.setTextOrigin(BV_COLUMN, BV_REF_Y - 15*BV_LINE)
+            text_obj.setTextTransform(LEFT_TEXT_SCALE, 0, 0, 1, BV_COLUMN + LEFT_TEXT_SHIFT, BV_REF_Y - 15*BV_LINE)
             text_obj.textLines(ref)
             canvas.drawText(text_obj)
             canvas.setFont('OCRB', 12)
             text_obj = canvas.beginText()
-            text_obj.setTextOrigin(BV_REF_X + 25*BV_COLUMN, BV_REF_Y - 9*BV_LINE)
+            text_obj.setTextTransform(REF_NO_SCALE, 0, 0, 1, BV_REF_X + 25*BV_COLUMN + REF_NO_SHIFT, BV_REF_Y - 9*BV_LINE)
             text_obj.textLines(ref)
             canvas.drawText(text_obj)
             canvas.setFont('EuclidBPBold', 10-1)
         text_obj = canvas.beginText()
-        text_obj.setTextOrigin(BV_COLUMN, BV_REF_Y - 16*BV_LINE)
+        text_obj.setTextTransform(LEFT_TEXT_SCALE, 0, 0, 1, BV_COLUMN + LEFT_TEXT_SHIFT, BV_REF_Y - 16*BV_LINE)
         text_obj.setLeading(1.5*BV_LINE)
         text_obj.textLines(doc.patient_bv)
         canvas.drawText(text_obj)
         text_obj = canvas.beginText()
-        text_obj.setTextOrigin(BV_REF_X + 25*BV_COLUMN, BV_REF_Y - 13*BV_LINE)
+        text_obj.setTextTransform(RIGHT_TEXT_SCALE, 0, 0, 1, BV_REF_X + 25*BV_COLUMN + RIGHT_TEXT_SHIFT, BV_REF_Y - 13*BV_LINE)
         text_obj.setLeading(1.5*BV_LINE)
         text_obj.textLines(doc.patient_bv)
         canvas.drawText(text_obj)
         # Le montant
-        offset = 1.3  # 1.4
+        offset = 0.5  # 1.3
         spacing = 1.0
         canvas.setFont('OCRB', 12)
         montant = '%11.2f' % doc.prix
@@ -251,6 +263,6 @@ if __name__ == '__main__':
     import mailcap
     import time
     cmd, cap = mailcap.findmatch(mailcap.getcaps(), 'application/pdf', 'view', filename)
-    os.system(cmd)
+    os.system(cmd +' &')
     time.sleep(10)
     os.unlink(filename)
