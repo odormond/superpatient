@@ -103,6 +103,63 @@ def sum_notfound(positions):
     return sum(p[3] for p in positions) / 100.0
 
 
+class Statistics(bp_Dialog.Dialog):
+    def __init__(self, parent):
+        bp_Dialog.Dialog.__init__(self, parent)
+
+    def buttonbox(self):
+        box = tk.Frame(self)
+        tk.Button(box, text=buttons_text.ok, command=self.cancel).pack(side=tk.LEFT)
+        self.bind("<Escape>", self.cancel)
+        box.pack()
+
+    def body(self, master):
+        self.title(windows_title.compta_statistics)
+        cursor.execute("SELECT DISTINCT COALESCE(consultations.therapeute, patients.therapeute) FROM consultations RIGHT OUTER JOIN patients ON consultations.id = patients.id")
+        self.therapeutes = [t for t, in cursor]
+        cursor.execute("SELECT DISTINCT YEAR(date_consult) FROM consultations")
+        self.years = [y for y, in cursor]
+        self.months = [u'tout', u'janvier', u'février', u'mars', u'avril', u'mai', u'juin', u'juillet', u'août', u'septembre', u'octobre', u'novembre', u'décembre']
+
+        hscroll = tk.Scrollbar(master, orient=tk.HORIZONTAL)
+        canvas = tk.Canvas(master, borderwidth=0, highlightthickness=0, xscrollcommand=hscroll.set)
+        hscroll.config(command=canvas.xview)
+        canvas.grid(row=1, rowspan=len(self.therapeutes), column=1, columnspan=2, sticky=tk.NSEW)
+        hscroll.grid(row=1+len(self.therapeutes), column=1, columnspan=2, sticky=tk.EW)
+
+        canvas.xview_moveto(0)
+        table_frame = tk.Frame(canvas)
+        table_id = canvas.create_window(0, 0, window=table_frame, anchor=tk.NW)
+
+        def configure_table(event):
+            size = table_frame.winfo_reqwidth(), table_frame.winfo_reqheight()
+            canvas.config(scrollregion="0 0 %d %d" % size)
+            if size[1] != canvas.winfo_height():
+                canvas.config(height=size[1])
+
+        def configure_canvas(event):
+            if table_frame.winfo_reqheight() != canvas.winfo_height():
+                canvas.itemconfigure(table_id, height=canvas.winfo_height())
+
+        table_frame.bind('<Configure>', configure_table)
+        canvas.bind('<Configure>', configure_canvas)
+
+        for i, therapeute in enumerate(self.therapeutes):
+            tk.Label(master, text=therapeute, anchor=tk.CENTER).grid(row=1+i, column=0)
+
+        self.yearVar = tk.StringVar()
+        self.yearVar.set('tout')
+        tk.OptionMenu(master, self.yearVar, *(['tout'] + [str(y) for y in self.years])).grid(row=0, column=1, sticky=tk.EW)
+
+        self.monthVar = tk.StringVar()
+        self.monthVar.set('tout')
+        self.monthWidget = tk.OptionMenu(master, self.monthVar, *self.months).grid(row=0, column=2, sticky=tk.EW)
+
+        #master.grid_rowconfigure(1, weight=1)
+        master.grid_columnconfigure(1, weight=1)
+        master.grid_columnconfigure(2, weight=1)
+
+
 class SummariesImport(bp_Dialog.Dialog):
     def __init__(self, parent, ok, ko, doubled, not_found, ignored):
         self.ok = ok
@@ -264,6 +321,11 @@ class Application(tk.Tk):
         bvrmenu.add_command(label=menus_text.import_bvr, command=self.import_bvr)
 
         menubar.add_cascade(label=menus_text.bvr, menu=bvrmenu)
+
+        statmenu = tk.Menu(menubar, tearoff=0)
+        statmenu.add_command(label=menus_text.show_stats, command=self.show_stats)
+
+        menubar.add_cascade(label=menus_text.show_stats, menu=statmenu)
 
         helpmenu = tk.Menu(menubar, tearoff=0)
         helpmenu.add_command(label=menus_text.about, command=lambda: apropos(self))
@@ -488,6 +550,9 @@ class Application(tk.Tk):
 
         SummariesImport(self, ok, ko, doubled, not_found, ignored)
         self.update_list()
+
+    def show_stats(self):
+        Statistics(self)
 
 
 app = Application()

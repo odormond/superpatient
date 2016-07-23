@@ -62,6 +62,7 @@ class WindowsTitle(Config):
     compta = u"Gestion comptable"
     really_cancel = u"Confirmation d'annulation"
     summaries_import = u"Résumé de l'import"
+    compta_statistics = u"Statistiques"
 
 windows_title = WindowsTitle()
 
@@ -131,6 +132,7 @@ class MenusText(Config):
     help = u"Aide"
     bvr = u"BVRs"
     import_bvr = u"Importer les payements"
+    show_stats = u"Statistiques"
 
 
 menus_text = MenusText()
