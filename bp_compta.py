@@ -5,6 +5,7 @@ import os
 import sys
 import datetime
 import traceback
+import calendar
 
 sys.path.insert(0, os.path.dirname(__file__))
 
@@ -121,43 +122,164 @@ class Statistics(bp_Dialog.Dialog):
         self.years = [y for y, in cursor]
         self.months = [u'tout', u'janvier', u'février', u'mars', u'avril', u'mai', u'juin', u'juillet', u'août', u'septembre', u'octobre', u'novembre', u'décembre']
 
-        hscroll = tk.Scrollbar(master, orient=tk.HORIZONTAL)
-        canvas = tk.Canvas(master, borderwidth=0, highlightthickness=0, xscrollcommand=hscroll.set)
-        hscroll.config(command=canvas.xview)
-        canvas.grid(row=1, rowspan=len(self.therapeutes), column=1, columnspan=2, sticky=tk.NSEW)
-        hscroll.grid(row=1+len(self.therapeutes), column=1, columnspan=2, sticky=tk.EW)
-
-        canvas.xview_moveto(0)
-        table_frame = tk.Frame(canvas)
-        table_id = canvas.create_window(0, 0, window=table_frame, anchor=tk.NW)
-
-        def configure_table(event):
-            size = table_frame.winfo_reqwidth(), table_frame.winfo_reqheight()
-            canvas.config(scrollregion="0 0 %d %d" % size)
-            if size[1] != canvas.winfo_height():
-                canvas.config(height=size[1])
-
-        def configure_canvas(event):
-            if table_frame.winfo_reqheight() != canvas.winfo_height():
-                canvas.itemconfigure(table_id, height=canvas.winfo_height())
-
-        table_frame.bind('<Configure>', configure_table)
-        canvas.bind('<Configure>', configure_canvas)
-
-        for i, therapeute in enumerate(self.therapeutes):
-            tk.Label(master, text=therapeute, anchor=tk.CENTER).grid(row=1+i, column=0)
-
+        selector_frame = tk.Frame(master)
+        selector_frame.grid(row=0, column=1, sticky=tk.EW)
         self.yearVar = tk.StringVar()
         self.yearVar.set('tout')
-        tk.OptionMenu(master, self.yearVar, *(['tout'] + [str(y) for y in self.years])).grid(row=0, column=1, sticky=tk.EW)
+        self.yearWidget = tk.OptionMenu(selector_frame, self.yearVar, *(['tout'] + [str(y) for y in self.years]))
+        self.yearWidget.grid(row=0, column=0, sticky=tk.EW)
+        self.yearVar.trace('w', self.update_display)
 
         self.monthVar = tk.StringVar()
         self.monthVar.set('tout')
-        self.monthWidget = tk.OptionMenu(master, self.monthVar, *self.months).grid(row=0, column=2, sticky=tk.EW)
+        self.monthWidget = tk.OptionMenu(selector_frame, self.monthVar, *self.months)
+        self.monthWidget.grid(row=0, column=1, sticky=tk.EW)
+        self.monthVar.trace('w', self.update_display)
+        self.monthWidget.config(state=tk.DISABLED)
+        selector_frame.grid_columnconfigure(0, weight=1)
+        selector_frame.grid_columnconfigure(1, weight=1)
 
-        #master.grid_rowconfigure(1, weight=1)
+        self.modeVar = tk.StringVar()
+        self.modeVar.set('# Consultations')
+        self.modeWidget = tk.OptionMenu(master, self.modeVar, '# Consultations', 'CHF Consultations', 'CHF Majorations', 'CHF Total')
+        self.modeWidget.grid(row=0, column=2, sticky=tk.EW)
+        self.modeVar.trace('w', self.update_display)
+
+        self.totals = {}
+        tk.Label(master).grid(row=1, column=0)  # Spacer
+        tk.Label(master).grid(row=2, column=0)  # Spacer
+        for i, therapeute in enumerate(self.therapeutes):
+            tk.Label(master, text=therapeute, anchor=tk.SE, borderwidth=1, relief=tk.RIDGE).grid(row=2+i, column=0, sticky=tk.EW+tk.S)
+            self.totals[therapeute] = widget = tk.Label(master, anchor=tk.SE, borderwidth=1, relief=tk.RIDGE)
+            widget.grid(row=2+i, column=2, sticky=tk.EW+tk.S)
+        tk.Label(master, text="Total", anchor=tk.NE).grid(row=2+len(self.therapeutes), column=1, sticky=tk.NE)
+        self.total = tk.Label(master, anchor=tk.NE, borderwidth=1, relief=tk.RIDGE)
+        self.total.grid(row=2+len(self.therapeutes), column=2, sticky=tk.EW+tk.N)
+
+        master.grid_columnconfigure(0, weight=0)
         master.grid_columnconfigure(1, weight=1)
-        master.grid_columnconfigure(2, weight=1)
+        master.grid_columnconfigure(2, weight=0)
+
+        self.master = master
+
+        self.update_display()
+
+    def update_display(self, *args):
+        year = self.yearVar.get()
+        month = self.monthVar.get()
+        if year != 'tout':
+            month_state = tk.NORMAL
+            year = int(year)
+        else:
+            month_state = tk.DISABLED
+        self.monthWidget.config(state=month_state)
+        self.cleanup()
+        if year != 'tout' and month != 'tout':
+            month = self.months.index(month)
+            self.setup_month_view(year, month)
+        elif year != 'tout':
+            self.setup_year_view(year)
+        else:
+            self.setup_full_view()
+
+    def cleanup(self):
+        self.table_frame = tk.Frame(self.master)
+        self.table_frame.grid(row=1, rowspan=len(self.therapeutes)+1, column=1, sticky=tk.NSEW)
+        for label in self.totals.values():
+            label.config(text='')
+        self.total.config(text='')
+
+    def setup_full_view(self):
+        totals = {}
+        total = 0
+        mode = self.modeVar.get()
+        format = '%d' if mode == '# Consultations' else '%0.2f'
+        for c, year in enumerate(self.years):
+            cursor.execute("""SELECT COALESCE(consultations.therapeute, patients.therapeute) AS therapeute, count(*), sum(prix_cts), sum(majoration_cts)
+                                FROM consultations INNER JOIN patients ON consultations.id = patients.id
+                               WHERE YEAR(date_consult) = %s
+                               GROUP BY therapeute
+                               ORDER BY therapeute""", [year])
+            tk.Label(self.table_frame, text=str(year), anchor=tk.CENTER, borderwidth=1, relief=tk.RIDGE).grid(row=0, column=c, sticky=tk.EW)
+            for therapeute, count, prix_cts, majoration_cts in cursor:
+                if mode == '# Consultations':
+                    value = count
+                elif mode == 'CHF Consultations':
+                    value = float(prix_cts)/100
+                elif mode == 'CHF Majorations':
+                    value = float(majoration_cts)/100
+                else:
+                    value = float(prix_cts + majoration_cts)/100
+                tk.Label(self.table_frame, text=(format % value), anchor=tk.SE, borderwidth=1, relief=tk.RIDGE).grid(row=1+self.therapeutes.index(therapeute), column=c, sticky=tk.EW)
+                totals[therapeute] = totals.get(therapeute, 0) + value
+                total += value
+            self.table_frame.grid_columnconfigure(c, weight=1)
+        for therapeute, label in self.totals.items():
+            if therapeute in totals:
+                label.config(text=(format % totals[therapeute]))
+        self.total.config(text=(format % total))
+
+    def setup_year_view(self, year):
+        totals = {}
+        total = 0
+        mode = self.modeVar.get()
+        format = '%d' if mode == '# Consultations' else '%0.2f'
+        for month in range(1, 13):
+            cursor.execute("""SELECT COALESCE(consultations.therapeute, patients.therapeute) AS therapeute, count(*), sum(prix_cts), sum(majoration_cts)
+                                FROM consultations INNER JOIN patients ON consultations.id = patients.id
+                               WHERE YEAR(date_consult) = %s AND MONTH(date_consult) = %s
+                               GROUP BY therapeute
+                               ORDER BY therapeute""", [year, month])
+            c = month - 1
+            tk.Label(self.table_frame, text=self.months[month], anchor=tk.CENTER, borderwidth=1, relief=tk.RIDGE).grid(row=0, column=c, sticky=tk.EW)
+            for therapeute, count, prix_cts, majoration_cts in cursor:
+                if mode == '# Consultations':
+                    value = count
+                elif mode == 'CHF Consultations':
+                    value = float(prix_cts)/100
+                elif mode == 'CHF Majorations':
+                    value = float(majoration_cts)/100
+                else:
+                    value = float(prix_cts + majoration_cts)/100
+                tk.Label(self.table_frame, text=(format % value), anchor=tk.SE, borderwidth=1, relief=tk.RIDGE).grid(row=1+self.therapeutes.index(therapeute), column=c, sticky=tk.EW)
+                totals[therapeute] = totals.get(therapeute, 0) + value
+                total += value
+            self.table_frame.grid_columnconfigure(c, weight=1)
+        for therapeute, label in self.totals.items():
+            if therapeute in totals:
+                label.config(text=(format % totals[therapeute]))
+        self.total.config(text=(format % total))
+
+    def setup_month_view(self, year, month):
+        totals = {}
+        total = 0
+        mode = self.modeVar.get()
+        format = '%d' if mode == '# Consultations' else '%0.2f'
+        for day in range(1, calendar.mdays[month]+1):
+            cursor.execute("""SELECT COALESCE(consultations.therapeute, patients.therapeute) AS therapeute, count(*), sum(prix_cts), sum(majoration_cts)
+                                FROM consultations INNER JOIN patients ON consultations.id = patients.id
+                               WHERE YEAR(date_consult) = %s AND MONTH(date_consult) = %s AND DAY(date_consult) = %s
+                               GROUP BY therapeute
+                               ORDER BY therapeute""", [year, month, day])
+            c = day - 1
+            tk.Label(self.table_frame, text=str(day), anchor=tk.CENTER, borderwidth=1, relief=tk.RIDGE).grid(row=0, column=c, sticky=tk.EW)
+            for therapeute, count, prix_cts, majoration_cts in cursor:
+                if mode == '# Consultations':
+                    value = count
+                elif mode == 'CHF Consultations':
+                    value = float(prix_cts)/100
+                elif mode == 'CHF Majorations':
+                    value = float(majoration_cts)/100
+                else:
+                    value = float(prix_cts + majoration_cts)/100
+                tk.Label(self.table_frame, text=(format % value), anchor=tk.SE, borderwidth=1, relief=tk.RIDGE).grid(row=1+self.therapeutes.index(therapeute), column=c, sticky=tk.EW)
+                totals[therapeute] = totals.get(therapeute, 0) + value
+                total += value
+            self.table_frame.grid_columnconfigure(c, weight=1)
+        for therapeute, label in self.totals.items():
+            if therapeute in totals:
+                label.config(text=(format % totals[therapeute]))
+        self.total.config(text=(format % total))
 
 
 class SummariesImport(bp_Dialog.Dialog):
