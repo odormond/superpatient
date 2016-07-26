@@ -67,7 +67,7 @@ def make_styles(font_size):
 
 
 def fixed(canvas, doc):
-    if not doc.patient_bv:
+    if not doc.adresse_bv:
         canvas.translate(0, doc.pagesize[1])
         canvas.rotate(-90)
         canvas.scale(1/SQRT2, 1/SQRT2)
@@ -81,7 +81,7 @@ def fixed(canvas, doc):
     canvas.drawImage(os.path.join(BASE_DIR, "logo_pog.png"), doc.leftMargin, doc.pagesize[1]-doc.topMargin-LOGO_HEIGHT, LOGO_WIDTH, LOGO_HEIGHT)
     canvas.setFont('EuclidBPBold', font_size)
     canvas.drawRightString(doc.pagesize[0]-doc.rightMargin, doc.pagesize[1]-doc.topMargin-font_size, u"Lausanne, le "+datetime.date.today().strftime(u'%d.%m.%y'))
-    if doc.patient_bv and doc.page == 1:
+    if doc.adresse_bv and doc.page == 1:
         if PRINT_BV_BG:
             if doc.bv_ref:
                 canvas.drawImage(os.path.join(BASE_DIR, "442_05_LAC_609_quer_Bank_CMYK.png"), 0, 0, BV_WIDTH, BV_HEIGHT)
@@ -140,12 +140,12 @@ def fixed(canvas, doc):
         text_obj = canvas.beginText()
         text_obj.setTextTransform(LEFT_TEXT_SCALE, 0, 0, 1, BV_COLUMN + LEFT_TEXT_SHIFT, BV_REF_Y - 16*BV_LINE)
         text_obj.setLeading(1.5*BV_LINE)
-        text_obj.textLines(doc.patient_bv)
+        text_obj.textLines(doc.adresse_bv)
         canvas.drawText(text_obj)
         text_obj = canvas.beginText()
         text_obj.setTextTransform(RIGHT_TEXT_SCALE, 0, 0, 1, BV_REF_X + 25*BV_COLUMN + RIGHT_TEXT_SHIFT, BV_REF_Y - 13*BV_LINE)
         text_obj.setLeading(1.5*BV_LINE)
-        text_obj.textLines(doc.patient_bv)
+        text_obj.textLines(doc.adresse_bv)
         canvas.drawText(text_obj)
         # Le montant
         offset = 0.5  # 1.3
@@ -185,16 +185,16 @@ def fixed(canvas, doc):
     canvas.make_bold = make_bold
 
 
-def facture(filename, therapeute, patient, duree, accident, prix_cts, description_majoration, majoration_cts, date, patient_bv=None, bv_ref=None):
+def facture(filename, therapeute, patient, duree, accident, prix_cts, description_majoration, majoration_cts, date, adresse_bv=None, bv_ref=None):
     doc = BaseDocTemplate(filename, pagesize=A4, leftMargin=MARGIN, rightMargin=MARGIN, topMargin=MARGIN, bottomMargin=MARGIN)
     doc.prix = (prix_cts + majoration_cts) / 100.
     doc.therapeute = therapeute
     doc.patient = patient
-    doc.patient_bv = patient_bv
+    doc.adresse_bv = adresse_bv
     doc.bv_ref = bv_ref
     doc.date = date
     doc.duree = duree
-    if patient_bv:
+    if adresse_bv:
         templates = [PageTemplate(id='bv', frames=[Frame(doc.leftMargin, doc.rightMargin, doc.width, doc.height)], onPage=fixed),
                      PageTemplate(id='copie', frames=[Frame(doc.leftMargin, doc.rightMargin, doc.width, doc.height)], onPage=fixed),
                      ]
@@ -220,7 +220,7 @@ def facture(filename, therapeute, patient, duree, accident, prix_cts, descriptio
         data += [[u"Raison : accident", None, ]]
     else:
         data += [[u"Raison : maladie", None, ]]
-    if not patient_bv:
+    if not adresse_bv:
         data[-1].append(u"payé")
     therapeute = [ParagraphOrSpacer(line, DEFAULT_STYLE) for line in therapeute.splitlines()]
     patient = [ParagraphOrSpacer(line, DEFAULT_STYLE) for line in patient.splitlines()]
@@ -239,10 +239,46 @@ def facture(filename, therapeute, patient, duree, accident, prix_cts, descriptio
             ]
     recu = fact[:]
     recu[3] = Paragraph(u'<onDraw name=make_bold label="COPIE"/>', COPIE_STYLE)
-    if patient_bv:
+    if adresse_bv:
         story = fact + [PageBreak()] + recu
     else:
         story = fact + [FrameBreak()] + recu
+    doc.build(story)
+
+
+def facture_manuelle(filename, therapeute, adresse, motif, prix, remarque, bv_ref):
+    doc = BaseDocTemplate(filename, pagesize=A4, leftMargin=MARGIN, rightMargin=MARGIN, topMargin=MARGIN, bottomMargin=MARGIN)
+    doc.prix = prix
+    doc.therapeute = therapeute
+    doc.adresse_bv = adresse
+    doc.bv_ref = bv_ref
+    templates = [PageTemplate(id='bv', frames=[Frame(doc.leftMargin, doc.rightMargin, doc.width, doc.height)], onPage=fixed)]
+    DEFAULT_STYLE, COPIE_STYLE, FACTURE_STYLE, DEFAULT_TABLE_STYLE, MAJORATION_TABLE_STYLE = make_styles(FONT_SIZE_BV)
+
+    doc.addPageTemplates(templates)
+    prix = u'%0.2f CHF' % doc.prix
+    tstyle = DEFAULT_TABLE_STYLE
+    therapeute = [ParagraphOrSpacer(line, DEFAULT_STYLE) for line in therapeute.splitlines()]
+    adresse = [ParagraphOrSpacer(line, DEFAULT_STYLE) for line in adresse.splitlines()]
+    story = [Spacer(0, LOGO_HEIGHT),
+             Table([[therapeute, adresse]],
+                   colWidths=[doc.width*2/3, doc.width/3],
+                   style=[('ALIGN', (0, 0), (0, 0), 'LEFT'), ('ALIGN', (1, 0), (1, 0), 'RIGHT')]),
+             Spacer(0, MARGIN),
+             Paragraph(u'', DEFAULT_STYLE),
+             Spacer(0, 1*MARGIN),
+             Paragraph(u'<onDraw name=make_italic label="FACTURE"/>', FACTURE_STYLE),
+             Spacer(0, 1*MARGIN),
+             Table([[Paragraph(motif, DEFAULT_STYLE), prix]], colWidths=[doc.width-6*cm, 5*cm], style=tstyle),
+             ]
+    if remarque:
+        story.append(Spacer(0, 1*MARGIN))
+        story.append(Table([[Paragraph(u"Remarque:", DEFAULT_STYLE), Paragraph(remarque, DEFAULT_STYLE)]],
+                           colWidths=[3*cm, doc.width - 3*cm],
+                           style=[('ALIGN', (0, 0), (1, 0), 'LEFT')]))
+    story += [Spacer(0, 1.5*MARGIN),
+              Paragraph(u"Avec mes remerciements.", DEFAULT_STYLE),
+              ]
     doc.build(story)
 
 
@@ -263,6 +299,6 @@ if __name__ == '__main__':
     import mailcap
     import time
     cmd, cap = mailcap.findmatch(mailcap.getcaps(), 'application/pdf', 'view', filename)
-    os.system(cmd +' &')
+    os.system(cmd + ' &')
     time.sleep(10)
     os.unlink(filename)

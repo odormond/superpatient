@@ -109,7 +109,7 @@ def parse_date(s):
 
 
 try:
-    from bp_factures import facture
+    from bp_factures import facture, facture_manuelle
 except:
     tkMessageBox.showwarning(u"Missing file", u"bp_factures.py is missing")
     sys.exit()
@@ -238,6 +238,12 @@ def TarifWidget(parent, key, row, column, value=None, readonly=False, side_by_si
     if want_widget:
         return var, widget
     return var
+
+
+def normalize_filename(filename):
+    for char in '\'"/`!$[]{}':
+        filename = filename.replace(char, '-')
+    return os.path.join(bp_custo.PDF_DIR, filename).encode('UTF-8')
 
 
 class Patient(bp_Dialog.Dialog):
@@ -824,10 +830,7 @@ class Consultation(bp_Dialog.Dialog):
             patient_bv = None
         adresse_patient = u'\n'.join([titre] + identite + [adresse_patient, "", date_naiss.strftime(DATE_FMT)])
         ts = datetime.datetime.now().strftime('%H')
-        filename = (u'%s_%s_%s_%s_%sh.pdf' % (nom, prenom, sex, date_ouvc, ts)).encode('UTF-8')
-        for char in '\'"/`!$[]{}':
-            filename = filename.replace(char, '-')
-        filename = os.path.join(bp_custo.PDF_DIR, filename)
+        filename = normalize_filename(u'%s_%s_%s_%s_%sh.pdf' % (nom, prenom, sex, date_ouvc, ts))
         cursorS.execute("SELECT bv_ref FROM consultations WHERE id_consult = %s", [self.id_consult])
         bv_ref, = cursorS.fetchone()
         facture(filename, adresse_therapeute, adresse_patient, description_prix, self.MC_accidentVar.get(), prix_cts, description_majoration, majoration_cts, date_ouvc, patient_bv, bv_ref)
@@ -1344,6 +1347,217 @@ class GererCollegues(bp_Dialog.Dialog):
         master.grid_columnconfigure(1, weight=1)
 
 
+class GererAdresses(bp_Dialog.Dialog):
+    def buttonbox(self):
+        box = tk.Button(self, text=buttons_text.done, command=self.cancel)
+        self.bind("<Escape>", self.cancel)
+        return box
+
+    def populate(self):
+        self.listbox.delete(0, tk.END)
+        i_width = a_width = 0
+        for identifiant, address in self.addresses:
+            i_width = max(i_width, len(identifiant))
+            a_width = max(a_width, len(address.replace('\n', ', ')))
+        for identifiant, address in self.addresses:
+            self.listbox.insert(tk.END, u"%*s   %*s" % (-i_width, identifiant, -a_width, address.replace('\n', ', ')))
+        self.listbox.selection_clear(0, tk.END)
+
+    def select_address(self, event):
+        indexes = self.listbox.curselection()
+        self.identifiant.set(u"")
+        self.address.delete('1.0', tk.END)
+        if indexes:
+            index = indexes[0]
+            if index == self.index:
+                self.listbox.selection_clear(0, tk.END)
+                self.index = None
+                self.update.config(text=buttons_text.add)
+                return
+            self.index = index
+            self.update.config(text=buttons_text.change)
+            identifiant, address = self.addresses[index]
+            self.identifiant.set(identifiant)
+            self.address.insert(tk.END, address)
+        else:
+            self.index = None
+            self.update.config(text=buttons_text.add)
+
+    def update_address(self):
+        identifiant = self.identifiant.get().strip()
+        address = self.address.get('1.0', tk.END).strip()
+        try:
+            if self.index:
+                key, _ = self.addresses[self.index]
+                cursorU.execute("""UPDATE adresses SET id = %s, adresse = %s WHERE id = %s""",
+                                [identifiant, address, key])
+                self.addresses[self.index] = (identifiant, address)
+            else:
+                cursorI.execute("""INSERT INTO adresses (id, adresse) VALUES (%s, %s)""",
+                                [identifiant, address])
+                self.addresses.append((identifiant, address))
+        except:
+            traceback.print_exc()
+            tkMessageBox.showwarning(windows_title.db_error, errors_text.db_update)
+        self.populate()
+        self.select_address('ignore')
+
+    def delete_address(self):
+        if self.index:
+            try:
+                key, _ = self.addresses[self.index]
+                cursorU.execute("""DELETE FROM adresses WHERE id = %s""", [key])
+                del self.addresses[self.index]
+            except:
+                traceback.print_exc()
+                tkMessageBox.showwarning(windows_title.db_error, errors_text.db_delete)
+        self.populate()
+        self.select_address('ignore')
+
+    def body(self, master):
+        try:
+            cursorS.execute("SELECT id, adresse FROM adresses ORDER BY id")
+            self.addresses = list(cursorS)
+        except:
+            traceback.print_exc()
+            tkMessageBox.showwarning(windows_title.db_error, errors_text.db_read)
+            return
+
+        self.title(windows_title.manage_addresses)
+        self.listbox = ListboxWidget(master, key='addresses', row=0, column=0, columnspan=2)
+        self.listbox.config(selectmode=tk.SINGLE)
+        self.listbox.bind('<<ListboxSelect>>', self.select_address)
+        self.index = None
+        self.populate()
+        self.identifiant = EntryWidget(master, key='identifiant', row=2, column=0)
+        self.address = TextWidget(master, key='address', row=3, column=0)
+        button_frame = tk.Frame(master)
+        button_frame.grid(row=4, column=0, columnspan=2)
+        self.update = tk.Button(button_frame, text=buttons_text.add, command=self.update_address)
+        self.update.grid(row=0, column=0)
+        self.delete = tk.Button(button_frame, text=buttons_text.delete, command=self.delete_address)
+        self.delete.grid(row=0, column=1)
+        button_frame.grid_columnconfigure(0, weight=1)
+        button_frame.grid_columnconfigure(1, weight=1)
+
+        master.grid_rowconfigure(1, weight=2)
+        master.grid_rowconfigure(3, weight=1)
+        master.grid_columnconfigure(1, weight=1)
+
+
+class FactureManuelle(tk.Toplevel):
+    def __init__(self):
+        tk.Toplevel.__init__(self)
+        self.option_add('*font', 'Helvetica -15')
+
+        menubar = tk.Menu(self)
+
+        adminmenu = tk.Menu(menubar, tearoff=0)
+        adminmenu.add_command(label=menus_text.manage_addresses, command=self.manage_addresses)
+
+        menubar.add_cascade(label=menus_text.admin, menu=adminmenu)
+        self.config(menu=menubar)
+
+        default_therapeute = ''
+        self.therapeutes = {}
+        cursorS.execute("SELECT therapeute, login, entete FROM therapeutes")
+        for therapeute, login, entete in cursorS:
+            self.therapeutes[therapeute] = entete + u'\n\n' + labels_text.adresse_pog
+            if login == LOGIN:
+                default_therapeute = therapeute
+
+        self.therapeute = tk.StringVar()
+        self.therapeute.set(default_therapeute)
+        self.therapeute.trace('w', self.change_therapeute)
+        tk.OptionMenu(self, self.therapeute, *self.therapeutes.keys()).grid(row=0, column=0, sticky=tk.EW)
+        self.therapeuteAddress = tk.Label(self, justify=tk.LEFT, state=tk.DISABLED)
+        self.therapeuteAddress.grid(row=1, column=0, sticky=tk.NSEW)
+
+        self.prefill = tk.StringVar()
+        self.prefill.set(u"Adresse manuelle")
+        self.prefill.trace('w', self.change_address)
+        self.prefillWidget = tk.OptionMenu(self, self.prefill, u"Adresse manuelle")
+        self.prefillWidget.grid(row=0, column=1, sticky=tk.EW)
+        self.address = tk.Text(self, relief=tk.SUNKEN, borderwidth=1, width=40, height=6)
+        self.address.grid(row=1, column=1, sticky=tk.NSEW)
+
+        tk.Label(self, text=u"Motif").grid(row=2, column=0, sticky=tk.EW)
+        tk.Label(self, text=u"Montant").grid(row=2, column=1, sticky=tk.EW)
+
+        self.reason = tk.StringVar()
+        tk.Entry(self, textvariable=self.reason).grid(row=3, column=0, sticky=tk.EW)
+        self.amount = tk.StringVar()
+        tk.Entry(self, textvariable=self.amount).grid(row=3, column=1, sticky=tk.EW)
+
+        tk.Label(self, text=u"Remarques").grid(row=4, column=0, sticky=tk.EW)
+        self.remark = tk.Text(self, relief=tk.SUNKEN, borderwidth=1, width=80, height=6)
+        self.remark.grid(row=5, column=0, columnspan=2, sticky=tk.NSEW)
+
+        tk.Button(self, text=u"Générer", command=self.generate_pdf).grid(row=6, column=0, columnspan=2, sticky=tk.EW)
+
+        self.grid_rowconfigure(1, weight=1)
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_columnconfigure(1, weight=1)
+
+        self.update_prefill()
+
+    def manage_addresses(self):
+        GererAdresses(self)
+        self.update_prefill()
+        self.change_address()
+
+    def change_address(self, *args):
+        self.address.delete('1.0', tk.END)
+        self.address.insert(tk.END, self.addresses.get(self.prefill.get(), u""))
+
+    def change_therapeute(self, *args):
+        self.therapeuteAddress.config(text=self.therapeutes[self.therapeute.get()])
+
+    def update_prefill(self):
+        self.addresses = {}
+        if len(self.prefillWidget['menu']._tclCommands) > 1:
+            self.prefillWidget['menu'].delete(1, tk.END)
+        cursorS.execute("SELECT id, adresse FROM adresses")
+        for id, address in cursorS:
+            self.addresses[id] = address
+            self.prefillWidget['menu'].add_command(label=id, command=tk._setit(self.prefill, id))
+
+    def generate_pdf(self):
+        therapeute = self.therapeutes[self.therapeute.get()].strip()
+        address = self.address.get('1.0', tk.END).strip()
+        key = self.prefill.get()
+        if key == u"Adresse Manuelle":
+            key = address.splitlines()[0].strip()
+        key = key.replace(' ', '_')
+        now = datetime.datetime.now()
+        ts = now.strftime('%Y-%m-%d_%H')
+        filename = normalize_filename(u'%s_%sh.pdf' % (key, ts))
+        reason = self.reason.get().strip()
+        try:
+            amount = float(self.amount.get().strip())
+        except ValueError:
+            tkMessageBox.showwarning(windows_title.invalid_error, errors_text.invalid_amount)
+            return
+        remark = self.remark.get('1.0', tk.END).strip()
+        try:
+            cursorU.execute("UPDATE bvr_sequence SET counter = @counter := counter + 1")
+            cursorS.execute("SELECT @counter")
+            bvr_counter, = cursorS.fetchone()
+            bv_ref = u'%06d%010d%02d%02d%02d%04d' % (bvr.prefix, bvr_counter, alpha_to_num(key[0]), alpha_to_num(key[1]), now.month, now.year)
+            bv_ref = bv_ref + str(bvr_checksum(bv_ref))
+            cursorI.execute("""INSERT INTO factures_manuelles
+                                      (id, emeteur, destinataire, motif, montant_cts, remarque, date, bv_ref)
+                               VALUES (%s, %s, %s, %s, %s, %s, %s, %s)""",
+                            [key, therapeute, address, reason, int(amount * 100), remark, now.date(), bv_ref])
+        except:
+            traceback.print_exc()
+            tkMessageBox.showwarning(windows_title.db_error, errors_text.db_update)
+            return
+        facture_manuelle(filename, therapeute, address, reason, amount, remark, bv_ref)
+        cmd, cap = mailcap.findmatch(mailcap.getcaps(), 'application/pdf', 'view', filename)
+        os.system(cmd)
+
+
 def save_db():
     myFormats = [('Database', '*.sql'), ]
 
@@ -1389,6 +1603,9 @@ class Application(tk.Tk):
         adminmenu.add_command(label=menus_text.manage_colleagues, command=lambda: GererCollegues(self))
         adminmenu.add_command(label=menus_text.manage_tarifs, command=lambda: GererTarifs(self))
         adminmenu.add_command(label=menus_text.manage_majorations, command=lambda: GererMajorations(self))
+        adminmenu.add_separator()
+        adminmenu.add_command(label=menus_text.manual_bill, command=lambda: FactureManuelle())
+        adminmenu.add_separator()
         adminmenu.add_command(label=menus_text.delete_data, command=lambda: GererPatients(self, 'supprimer'), foreground='red')
         adminmenu.add_command(label=menus_text.save_db, command=save_db)
         adminmenu.add_command(label=menus_text.restore_db, command=restore_db)

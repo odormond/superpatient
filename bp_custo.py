@@ -59,6 +59,7 @@ class WindowsTitle(Config):
     manage_colleagues = u"Gérer les collaborateurs"
     manage_majorations = u"Gérer les majorations"
     manage_tarifs = u"Gérer les tarifs"
+    manage_addresses = u"Gérer les adresses"
     compta = u"Gestion comptable"
     really_cancel = u"Confirmation d'annulation"
     summaries_import = u"Résumé de l'import"
@@ -81,6 +82,7 @@ class ErrorsText(Config):
     invalid_date = u"Veuillez vérifier le format des champs date"
     invalid_majoration = u"Majoration invalide"
     invalid_tarif = u"Tarif invalide"
+    invalid_amount = u"Montant invalide"
 
 
 errors_text = ErrorsText()
@@ -123,6 +125,8 @@ class MenusText(Config):
     manage_colleagues = u"Gestion des collaborateurs"
     manage_majorations = u"Gestion des majorations"
     manage_tarifs = u"Gestion des tarifs"
+    manage_addresses = u"Gestion des adresses"
+    manual_bill = u"Facture manuelle"
     delete_data = u"Supprimer des données"
     save_db = u"Sauvegarder la base de données"
     restore_db = u"Restaurer la base de données"
@@ -208,6 +212,9 @@ class LabelsText(Config):
     total_consultation = u"Total consultation"
     total_majoration = u"Total majoration"
     total = u"Total"
+    addresses = u"Adresses"
+    address = u"Adresse"
+    identifiant = u"Identifiant"
     # Info sur l'application
     apropos_description = u"""BasicPatient ver. 2.0 est un gestionnaire de patients et de consultations open-source.
 
@@ -258,7 +265,7 @@ class LabelsFont(Config):
     gen = a_osteo = exph = ttt = important = paye = ttes_cons = seance = LABEL_BOLD
     paye_par = paye_le = entete = collabos = date_du = date_au = etat_payement = LABEL_BOLD
     count = total_consultation = total_majoration = total = majorations = LABEL_BOLD
-    majoration = tarifs = tarif = description = LABEL_BOLD
+    majoration = tarifs = tarif = description = addresses = address = identifiant = LABEL_BOLD
 
 
 labels_font = LabelsFont()
@@ -275,6 +282,7 @@ class FieldsFont(Config):
     mc = eg = expc = atcdp = atcdf = thorax = abdomen = tete = ms = TEXT_DEFAULT
     mi = gen = a_osteo = exph = ttt = paye = entete = TEXT_DEFAULT
     rp = rc = collabos = majorations = tarifs = consultations = LISTBOX_DEFAULT
+    addresses = address = identifiant = TEXT_DEFAULT
 
 
 fields_font = FieldsFont()
@@ -312,6 +320,8 @@ class FieldsHeight(Config):
     tarif = 6
     description = 6
     consultations = 50
+    addresses = 20
+    address = 6
 
 
 fields_height = FieldsHeight()
@@ -345,6 +355,8 @@ class FieldsWidth(Config):
     ttt = 60
     paye = 60
     entete = 60
+    addresses = 100
+    address = 60
 
 
 fields_width = FieldsWidth()
