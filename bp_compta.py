@@ -303,7 +303,10 @@ class SummariesImport(bp_Dialog.Dialog):
             for payment in self.ok:
                 id_consult = payment[0]
                 credit_date = payment[10]
-                cursor.execute("UPDATE consultations SET paye_le = %s WHERE id_consult = %s", [credit_date, id_consult])
+                if id_consult >= 0:
+                    cursor.execute("UPDATE consultations SET paye_le = %s WHERE id_consult = %s", [credit_date, id_consult])
+                else:
+                    cursor.execute("UPDATE factures_manuelles SET paye_le = %s WHERE id = %s", [credit_date, -id_consult])
             self.cancel()
         except:
             traceback.print_exc()
@@ -400,7 +403,10 @@ class Details(bp_Dialog.Dialog):
         columns = [u"Sex", u"Nom", u"Prénom", u"Naissance", u"Consultation du", u"Facturé CHF", u"Payé CHF", u"Crédité le", u"Comtabilisé le", u"Numéro de référence"]
         widths = [len(c) for c in columns]
         for id_consult, prix_cts, majoration_cts, transaction_type, bvr_client_no, ref_no, amount_cts, depot_ref, depot_date, processing_date, credit_date, microfilm_no, reject_code, postal_fee_cts in self.positions:
-            cursor.execute("SELECT sex, nom, prenom, date_naiss, date_consult, paye_le FROM consultations INNER JOIN patients ON patients.id = consultations.id WHERE id_consult = %s", [id_consult])
+            if id_consult >= 0:
+                cursor.execute("SELECT sex, nom, prenom, date_naiss, date_consult, paye_le FROM consultations INNER JOIN patients ON patients.id = consultations.id WHERE id_consult = %s", [id_consult])
+            else:
+                cursor.execute("SELECT '-', identifiant, '', '', date, paye_le FROM factures_manuelles WHERE id = %s", [-id_consult])
             sex, nom, prenom, date_naiss, date_consult, paye_le = cursor.fetchone()
             data.append((sex, nom, prenom, date_naiss, date_consult, u'%0.2f' % ((prix_cts+majoration_cts)/100.), u'%0.2f' % (amount_cts/100.), self.format_date(credit_date), self.format_date(paye_le), self.format_ref(ref_no)))
             widths = [max(a, len(unicode(b))) for a, b in zip(widths, data[-1])]
@@ -522,28 +528,40 @@ class Application(tk.Tk):
         nom = self.nom.get().strip()
         conditions = ['TRUE']
         args = []
+        manual_bills_conditions = ['TRUE']
+        manual_bills_args = []
         if therapeute != 'Tous':
             conditions.append('consultations.therapeute = %s')
             args.append(therapeute)
+            manual_bills_conditions.append('therapeute = %s')
+            manual_bills_args.append(therapeute)
         if paye_par != '':
             conditions.append('paye_par = %s')
             args.append(paye_par)
         if date_du:
             conditions.append('date_consult >= %s')
             args.append(date_du)
+            manual_bills_conditions.append('date >= %s')
+            manual_bills_args.append(date_du)
         if date_au:
             conditions.append('date_consult < %s')
             args.append(date_au + datetime.timedelta(days=1))
+            manual_bills_conditions.append('date < %s')
+            manual_bills_args.append(date_au + datetime.timedelta(days=1))
         if etat == 'Comptabilisé':
             conditions.append('paye_le IS NOT NULL')
+            manual_bills_conditions.append('paye_le IS NOT NULL')
         elif etat == 'Non-comptabilisé':
             conditions.append('paye_le IS NULL')
+            manual_bills_conditions.append('paye_le IS NULL')
         if prenom:
             conditions.append('prenom LIKE %s')
             args.append(prenom.replace('*', '%'))
         if nom:
             conditions.append('nom LIKE %s')
             args.append(nom.replace('*', '%'))
+            manual_bills_conditions.append('destinataire LIKE %s')
+            manual_bills_args.append(nom.replace('*', '%'))
         self.list.delete(0, tk.END)
         self.list.selection_clear(0, tk.END)
         self.count.set('')
@@ -555,8 +573,16 @@ class Application(tk.Tk):
         try:
             cursor.execute("""SELECT id_consult, date_consult, paye_le, prix_cts, majoration_cts, sex, nom, prenom
                                 FROM consultations INNER JOIN patients ON consultations.id = patients.id
-                               WHERE %s""" % ' AND '.join(conditions), args)
-            for id_consult, date_consult, paye_le, prix_cts, majoration_cts, sex, nom, prenom in cursor:
+                               WHERE %s
+                               ORDER BY date_consult""" % ' AND '.join(conditions), args)
+            data = list(cursor)
+            if paye_par in ('', 'BVR'):
+                cursor.execute("""SELECT -id, date, paye_le, montant_cts, 0, '-', identifiant, ''
+                                    FROM factures_manuelles
+                                   WHERE %s
+                                   ORDER BY date""" % ' AND '.join(manual_bills_conditions), manual_bills_args)
+                data += list(cursor)
+            for id_consult, date_consult, paye_le, prix_cts, majoration_cts, sex, nom, prenom in data:
                 self.list.insert(tk.END, self.list_format % (sex, nom, prenom, date_consult, (prix_cts+majoration_cts)/100., paye_le))
                 self.data.append(id_consult)
                 total_consultation += prix_cts
@@ -572,14 +598,21 @@ class Application(tk.Tk):
 
     def mark_paid(self, *args):
         paye_le = parse_date(self.paye_le.get())
-        ids = [id_consult for i, id_consult in enumerate(self.data) if self.list.selection_includes(i)]
+        consult_ids = [id for i, id in enumerate(self.data) if self.list.selection_includes(i) and id >= 0]
+        manual_bills_ids = [-id for i, id in enumerate(self.data) if self.list.selection_includes(i) and id < 0]
         try:
-            if len(ids) > 1:
+            if len(consult_ids) > 1:
                 cursor.execute("""UPDATE consultations SET paye_le = %s
                                 WHERE paye_le IS NULL AND id_consult IN %s""",
-                               [paye_le, tuple(ids)])
-            elif len(ids) == 1:
-                cursor.execute("""UPDATE consultations SET paye_le = %s WHERE id_consult = %s""", [paye_le, ids[0]])
+                               [paye_le, tuple(consult_ids)])
+            elif len(consult_ids) == 1:
+                cursor.execute("""UPDATE consultations SET paye_le = %s WHERE id_consult = %s""", [paye_le, consult_ids[0]])
+            if len(manual_bills_ids) > 1:
+                cursor.execute("""UPDATE factures_manuelles SET paye_le = %s
+                                WHERE paye_le IS NULL AND id IN %s""",
+                               [paye_le, tuple(manual_bills_ids)])
+            elif len(manual_bills_ids) == 1:
+                cursor.execute("""UPDATE factures_manuelles SET paye_le = %s WHERE id = %s""", [paye_le, manual_bills_ids[0]])
         except:
             traceback.print_exc()
             tkMessageBox.showwarning(windows_title.db_error, errors_text.db_update)
@@ -657,18 +690,31 @@ class Application(tk.Tk):
             if transaction_type[2] != '2':
                 ignored.append((transaction_type, bvr_client_no, ref_no, amount_cts, depot_ref, depot_date, processing_date, credit_date, microfilm_no, reject_code, postal_fee_cts))
                 continue
+            l = None
             cursor.execute("SELECT id_consult, prix_cts, majoration_cts, paye_le FROM consultations WHERE bv_ref = %s", [ref_no])
-            if cursor.rowcount == 0:
-                not_found.append((transaction_type, bvr_client_no, ref_no, amount_cts, depot_ref, depot_date, processing_date, credit_date, microfilm_no, reject_code, postal_fee_cts))
-                continue
-            id_consult, prix_cts, majoration_cts, paye_le = cursor.fetchone()
-            if prix_cts + majoration_cts != amount_cts:
-                l = ko
-            elif paye_le is None:
-                l = ok
+            if cursor.rowcount != 0:
+                id_consult, prix_cts, majoration_cts, paye_le = cursor.fetchone()
+                if prix_cts + majoration_cts != amount_cts:
+                    l = ko
+                elif paye_le is None:
+                    l = ok
+                else:
+                    l = doubled
+            cursor.execute("SELECT id, montant_cts, paye_le FROM factures_manuelles WHERE bv_ref = %s", [ref_no])
+            if cursor.rowcount != 0:
+                id, montant_cts, paye_le = cursor.fetchone()
+                id_consult = -id
+                prix_cts, majoration_cts = montant_cts, 0
+                if montant_cts != amount_cts:
+                    l = ko
+                elif paye_le is None:
+                    l = ok
+                else:
+                    l = doubled
+            if l is not None:
+                l.append((id_consult, prix_cts, majoration_cts, transaction_type, bvr_client_no, ref_no, amount_cts, depot_ref, depot_date, processing_date, credit_date, microfilm_no, reject_code, postal_fee_cts))
             else:
-                l = doubled
-            l.append((id_consult, prix_cts, majoration_cts, transaction_type, bvr_client_no, ref_no, amount_cts, depot_ref, depot_date, processing_date, credit_date, microfilm_no, reject_code, postal_fee_cts))
+                not_found.append((transaction_type, bvr_client_no, ref_no, amount_cts, depot_ref, depot_date, processing_date, credit_date, microfilm_no, reject_code, postal_fee_cts))
 
         SummariesImport(self, ok, ko, doubled, not_found, ignored)
         self.update_list()

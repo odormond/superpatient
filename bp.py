@@ -1523,15 +1523,15 @@ class FactureManuelle(tk.Toplevel):
             self.prefillWidget['menu'].add_command(label=id, command=tk._setit(self.prefill, id))
 
     def generate_pdf(self):
-        therapeute = self.therapeutes[self.therapeute.get()].strip()
+        therapeute = self.therapeute.get()
+        therapeuteAddress = self.therapeutes[therapeute].strip()
         address = self.address.get('1.0', tk.END).strip()
-        key = self.prefill.get()
-        if key == u"Adresse Manuelle":
-            key = address.splitlines()[0].strip()
-        key = key.replace(' ', '_')
+        identifier = self.prefill.get()
+        if identifier == u"Adresse Manuelle":
+            identifier = address.splitlines()[0].strip()
         now = datetime.datetime.now()
         ts = now.strftime('%Y-%m-%d_%H')
-        filename = normalize_filename(u'%s_%sh.pdf' % (key, ts))
+        filename = normalize_filename(u'%s_%sh.pdf' % (identifier.replace(' ', '_'), ts))
         reason = self.reason.get().strip()
         try:
             amount = float(self.amount.get().strip())
@@ -1543,17 +1543,17 @@ class FactureManuelle(tk.Toplevel):
             cursorU.execute("UPDATE bvr_sequence SET counter = @counter := counter + 1")
             cursorS.execute("SELECT @counter")
             bvr_counter, = cursorS.fetchone()
-            bv_ref = u'%06d%010d%02d%02d%02d%04d' % (bvr.prefix, bvr_counter, alpha_to_num(key[0]), alpha_to_num(key[1]), now.month, now.year)
+            bv_ref = u'%06d%010d%02d%02d%02d%04d' % (bvr.prefix, bvr_counter, alpha_to_num(identifier[0]), alpha_to_num(identifier[1]), now.month, now.year)
             bv_ref = bv_ref + str(bvr_checksum(bv_ref))
             cursorI.execute("""INSERT INTO factures_manuelles
-                                      (id, emeteur, destinataire, motif, montant_cts, remarque, date, bv_ref)
+                                      (identifiant, therapeute, destinataire, motif, montant_cts, remarque, date, bv_ref)
                                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)""",
-                            [key, therapeute, address, reason, int(amount * 100), remark, now.date(), bv_ref])
+                            [identifier, therapeute, address, reason, int(amount * 100), remark, now.date(), bv_ref])
         except:
             traceback.print_exc()
             tkMessageBox.showwarning(windows_title.db_error, errors_text.db_update)
             return
-        facture_manuelle(filename, therapeute, address, reason, amount, remark, bv_ref)
+        facture_manuelle(filename, therapeuteAddress, address, reason, amount, remark, bv_ref)
         cmd, cap = mailcap.findmatch(mailcap.getcaps(), 'application/pdf', 'view', filename)
         os.system(cmd)
 
