@@ -570,8 +570,8 @@ class ListeConsultations(bp_Dialog.Dialog):
 
     def auto_affiche(self):
         try:
-            cursorS.execute("""SELECT sex, nom, prenom, date_naiss, ATCD_perso, ATCD_fam, important FROM patients WHERE id = %s""", [self.id_patient])
-            sex, nom, prenom, date_naiss, ATCD_perso, ATCD_fam, Important = cursorS.fetchone()
+            cursorS.execute("""SELECT sex, nom, prenom, date_naiss, ATCD_perso, ATCD_fam, important, ass_compl FROM patients WHERE id = %s""", [self.id_patient])
+            sex, nom, prenom, date_naiss, ATCD_perso, ATCD_fam, Important, ass_compl = cursorS.fetchone()
             cursorS.execute("""SELECT id_consult, date_consult, MC, MC_accident, EG, APT_thorax, APT_abdomen, APT_tete, APT_MS,
                                       APT_MI, APT_system, A_osteo, exam_phys, traitement, divers, exam_pclin, paye, therapeute, paye_le
                                  FROM consultations
@@ -595,6 +595,8 @@ class ListeConsultations(bp_Dialog.Dialog):
         self.toutes.insert(tk.END, ATCD_fam+u'\n')
         self.toutes.insert(tk.END, labels_text.important+u'\n', "important")
         self.toutes.insert(tk.END, Important+u'\n')
+        self.toutes.insert(tk.END, labels_text.ass_comp+u'\n', "titre")
+        self.toutes.insert(tk.END, ass_compl+u'\n')
         for id_consult, date_consult, MC, MC_accident, EG, APT_thorax, APT_abdomen, APT_tete, APT_MS, APT_MI, APT_system, A_osteo, exam_phys, traitement, divers, exam_pclin, paye, therapeute, paye_le in cursorS:
             self.toutes.insert(tk.END, u'\n********** '+labels_text.date_consult+date_consult.strftime(DATE_FMT)+u' **********'+u'\n', "date")
             if paye_le is None:
