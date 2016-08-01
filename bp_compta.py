@@ -282,6 +282,93 @@ class Statistics(bp_Dialog.Dialog):
         self.total.config(text=(format % total))
 
 
+class GererRappels(bp_Dialog.Dialog):
+    def buttonbox(self):
+        box = tk.Frame(self)
+        tk.Button(box, text=buttons_text.output_recalls, command=self.output_recalls).pack(side=tk.LEFT)
+        tk.Button(box, text=buttons_text.cancel, command=self.cancel).pack(side=tk.LEFT)
+        self.bind("<Escape>", self.cancel)
+        box.pack()
+
+    def body(self, master):
+        self.title(windows_title.manage_recalls)
+        self.upto, w_upto = EntryWidget(master, 'consult_upto', 0, 0, want_widget=True)
+        self.upto.set(str(datetime.date.today() - datetime.timedelta(days=30)))
+        w_upto.bind('<KeyRelease-Return>', self.update_list)
+        tk.Button(master, text=u"\U0001f4c5".encode('UTF-8'), command=lambda: self.popup_calendar(self.upto, w_upto), borderwidth=0, relief=tk.FLAT).grid(row=0, column=2)
+        tk.Label(master, font=bp_custo.LISTBOX_DEFAULT,
+                 text="       Nom                            Prénom                    Consultation du   Prix  Rappel le  #").grid(row=1, column=0, columnspan=3, sticky=tk.W)
+        self.list_format = "%-6s %-30s %-30s %s %6.2f  %8s   %d"
+        self.list = ListboxWidget(master, 'consultations', 2, 0, columnspan=3)
+        self.list.config(selectmode=tk.MULTIPLE)
+        self.list.bind('<<ListboxSelect>>', self.update_selection)
+        self.total = EntryWidget(master, 'total', 3, 0, readonly=True, justify=tk.RIGHT)
+
+        master.grid_columnconfigure(0, weight=1)
+        master.grid_columnconfigure(1, weight=1)
+        master.grid_rowconfigure(1, weight=1)
+
+        self.update_list()
+
+    def popup_calendar(self, var, widget):
+        import ttkcalendar
+        geometry = widget.winfo_geometry()
+        geometry = geometry[geometry.find('+'):]
+        win = tk.Toplevel(self)
+        win.geometry(geometry)
+        win.title("Date")
+        win.transient(self)
+        date = parse_date(var.get())
+        ttkcal = ttkcalendar.Calendar(win, locale="fr_CH.UTF-8", year=date.year, month=date.month)
+        ttkcal.pack(expand=1, fill='both')
+        win.update()
+        win.wait_window()
+        if ttkcal.selection:
+            var.set(ttkcal.selection.strftime("%Y-%m-%d"))
+            self.update_list()
+
+    def update_list(self, *args):
+        upto = parse_date(self.upto.get().strip())
+        self.list.delete(0, tk.END)
+        self.list.selection_clear(0, tk.END)
+        self.total.set('')
+        self.data = []
+        try:
+            cursor.execute("""SELECT consultations.id_consult, date_consult, prix_cts, majoration_cts, sex, nom, prenom, COALESCE(sum(rappel_cts), 0), count(date_rappel), max(date_rappel)
+                                FROM consultations INNER JOIN patients ON consultations.id = patients.id
+                                LEFT OUTER JOIN rappels ON consultations.id_consult = rappels.id_consult
+                               WHERE bv_ref IS NOT NULL AND bv_ref != '' AND date_consult <= %s
+                               GROUP BY consultations.id_consult, date_consult, prix_cts, majoration_cts, sex, nom, prenom
+                               ORDER BY date_consult""", [upto])
+            for id_consult, date_consult, prix_cts, majoration_cts, sex, nom, prenom, rappel_cts, rappel_cnt, rappel_last in cursor:
+                if rappel_last is None:
+                    rappel_last = ''
+                elif rappel_last > upto:
+                    continue
+                self.list.insert(tk.END, self.list_format % (sex, nom, prenom, date_consult, float(prix_cts+majoration_cts+rappel_cts)/100., rappel_last, rappel_cnt))
+                if rappel_cnt == 1:
+                    self.list.itemconfig(tk.END, foreground='#400')
+                elif rappel_cnt > 1:
+                    self.list.itemconfig(tk.END, foreground='#800')
+                self.data.append((id_consult, float(prix_cts+majoration_cts+rappel_cts)))
+        except:
+            traceback.print_exc()
+            tkMessageBox.showwarning(windows_title.db_error, errors_text.db_read)
+        self.list.selection_set(0, tk.END)
+        self.update_selection()
+
+    def update_selection(self, *args):
+        total = 0
+        for idx in self.list.curselection():
+            total += self.data[idx][1]
+        self.total.set('%0.2f CHF' % (total/100.))
+
+    def output_recalls(self, *args):
+        for idx in self.list.curselection():
+            id_consult = self.data[idx][0]
+        self.cancel()
+
+
 class SummariesImport(bp_Dialog.Dialog):
     def __init__(self, parent, ok, ko, doubled, not_found, ignored):
         self.ok = ok
@@ -325,10 +412,6 @@ class SummariesImport(bp_Dialog.Dialog):
 
         tk.Label(master, text=u"Payements ne correspondant pas au montant attendu").grid(row=2, column=0)
         tk.Label(master, text=str(len(self.ko))).grid(row=2, column=1)
-        tk.Label(master, text=u"%0.2f CHF" % sum_found(self.ko)).grid(row=2, column=2, sticky=tk.E)
-        if self.ko:
-            tk.Button(master, text=buttons_text.details, command=lambda: Details(self, self.ko)).grid(row=2, column=3, sticky=tk.W)
-
         tk.Label(master, text=u"Payements déjà encaissés").grid(row=3, column=0)
         tk.Label(master, text=str(len(self.doubled))).grid(row=3, column=1)
         tk.Label(master, text=u"%0.2f CHF" % sum_found(self.doubled)).grid(row=3, column=2, sticky=tk.E)
@@ -447,8 +530,9 @@ class Application(tk.Tk):
 
         bvrmenu = tk.Menu(menubar, tearoff=0)
         bvrmenu.add_command(label=menus_text.import_bvr, command=self.import_bvr)
+        bvrmenu.add_command(label=menus_text.manage_recalls, command=lambda: GererRappels(self))
 
-        menubar.add_cascade(label=menus_text.bvr, menu=bvrmenu)
+        menubar.add_cascade(label=menus_text.payments, menu=bvrmenu)
 
         statmenu = tk.Menu(menubar, tearoff=0)
         statmenu.add_command(label=menus_text.show_stats, command=self.show_stats)
@@ -484,13 +568,13 @@ class Application(tk.Tk):
         w_date_du.bind('<KeyRelease-Return>', self.date_du_changed)
         w_date_au.bind('<KeyRelease-Return>', self.update_list)
         self.etat.trace('w', self.update_list)
-        tk.Button(self, text="📅", command=lambda: self.popup_calendar(self.date_du, w_date_du), borderwidth=0, relief=tk.FLAT).grid(row=0, column=4)
-        tk.Button(self, text="📅", command=lambda: self.popup_calendar(self.date_au, w_date_au), borderwidth=0, relief=tk.FLAT).grid(row=1, column=4)
+        tk.Button(self, text=u"\U0001f4c5".encode('UTF-8'), command=lambda: self.popup_calendar(self.date_du, w_date_du), borderwidth=0, relief=tk.FLAT).grid(row=0, column=4)
+        tk.Button(self, text=u"\U0001f4c5".encode('UTF-8'), command=lambda: self.popup_calendar(self.date_au, w_date_au), borderwidth=0, relief=tk.FLAT).grid(row=1, column=4)
         self.nom, widget = EntryWidget(self, 'nom', 3, 0, want_widget=True)
         widget.bind('<Return>', self.update_list)
         self.prenom, widget = EntryWidget(self, 'prenom', 3, 2, want_widget=True)
         widget.bind('<Return>', self.update_list)
-        tk.Button(self, text="🔎", command=self.update_list, borderwidth=0, relief=tk.FLAT).grid(row=3, column=4)
+        tk.Button(self, text=u"\U0001f50e".encode('UTF-8'), command=self.update_list, borderwidth=0, relief=tk.FLAT).grid(row=3, column=4)
 
         # Middle block: list display
         tk.Label(self, font=bp_custo.LISTBOX_DEFAULT,
@@ -501,11 +585,12 @@ class Application(tk.Tk):
         self.count = EntryWidget(self, 'count', 6, 0, readonly=True)
         self.total_consultation = EntryWidget(self, 'total_consultation', 6, 2, readonly=True, justify=tk.RIGHT)
         self.total_majoration = EntryWidget(self, 'total_majoration', 7, 2, readonly=True, justify=tk.RIGHT)
-        self.total = EntryWidget(self, 'total', 8, 2, readonly=True, justify=tk.RIGHT)
+        self.total_rappel = EntryWidget(self, 'total_rappel', 8, 2, readonly=True, justify=tk.RIGHT)
+        self.total = EntryWidget(self, 'total', 9, 2, readonly=True, justify=tk.RIGHT)
 
         # Bottom block: available action on selected items
-        self.paye_le = EntryWidget(self, 'paye_le', 9, 0, value=today)
-        tk.Button(self, text=buttons_text.mark_paye, command=self.mark_paid).grid(row=9, column=2, sticky=tk.W)
+        self.paye_le = EntryWidget(self, 'paye_le', 10, 0, value=today)
+        tk.Button(self, text=buttons_text.mark_paye, command=self.mark_paid).grid(row=10, column=2, sticky=tk.W)
 
         self.grid_columnconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
@@ -565,28 +650,39 @@ class Application(tk.Tk):
         self.list.delete(0, tk.END)
         self.list.selection_clear(0, tk.END)
         self.count.set('')
+        self.total_consultation.set('')
+        self.total_majoration.set('')
+        self.total_rappel.set('')
         self.total.set('')
         self.data = []
         count = 0
         total_consultation = 0
         total_majoration = 0
+        total_rappel = 0
         try:
-            cursor.execute("""SELECT id_consult, date_consult, paye_le, prix_cts, majoration_cts, sex, nom, prenom
+            cursor.execute("""SELECT consultations.id_consult, date_consult, paye_le, prix_cts, majoration_cts, sex, nom, prenom, COALESCE(sum(rappel_cts), 0), count(date_rappel)
                                 FROM consultations INNER JOIN patients ON consultations.id = patients.id
+                                LEFT OUTER JOIN rappels ON consultations.id_consult = rappels.id_consult
                                WHERE %s
+                               GROUP BY consultations.id_consult, date_consult, paye_le, prix_cts, majoration_cts, sex, nom, prenom
                                ORDER BY date_consult""" % ' AND '.join(conditions), args)
             data = list(cursor)
             if paye_par in ('', 'BVR'):
-                cursor.execute("""SELECT -id, date, paye_le, montant_cts, 0, '-', identifiant, ''
+                cursor.execute("""SELECT -id, date, paye_le, montant_cts, 0, '-', identifiant, '', 0, 0
                                     FROM factures_manuelles
                                    WHERE %s
                                    ORDER BY date""" % ' AND '.join(manual_bills_conditions), manual_bills_args)
                 data += list(cursor)
-            for id_consult, date_consult, paye_le, prix_cts, majoration_cts, sex, nom, prenom in data:
-                self.list.insert(tk.END, self.list_format % (sex, nom, prenom, date_consult, (prix_cts+majoration_cts)/100., paye_le))
+            for id_consult, date_consult, paye_le, prix_cts, majoration_cts, sex, nom, prenom, rappel_cts, rappel_cnt in data:
+                self.list.insert(tk.END, self.list_format % (sex, nom, prenom, date_consult, (prix_cts+majoration_cts+rappel_cts)/100., paye_le))
+                if rappel_cnt == 1:
+                    self.list.itemconfig(self.list.size()-1, foreground='#400')
+                elif rappel_cnt > 1:
+                    self.list.itemconfig(self.list.size()-1, foreground='#800')
                 self.data.append(id_consult)
                 total_consultation += prix_cts
                 total_majoration += majoration_cts
+                total_rappel += rappel_cts
                 count += 1
         except:
             traceback.print_exc()
@@ -594,7 +690,8 @@ class Application(tk.Tk):
         self.count.set(str(count))
         self.total_consultation.set('%0.2f CHF' % (total_consultation/100.))
         self.total_majoration.set('%0.2f CHF' % (total_majoration/100.))
-        self.total.set('%0.2f CHF' % ((total_consultation + total_majoration)/100.))
+        self.total_rappel.set('%0.2f CHF' % (total_rappel/100.))
+        self.total.set('%0.2f CHF' % ((total_consultation + total_majoration + total_rappel)/100.))
 
     def mark_paid(self, *args):
         paye_le = parse_date(self.paye_le.get())
@@ -725,3 +822,7 @@ class Application(tk.Tk):
 
 app = Application()
 app.mainloop()
+#! /usr/bin/env python2
+# coding:UTF-8
+
+import os

@@ -21,6 +21,8 @@ ANCIEN_MOYEN_DE_PAYEMENT = [u'CdM']
 MOYEN_DE_PAYEMENT = [u'Cash', u'Carte', u'BVR', u'Dû', u'PVPE']
 ETAT_PAYEMENT = [u'Tous', u'Comptabilisé', u'Non-comptabilisé']
 
+MONTANT_RAPPEL_CTS = 500
+
 
 class Config(object):
     def __getitem__(self, key):
@@ -64,6 +66,7 @@ class WindowsTitle(Config):
     really_cancel = u"Confirmation d'annulation"
     summaries_import = u"Résumé de l'import"
     compta_statistics = u"Statistiques"
+    manage_recalls = u"Gérer les rappels"
 
 windows_title = WindowsTitle()
 
@@ -116,6 +119,7 @@ class ButtonsText(Config):
     mark_paye = u"Marquer payé"
     valider_import = u"Valider l'import"
     details = u"Détails"
+    output_recalls = u"Générer les rappels"
 
 
 buttons_text = ButtonsText()
@@ -135,7 +139,9 @@ class MenusText(Config):
     admin = u"Administration"
     help = u"Aide"
     bvr = u"BVRs"
-    import_bvr = u"Importer les payements"
+    payments = u"Paiements"
+    import_bvr = u"Importer les paiements"
+    manage_recalls = u"Gestion des rappels"
     show_stats = u"Statistiques"
 
 
@@ -211,10 +217,12 @@ class LabelsText(Config):
     count = u"# entrées"
     total_consultation = u"Total consultation"
     total_majoration = u"Total majoration"
+    total_rappel = u"Total frais de rappel"
     total = u"Total"
     addresses = u"Adresses"
     address = u"Adresse"
     identifiant = u"Identifiant"
+    consult_upto = u"Consultations ou rappel jusqu'au"
     # Info sur l'application
     apropos_description = u"""BasicPatient ver. 2.0 est un gestionnaire de patients et de consultations open-source.
 
@@ -264,8 +272,9 @@ class LabelsFont(Config):
     mc = eg = expc = atcdp = atcdf = thorax = abdomen = tete = ms = mi = LABEL_BOLD
     gen = a_osteo = exph = ttt = important = paye = ttes_cons = seance = LABEL_BOLD
     paye_par = paye_le = entete = collabos = date_du = date_au = etat_payement = LABEL_BOLD
-    count = total_consultation = total_majoration = total = majorations = LABEL_BOLD
+    count = total_consultation = total_majoration = total_rappel = total = majorations = LABEL_BOLD
     majoration = tarifs = tarif = description = addresses = address = identifiant = LABEL_BOLD
+    consult_upto = LABEL_BOLD
 
 
 labels_font = LabelsFont()
@@ -275,7 +284,7 @@ class FieldsFont(Config):
     id = sexe = therapeute = login = nom = prenom = naissance_le = naissance = ENTRY_DEFAULT
     date_ouverture = tel_fix = portable = tel_prof = mail = ENTRY_DEFAULT
     ass_comp = profes = etat = envoye = seance = count = total_consultation = ENTRY_DEFAULT
-    total_majoration = total = ENTRY_DEFAULT
+    total_majoration = total_rappel = total = consult_upto = ENTRY_DEFAULT
     paye_par = paye_le = date_du = date_au = etat_payement = ENTRY_DEFAULT
     majoration = tarif = description = ENTRY_DEFAULT
     important = medecin = adr_priv = medecinS = remarques = ttes_cons = TEXT_DEFAULT

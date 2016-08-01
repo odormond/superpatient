@@ -185,19 +185,20 @@ def fixed(canvas, doc):
     canvas.make_bold = make_bold
 
 
-def facture(filename, therapeute, patient, duree, accident, prix_cts, description_majoration, majoration_cts, date, adresse_bv=None, bv_ref=None):
+def facture(filename, therapeute, patient, duree, accident, prix_cts, description_majoration, majoration_cts, date, adresse_bv=None, bv_ref=None, rappel_cts=0):
     doc = BaseDocTemplate(filename, pagesize=A4, leftMargin=MARGIN, rightMargin=MARGIN, topMargin=MARGIN, bottomMargin=MARGIN)
-    doc.prix = (prix_cts + majoration_cts) / 100.
+    doc.prix = (prix_cts + majoration_cts + rappel_cts) / 100.
     doc.therapeute = therapeute
     doc.patient = patient
     doc.adresse_bv = adresse_bv
     doc.bv_ref = bv_ref
     doc.date = date
     doc.duree = duree
+    doc.rappel_cts = rappel_cts
     if adresse_bv:
-        templates = [PageTemplate(id='bv', frames=[Frame(doc.leftMargin, doc.rightMargin, doc.width, doc.height)], onPage=fixed),
-                     PageTemplate(id='copie', frames=[Frame(doc.leftMargin, doc.rightMargin, doc.width, doc.height)], onPage=fixed),
-                     ]
+        templates = [PageTemplate(id='bv', frames=[Frame(doc.leftMargin, doc.rightMargin, doc.width, doc.height)], onPage=fixed)]
+        if rappel_cts == 0:
+            templates.append(PageTemplate(id='copie', frames=[Frame(doc.leftMargin, doc.rightMargin, doc.width, doc.height)], onPage=fixed))
         DEFAULT_STYLE, COPIE_STYLE, FACTURE_STYLE, DEFAULT_TABLE_STYLE, MAJORATION_TABLE_STYLE = make_styles(FONT_SIZE_BV)
     else:
         templates = [PageTemplate(id='recu',
@@ -212,10 +213,10 @@ def facture(filename, therapeute, patient, duree, accident, prix_cts, descriptio
     data = [[Paragraph(u"Prise en charge ostéopathique %s datée du %s" % (duree, date.strftime(DATE_FMT)), DEFAULT_STYLE), None, prix], ]
     if majoration_cts:
         tstyle = MAJORATION_TABLE_STYLE
-        majoration = u'%0.2f CHF' % (majoration_cts/100.)
-        total = u'%0.2f CHF' % ((prix_cts+majoration_cts)/100.)
-        data += [[description_majoration, None, majoration]]
-        data += [[None, u'TOTAL', total]]
+        data += [[description_majoration, None, u'%0.2f CHF' % (majoration_cts/100.)]]
+        if rappel_cts != 0:
+            data += [["Frais de rappel", None, u'%0.2f CHF' % (rappel_cts/100.)]]
+        data += [[None, u'TOTAL', u'%0.2f CHF' % doc.prix]]
     if accident:
         data += [[u"Raison : accident", None, ]]
     else:
@@ -231,16 +232,23 @@ def facture(filename, therapeute, patient, duree, accident, prix_cts, descriptio
             Spacer(0, MARGIN),
             Paragraph(u'', DEFAULT_STYLE),
             Spacer(0, 1*MARGIN),
-            Paragraph(u'<onDraw name=make_italic label="FACTURE"/>', FACTURE_STYLE),
-            Spacer(0, 1*MARGIN),
-            Table(data, colWidths=[doc.width-5*cm, 1.5*cm, 3.5*cm], style=tstyle),
-            Spacer(0, 1.5*MARGIN),
-            Paragraph(u"Avec mes remerciements.", DEFAULT_STYLE),
             ]
+    if rappel_cts:
+        fact.append(Paragraph(u'<onDraw name=make_italic label="RAPPEL"/>', FACTURE_STYLE))
+    else:
+        fact.append(Paragraph(u'<onDraw name=make_italic label="FACTURE"/>', FACTURE_STYLE))
+    fact += [Spacer(0, 1*MARGIN),
+             Table(data, colWidths=[doc.width-5*cm, 1.5*cm, 3.5*cm], style=tstyle),
+             Spacer(0, 1.5*MARGIN),
+             Paragraph(u"Avec mes remerciements.", DEFAULT_STYLE),
+             ]
     recu = fact[:]
     recu[3] = Paragraph(u'<onDraw name=make_bold label="COPIE"/>', COPIE_STYLE)
     if adresse_bv:
-        story = fact + [PageBreak()] + recu
+        if rappel_cts == 0:
+            story = fact + [PageBreak()] + recu
+        else:
+            story = fact
     else:
         story = fact + [FrameBreak()] + recu
     doc.build(story)
