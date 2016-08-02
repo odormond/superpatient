@@ -381,8 +381,8 @@ class GererRappels(bp_Dialog.Dialog):
         for idx in self.list.curselection():
             id_consult, _, sex, nom, prenom, date_consult, rappel_cnt, prix_cts, majoration_cts, rappel_cts = self.data[idx]
 
-            ts = datetime.datetime.now().strftime('%H')
-            filename = normalize_filename(u'rappel_%d_%s_%s_%s_%s_%sh.pdf' % (rappel_cnt+1, nom, prenom, sex, date_consult, ts))
+            today = datetime.date.today()
+            filename = normalize_filename(u'rappel_%d_%s_%s_%s_%s_%s.pdf' % (rappel_cnt+1, today, nom, prenom, sex, date_consult))
 
             cursor.execute("""SELECT COALESCE(consultations.therapeute, patients.therapeute), patients.id, MC_accident, date_naiss, bv_ref
                                 FROM consultations INNER JOIN patients ON consultations.id = patients.id
@@ -418,7 +418,7 @@ class GererRappels(bp_Dialog.Dialog):
 
             cursor.execute("""INSERT INTO rappels (id_consult, rappel_cts, date_rappel)
                                    VALUES (%s, %s, %s)""",
-                           [id_consult, bp_custo.MONTANT_RAPPEL_CTS, datetime.date.today()])
+                           [id_consult, bp_custo.MONTANT_RAPPEL_CTS, today])
             rappel_cost = rappel_cts + bp_custo.MONTANT_RAPPEL_CTS
 
             facture(filename, adresse_therapeute, adresse_patient, description_prix, mc_accident, prix_cts, description_majoration, majoration_cts, date_consult, patient_bv, bv_ref, rappel_cost)
