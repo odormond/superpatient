@@ -297,13 +297,13 @@ class Statistics(bp_Dialog.Dialog):
 class GererRappels(bp_Dialog.Dialog):
     def buttonbox(self):
         box = tk.Frame(self)
-        tk.Button(box, text=buttons_text.output_recalls, command=self.output_recalls).pack(side=tk.LEFT)
+        tk.Button(box, text=buttons_text.output_reminders, command=self.output_reminders).pack(side=tk.LEFT)
         tk.Button(box, text=buttons_text.cancel, command=self.cancel).pack(side=tk.LEFT)
         self.bind("<Escape>", self.cancel)
         box.pack()
 
     def body(self, master):
-        self.title(windows_title.manage_recalls)
+        self.title(windows_title.manage_reminders)
         self.upto, w_upto = EntryWidget(master, 'consult_upto', 0, 0, want_widget=True)
         self.upto.set(str(datetime.date.today() - datetime.timedelta(days=30)))
         w_upto.bind('<KeyRelease-Return>', self.update_list)
@@ -375,7 +375,7 @@ class GererRappels(bp_Dialog.Dialog):
             total += self.data[idx][1]
         self.total.set('%0.2f CHF' % (total/100.))
 
-    def output_recalls(self, *args):
+    def output_reminders(self, *args):
         for idx in self.list.curselection():
             id_consult, _, sex, nom, prenom, date_consult, rappel_cnt, prix_cts, majoration_cts, rappel_cts = self.data[idx]
 
@@ -594,7 +594,7 @@ class Application(tk.Tk):
 
         bvrmenu = tk.Menu(menubar, tearoff=0)
         bvrmenu.add_command(label=menus_text.import_bvr, command=self.import_bvr)
-        bvrmenu.add_command(label=menus_text.manage_recalls, command=lambda: GererRappels(self))
+        bvrmenu.add_command(label=menus_text.manage_reminders, command=lambda: GererRappels(self))
 
         menubar.add_cascade(label=menus_text.payments, menu=bvrmenu)
 

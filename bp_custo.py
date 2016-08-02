@@ -66,7 +66,7 @@ class WindowsTitle(Config):
     really_cancel = u"Confirmation d'annulation"
     summaries_import = u"Résumé de l'import"
     compta_statistics = u"Statistiques"
-    manage_recalls = u"Gérer les rappels"
+    manage_reminders = u"Gérer les rappels"
 
 windows_title = WindowsTitle()
 
@@ -119,7 +119,7 @@ class ButtonsText(Config):
     mark_paye = u"Marquer payé"
     valider_import = u"Valider l'import"
     details = u"Détails"
-    output_recalls = u"Générer les rappels"
+    output_reminders = u"Générer les rappels"
 
 
 buttons_text = ButtonsText()
@@ -141,7 +141,7 @@ class MenusText(Config):
     bvr = u"BVRs"
     payments = u"Paiements"
     import_bvr = u"Importer les paiements"
-    manage_recalls = u"Gestion des rappels"
+    manage_reminders = u"Gestion des rappels"
     show_stats = u"Statistiques"
 
 
