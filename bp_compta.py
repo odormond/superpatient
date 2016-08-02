@@ -103,7 +103,7 @@ class licence(bp_Dialog.Dialog):
 
 
 def sum_found(positions):
-    return sum(p[6] for p in positions) / 100.0
+    return sum(p[7] for p in positions) / 100.0
 
 
 def sum_notfound(positions):
@@ -207,7 +207,7 @@ class Statistics(bp_Dialog.Dialog):
         mode = self.modeVar.get()
         format = '%d' if mode == '# Consultations' else '%0.2f'
         for c, year in enumerate(self.years):
-            cursor.execute("""SELECT COALESCE(consultations.therapeute, patients.therapeute) AS therapeute, count(*), sum(prix_cts), sum(majoration_cts)
+            cursor.execute("""SELECT COALESCE(consultations.therapeute, patients.therapeute) AS therapeute, count(*), CAST(SUM(prix_cts) AS SIGNED), CAST(SUM(majoration_cts) AS SIGNED)
                                 FROM consultations INNER JOIN patients ON consultations.id = patients.id
                                WHERE YEAR(date_consult) = %s
                                GROUP BY therapeute
@@ -217,11 +217,11 @@ class Statistics(bp_Dialog.Dialog):
                 if mode == '# Consultations':
                     value = count
                 elif mode == 'CHF Consultations':
-                    value = float(prix_cts)/100
+                    value = prix_cts/100.
                 elif mode == 'CHF Majorations':
-                    value = float(majoration_cts)/100
+                    value = majoration_cts/100.
                 else:
-                    value = float(prix_cts + majoration_cts)/100
+                    value = (prix_cts + majoration_cts)/100.
                 tk.Label(self.table_frame, text=(format % value), anchor=tk.SE, borderwidth=1, relief=tk.RIDGE).grid(row=1+self.therapeutes.index(therapeute), column=c, sticky=tk.EW)
                 totals[therapeute] = totals.get(therapeute, 0) + value
                 total += value
@@ -237,7 +237,7 @@ class Statistics(bp_Dialog.Dialog):
         mode = self.modeVar.get()
         format = '%d' if mode == '# Consultations' else '%0.2f'
         for month in range(1, 13):
-            cursor.execute("""SELECT COALESCE(consultations.therapeute, patients.therapeute) AS therapeute, count(*), sum(prix_cts), sum(majoration_cts)
+            cursor.execute("""SELECT COALESCE(consultations.therapeute, patients.therapeute) AS therapeute, count(*), CAST(SUM(prix_cts) AS SIGNED), CAST(SUM(majoration_cts) AS SIGNED)
                                 FROM consultations INNER JOIN patients ON consultations.id = patients.id
                                WHERE YEAR(date_consult) = %s AND MONTH(date_consult) = %s
                                GROUP BY therapeute
@@ -248,11 +248,11 @@ class Statistics(bp_Dialog.Dialog):
                 if mode == '# Consultations':
                     value = count
                 elif mode == 'CHF Consultations':
-                    value = float(prix_cts)/100
+                    value = prix_cts/100.
                 elif mode == 'CHF Majorations':
-                    value = float(majoration_cts)/100
+                    value = majoration_cts/100.
                 else:
-                    value = float(prix_cts + majoration_cts)/100
+                    value = (prix_cts + majoration_cts)/100.
                 tk.Label(self.table_frame, text=(format % value), anchor=tk.SE, borderwidth=1, relief=tk.RIDGE).grid(row=1+self.therapeutes.index(therapeute), column=c, sticky=tk.EW)
                 totals[therapeute] = totals.get(therapeute, 0) + value
                 total += value
@@ -268,7 +268,7 @@ class Statistics(bp_Dialog.Dialog):
         mode = self.modeVar.get()
         format = '%d' if mode == '# Consultations' else '%0.2f'
         for day in range(1, calendar.mdays[month]+1):
-            cursor.execute("""SELECT COALESCE(consultations.therapeute, patients.therapeute) AS therapeute, count(*), sum(prix_cts), sum(majoration_cts)
+            cursor.execute("""SELECT COALESCE(consultations.therapeute, patients.therapeute) AS therapeute, count(*), CAST(SUM(prix_cts) AS SIGNED), CAST(SUM(majoration_cts) AS SIGNED)
                                 FROM consultations INNER JOIN patients ON consultations.id = patients.id
                                WHERE YEAR(date_consult) = %s AND MONTH(date_consult) = %s AND DAY(date_consult) = %s
                                GROUP BY therapeute
@@ -279,11 +279,11 @@ class Statistics(bp_Dialog.Dialog):
                 if mode == '# Consultations':
                     value = count
                 elif mode == 'CHF Consultations':
-                    value = float(prix_cts)/100
+                    value = prix_cts/100.
                 elif mode == 'CHF Majorations':
-                    value = float(majoration_cts)/100
+                    value = majoration_cts/100.
                 else:
-                    value = float(prix_cts + majoration_cts)/100
+                    value = (prix_cts + majoration_cts)/100.
                 tk.Label(self.table_frame, text=(format % value), anchor=tk.SE, borderwidth=1, relief=tk.RIDGE).grid(row=1+self.therapeutes.index(therapeute), column=c, sticky=tk.EW)
                 totals[therapeute] = totals.get(therapeute, 0) + value
                 total += value
@@ -346,10 +346,10 @@ class GererRappels(bp_Dialog.Dialog):
         self.total.set('')
         self.data = []
         try:
-            cursor.execute("""SELECT consultations.id_consult, date_consult, prix_cts, majoration_cts, sex, nom, prenom, COALESCE(sum(rappel_cts), 0), count(date_rappel), max(date_rappel)
+            cursor.execute("""SELECT consultations.id_consult, date_consult, prix_cts, majoration_cts, sex, nom, prenom, COALESCE(CAST(SUM(rappel_cts) AS SIGNED), 0), count(date_rappel), max(date_rappel)
                                 FROM consultations INNER JOIN patients ON consultations.id = patients.id
                                 LEFT OUTER JOIN rappels ON consultations.id_consult = rappels.id_consult
-                               WHERE bv_ref IS NOT NULL AND bv_ref != '' AND date_consult <= %s
+                               WHERE paye_le IS NULL AND bv_ref IS NOT NULL AND bv_ref != '' AND date_consult <= %s
                                GROUP BY consultations.id_consult, date_consult, prix_cts, majoration_cts, sex, nom, prenom
                                ORDER BY date_consult""", [upto])
             for id_consult, date_consult, prix_cts, majoration_cts, sex, nom, prenom, rappel_cts, rappel_cnt, rappel_last in cursor:
@@ -357,12 +357,12 @@ class GererRappels(bp_Dialog.Dialog):
                     rappel_last = ''
                 elif rappel_last > upto:
                     continue
-                self.list.insert(tk.END, self.list_format % (sex, nom, prenom, date_consult, float(prix_cts+majoration_cts+rappel_cts)/100., rappel_last, rappel_cnt))
+                self.list.insert(tk.END, self.list_format % (sex, nom, prenom, date_consult, (prix_cts+majoration_cts+rappel_cts)/100., rappel_last, rappel_cnt))
                 if rappel_cnt == 1:
                     self.list.itemconfig(tk.END, foreground='#400')
                 elif rappel_cnt > 1:
                     self.list.itemconfig(tk.END, foreground='#800')
-                self.data.append((id_consult, float(prix_cts+majoration_cts+rappel_cts), sex, nom, prenom, date_consult, rappel_cnt, int(prix_cts), int(majoration_cts), int(rappel_cts)))
+                self.data.append((id_consult, (prix_cts+majoration_cts+rappel_cts), sex, nom, prenom, date_consult, rappel_cnt, prix_cts, majoration_cts, rappel_cts))
         except:
             traceback.print_exc()
             tkMessageBox.showwarning(windows_title.db_error, errors_text.db_read)
@@ -516,7 +516,7 @@ class Details(bp_Dialog.Dialog):
         master.grid_rowconfigure(0, weight=1)
         master.grid_columnconfigure(0, weight=1)
 
-        if len(self.positions[0]) == 14:
+        if len(self.positions[0]) == 15:
             self.populate_found()
         else:
             self.populate_notfound()
@@ -537,17 +537,27 @@ class Details(bp_Dialog.Dialog):
     def populate_found(self):
         self.list_box.delete(0, tk.END)
         data = []
-        columns = [u"Sex", u"Nom", u"Prénom", u"Naissance", u"Consultation du", u"Facturé CHF", u"Payé CHF", u"Crédité le", u"Comtabilisé le", u"Numéro de référence"]
+        columns = [u"Sex", u"Nom", u"Prénom", u"Naissance", u"Consultation du", u"Facturé CHF", u"Payé CHF", u"Rappel", u"Crédité le", u"Comtabilisé le", u"Numéro de référence"]
         widths = [len(c) for c in columns]
-        for id_consult, prix_cts, majoration_cts, transaction_type, bvr_client_no, ref_no, amount_cts, depot_ref, depot_date, processing_date, credit_date, microfilm_no, reject_code, postal_fee_cts in self.positions:
+        for id_consult, prix_cts, majoration_cts, rappel_cts, transaction_type, bvr_client_no, ref_no, amount_cts, depot_ref, depot_date, processing_date, credit_date, microfilm_no, reject_code, postal_fee_cts in self.positions:
             if id_consult >= 0:
-                cursor.execute("SELECT sex, nom, prenom, date_naiss, date_consult, paye_le FROM consultations INNER JOIN patients ON patients.id = consultations.id WHERE id_consult = %s", [id_consult])
+                cursor.execute("""SELECT sex, nom, prenom, date_naiss, date_consult, paye_le, COALESCE(CAST(SUM(rappel_cts) AS SIGNED), 0)
+                                    FROM consultations INNER JOIN patients ON patients.id = consultations.id
+                                                       LEFT OUTER JOIN rappels ON consultations.id_consult = rappels.id_consult
+                                   WHERE consultations.id_consult = %s
+                                   GROUP BY sex, nom, prenom, date_naiss, date_consult, paye_le""",
+                               [id_consult])
             else:
-                cursor.execute("SELECT '-', identifiant, '', '', date, paye_le FROM factures_manuelles WHERE id = %s", [-id_consult])
-            sex, nom, prenom, date_naiss, date_consult, paye_le = cursor.fetchone()
-            data.append((sex, nom, prenom, date_naiss, date_consult, u'%0.2f' % ((prix_cts+majoration_cts)/100.), u'%0.2f' % (amount_cts/100.), self.format_date(credit_date), self.format_date(paye_le), self.format_ref(ref_no)))
+                cursor.execute("SELECT '-', identifiant, '', '', date, paye_le, 0 FROM factures_manuelles WHERE id = %s", [-id_consult])
+            sex, nom, prenom, date_naiss, date_consult, paye_le, fact_rappel_cts = cursor.fetchone()
+            fact_rappel_cts = int(fact_rappel_cts)
+            if fact_rappel_cts == 0:
+                rappel = ''
+            else:
+                rappel = '%3.0f%%' % (rappel_cts * 100 / fact_rappel_cts)
+            data.append((sex, nom, prenom, date_naiss, date_consult, u'%0.2f' % ((prix_cts+majoration_cts+fact_rappel_cts)/100.), u'%0.2f' % (amount_cts/100.), rappel, self.format_date(credit_date), self.format_date(paye_le), self.format_ref(ref_no)))
             widths = [max(a, len(unicode(b))) for a, b in zip(widths, data[-1])]
-        self.list_box.config(width=min(120, sum(widths)+2*9))
+        self.list_box.config(width=min(120, sum(widths)+2*10))
         widths[5] *= -1
         widths[6] *= -1
 
@@ -714,7 +724,7 @@ class Application(tk.Tk):
         total_majoration = 0
         total_rappel = 0
         try:
-            cursor.execute("""SELECT consultations.id_consult, date_consult, paye_le, prix_cts, majoration_cts, sex, nom, prenom, COALESCE(sum(rappel_cts), 0), count(date_rappel)
+            cursor.execute("""SELECT consultations.id_consult, date_consult, paye_le, prix_cts, majoration_cts, sex, nom, prenom, COALESCE(CAST(SUM(rappel_cts) AS SIGNED), 0), count(date_rappel)
                                 FROM consultations INNER JOIN patients ON consultations.id = patients.id
                                 LEFT OUTER JOIN rappels ON consultations.id_consult = rappels.id_consult
                                WHERE %s
@@ -842,28 +852,36 @@ class Application(tk.Tk):
                 ignored.append((transaction_type, bvr_client_no, ref_no, amount_cts, depot_ref, depot_date, processing_date, credit_date, microfilm_no, reject_code, postal_fee_cts))
                 continue
             l = None
+            rappel_cts = 0
             cursor.execute("SELECT id_consult, prix_cts, majoration_cts, paye_le FROM consultations WHERE bv_ref = %s", [ref_no])
             if cursor.rowcount != 0:
                 id_consult, prix_cts, majoration_cts, paye_le = cursor.fetchone()
-                if prix_cts + majoration_cts != amount_cts:
-                    l = ko
-                elif paye_le is None:
-                    l = ok
+                cursor.execute("SELECT rappel_cts FROM rappels WHERE id_consult = %s ORDER BY date_rappel", [id_consult])
+                a_payer_cts = prix_cts + majoration_cts
+                for r in [0] + [r for r, in cursor]:
+                    rappel_cts += r
+                    if a_payer_cts + rappel_cts == amount_cts:
+                        if paye_le is None:
+                            l = ok
+                        else:
+                            l = doubled
+                        break
                 else:
-                    l = doubled
-            cursor.execute("SELECT id, montant_cts, paye_le FROM factures_manuelles WHERE bv_ref = %s", [ref_no])
-            if cursor.rowcount != 0:
-                id, montant_cts, paye_le = cursor.fetchone()
-                id_consult = -id
-                prix_cts, majoration_cts = montant_cts, 0
-                if montant_cts != amount_cts:
                     l = ko
-                elif paye_le is None:
-                    l = ok
-                else:
-                    l = doubled
+            else:
+                cursor.execute("SELECT id, montant_cts, paye_le FROM factures_manuelles WHERE bv_ref = %s", [ref_no])
+                if cursor.rowcount != 0:
+                    id, montant_cts, paye_le = cursor.fetchone()
+                    id_consult = -id
+                    prix_cts, majoration_cts = montant_cts, 0
+                    if montant_cts != amount_cts:
+                        l = ko
+                    elif paye_le is None:
+                        l = ok
+                    else:
+                        l = doubled
             if l is not None:
-                l.append((id_consult, prix_cts, majoration_cts, transaction_type, bvr_client_no, ref_no, amount_cts, depot_ref, depot_date, processing_date, credit_date, microfilm_no, reject_code, postal_fee_cts))
+                l.append((id_consult, prix_cts, majoration_cts, rappel_cts, transaction_type, bvr_client_no, ref_no, amount_cts, depot_ref, depot_date, processing_date, credit_date, microfilm_no, reject_code, postal_fee_cts))
             else:
                 not_found.append((transaction_type, bvr_client_no, ref_no, amount_cts, depot_ref, depot_date, processing_date, credit_date, microfilm_no, reject_code, postal_fee_cts))
 
