@@ -894,7 +894,3 @@ class Application(tk.Tk):
 
 app = Application()
 app.mainloop()
-#! /usr/bin/env python2
-# coding:UTF-8
-
-import os
