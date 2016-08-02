@@ -6,6 +6,7 @@ import sys
 import datetime
 import traceback
 import calendar
+import mailcap
 
 sys.path.insert(0, os.path.dirname(__file__))
 
@@ -376,6 +377,7 @@ class GererRappels(bp_Dialog.Dialog):
         self.total.set('%0.2f CHF' % (total/100.))
 
     def output_reminders(self, *args):
+        filenames = []
         for idx in self.list.curselection():
             id_consult, _, sex, nom, prenom, date_consult, rappel_cnt, prix_cts, majoration_cts, rappel_cts = self.data[idx]
 
@@ -420,6 +422,11 @@ class GererRappels(bp_Dialog.Dialog):
             rappel_cost = rappel_cts + bp_custo.MONTANT_RAPPEL_CTS
 
             facture(filename, adresse_therapeute, adresse_patient, description_prix, mc_accident, prix_cts, description_majoration, majoration_cts, date_consult, patient_bv, bv_ref, rappel_cost)
+            filenames.append(filename)
+        if filenames:
+            cmd, cap = mailcap.findmatch(mailcap.getcaps(), 'application/pdf', 'view', filenames[0])
+            cmd = ' '.join([cmd] + ["'%s'" % filename for filename in filenames[1:]])
+            os.system(cmd)
         self.cancel()
 
 
@@ -443,9 +450,15 @@ class SummariesImport(bp_Dialog.Dialog):
         try:
             for payment in self.ok:
                 id_consult = payment[0]
+                rappel_cts = payment[3]
                 credit_date = payment[10]
                 if id_consult >= 0:
                     cursor.execute("UPDATE consultations SET paye_le = %s WHERE id_consult = %s", [credit_date, id_consult])
+                    if rappel_cts > 0:
+                        cursor.execute("SELECT rappel_cts, date_rappel FROM rappels WHERE id_consult = %s ORDER BY date_rappel", [id_consult])
+                        for fact_rappel_cts, date_rappel in list(cursor):
+                            cursor.execute("UPDATE rappels SET paye = %s WHERE id_consult = %s AND date_rappel = %s", [rappel_cts >= fact_rappel_cts, id_consult, date_rappel])
+                            rappel_cts -= fact_rappel_cts
                 else:
                     cursor.execute("UPDATE factures_manuelles SET paye_le = %s WHERE id = %s", [credit_date, -id_consult])
             self.cancel()
@@ -738,7 +751,7 @@ class Application(tk.Tk):
                                    ORDER BY date""" % ' AND '.join(manual_bills_conditions), manual_bills_args)
                 data += list(cursor)
             for id_consult, date_consult, paye_le, prix_cts, majoration_cts, sex, nom, prenom, rappel_cts, rappel_cnt in data:
-                self.list.insert(tk.END, self.list_format % (sex, nom, prenom, date_consult, (prix_cts+majoration_cts+rappel_cts)/100., paye_le))
+                self.list.insert(tk.END, self.list_format % (sex, nom, prenom, date_consult, (prix_cts+majoration_cts+rappel_cts)/100., paye_le or ''))
                 if rappel_cnt == 1:
                     self.list.itemconfig(self.list.size()-1, foreground='#400')
                 elif rappel_cnt > 1:
