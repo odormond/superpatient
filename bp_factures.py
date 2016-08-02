@@ -58,12 +58,17 @@ def make_styles(font_size):
 
     DEFAULT_TABLE_STYLE = [('FONT', (0, 0), (-1, -1), 'EuclidBPBold', font_size),
                            ('ALIGN', (1, 0), (1, -1), 'RIGHT')]
-    MAJORATION_TABLE_STYLE = [('FONT', (0, 0), (-1, -1), 'EuclidBPBold', font_size),
-                              ('ALIGN', (2, 0), (2, -1), 'RIGHT'),
-                              ('ALIGN', (1, 2), (1, 2), 'RIGHT'),
-                              ('LINEABOVE', (2, 2), (2, 2), 2, colors.black),
-                              ]
-    return DEFAULT_STYLE, COPIE_STYLE, FACTURE_STYLE, DEFAULT_TABLE_STYLE, MAJORATION_TABLE_STYLE
+    MAJORATION_OU_RAPPEL_TABLE_STYLE = [('FONT', (0, 0), (-1, -1), 'EuclidBPBold', font_size),
+                                        ('ALIGN', (2, 0), (2, -1), 'RIGHT'),
+                                        ('ALIGN', (1, 2), (1, 2), 'RIGHT'),
+                                        ('LINEABOVE', (2, 2), (2, 2), 2, colors.black),
+                                        ]
+    MAJORATION_ET_RAPPEL_TABLE_STYLE = [('FONT', (0, 0), (-1, -1), 'EuclidBPBold', font_size),
+                                        ('ALIGN', (2, 0), (2, -1), 'RIGHT'),
+                                        ('ALIGN', (1, 3), (1, 3), 'RIGHT'),
+                                        ('LINEABOVE', (2, 3), (2, 3), 2, colors.black),
+                                        ]
+    return DEFAULT_STYLE, COPIE_STYLE, FACTURE_STYLE, DEFAULT_TABLE_STYLE, MAJORATION_OU_RAPPEL_TABLE_STYLE, MAJORATION_ET_RAPPEL_TABLE_STYLE
 
 
 def fixed(canvas, doc):
@@ -75,7 +80,7 @@ def fixed(canvas, doc):
     else:
         font_size = FONT_SIZE_BV
 
-    DEFAULT_STYLE, COPIE_STYLE, FACTURE_STYLE, DEFAULT_TABLE_STYLE, MAJORATION_TABLE_STYLE = make_styles(font_size)
+    DEFAULT_STYLE, COPIE_STYLE, FACTURE_STYLE, DEFAULT_TABLE_STYLE, MAJORATION_OU_RAPPEL_TABLE_STYLE, MAJORATION_ET_RAPPEL_TABLE_STYLE = make_styles(font_size)
 
     canvas.saveState()
     canvas.drawImage(os.path.join(BASE_DIR, "logo_pog.png"), doc.leftMargin, doc.pagesize[1]-doc.topMargin-LOGO_HEIGHT, LOGO_WIDTH, LOGO_HEIGHT)
@@ -199,23 +204,26 @@ def facture(filename, therapeute, patient, duree, accident, prix_cts, descriptio
         templates = [PageTemplate(id='bv', frames=[Frame(doc.leftMargin, doc.rightMargin, doc.width, doc.height)], onPage=fixed)]
         if rappel_cts == 0:
             templates.append(PageTemplate(id='copie', frames=[Frame(doc.leftMargin, doc.rightMargin, doc.width, doc.height)], onPage=fixed))
-        DEFAULT_STYLE, COPIE_STYLE, FACTURE_STYLE, DEFAULT_TABLE_STYLE, MAJORATION_TABLE_STYLE = make_styles(FONT_SIZE_BV)
+        DEFAULT_STYLE, COPIE_STYLE, FACTURE_STYLE, DEFAULT_TABLE_STYLE, MAJORATION_OU_RAPPEL_TABLE_STYLE, MAJORATION_ET_RAPPEL_TABLE_STYLE = make_styles(FONT_SIZE_BV)
     else:
         templates = [PageTemplate(id='recu',
                                   frames=[Frame(doc.leftMargin, doc.rightMargin, doc.width, doc.height),
                                           Frame(doc.pagesize[0]+doc.leftMargin, doc.rightMargin, doc.width, doc.height)],
                                   onPage=fixed)]
-        DEFAULT_STYLE, COPIE_STYLE, FACTURE_STYLE, DEFAULT_TABLE_STYLE, MAJORATION_TABLE_STYLE = make_styles(FONT_SIZE)
+        DEFAULT_STYLE, COPIE_STYLE, FACTURE_STYLE, DEFAULT_TABLE_STYLE, MAJORATION_OU_RAPPEL_TABLE_STYLE, MAJORATION_ET_RAPPEL_TABLE_STYLE = make_styles(FONT_SIZE)
 
     doc.addPageTemplates(templates)
     prix = u'%0.2f CHF' % (prix_cts/100.)
     tstyle = DEFAULT_TABLE_STYLE
     data = [[Paragraph(u"Prise en charge ostéopathique %s datée du %s" % (duree, date.strftime(DATE_FMT)), DEFAULT_STYLE), None, prix], ]
     if majoration_cts:
-        tstyle = MAJORATION_TABLE_STYLE
         data += [[description_majoration, None, u'%0.2f CHF' % (majoration_cts/100.)]]
-        if rappel_cts != 0:
-            data += [["Frais de rappel", None, u'%0.2f CHF' % (rappel_cts/100.)]]
+    if rappel_cts != 0:
+        data += [["Frais de rappel", None, u'%0.2f CHF' % (rappel_cts/100.)]]
+    if majoration_cts or rappel_cts:
+        tstyle = MAJORATION_OU_RAPPEL_TABLE_STYLE
+        if majoration_cts and rappel_cts:
+            tstyle = MAJORATION_ET_RAPPEL_TABLE_STYLE
         data += [[None, u'TOTAL', u'%0.2f CHF' % doc.prix]]
     if accident:
         data += [[u"Raison : accident", None, ]]
@@ -239,7 +247,7 @@ def facture(filename, therapeute, patient, duree, accident, prix_cts, descriptio
         fact.append(Paragraph(u'<onDraw name=make_italic label="FACTURE"/>', FACTURE_STYLE))
     fact += [Spacer(0, 1*MARGIN),
              Table(data, colWidths=[doc.width-5*cm, 1.5*cm, 3.5*cm], style=tstyle),
-             Spacer(0, 1.5*MARGIN),
+             Spacer(0, 1*MARGIN),
              Paragraph(u"Avec mes remerciements.", DEFAULT_STYLE),
              ]
     recu = fact[:]
@@ -261,7 +269,7 @@ def facture_manuelle(filename, therapeute, adresse, motif, prix, remarque, bv_re
     doc.adresse_bv = adresse
     doc.bv_ref = bv_ref
     templates = [PageTemplate(id='bv', frames=[Frame(doc.leftMargin, doc.rightMargin, doc.width, doc.height)], onPage=fixed)]
-    DEFAULT_STYLE, COPIE_STYLE, FACTURE_STYLE, DEFAULT_TABLE_STYLE, MAJORATION_TABLE_STYLE = make_styles(FONT_SIZE_BV)
+    DEFAULT_STYLE, COPIE_STYLE, FACTURE_STYLE, DEFAULT_TABLE_STYLE, MAJORATION_OU_RAPPEL_TABLE_STYLE, MAJORATION_ET_RAPPEL_TABLE_STYLE = make_styles(FONT_SIZE_BV)
 
     doc.addPageTemplates(templates)
     prix = u'%0.2f CHF' % doc.prix

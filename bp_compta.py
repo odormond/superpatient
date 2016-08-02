@@ -26,7 +26,7 @@ except:
 
 try:
     import bp_custo
-    from bp_custo import windows_title, errors_text, buttons_text, menus_text, labels_text
+    from bp_custo import windows_title, errors_text, buttons_text, menus_text, labels_text, DATE_FMT
 except:
     tkMessageBox.showwarning("Missing file", "bp_custo.py is missing")
     sys.exit()
@@ -41,6 +41,12 @@ try:
     from bp_widgets import ListboxWidget, EntryWidget, OptionWidget
 except:
     tkMessageBox.showwarning("Missing file", "bp_widgets.py is missing")
+    sys.exit()
+
+try:
+    from bp_factures import facture
+except:
+    tkMessageBox.showwarning("Missing file", "bp_factures.py is missing")
     sys.exit()
 
 try:
@@ -102,6 +108,12 @@ def sum_found(positions):
 
 def sum_notfound(positions):
     return sum(p[3] for p in positions) / 100.0
+
+
+def normalize_filename(filename):
+    for char in '\'"/`!$[]{}':
+        filename = filename.replace(char, '-')
+    return os.path.join(bp_custo.PDF_DIR, filename).encode('UTF-8')
 
 
 class Statistics(bp_Dialog.Dialog):
@@ -298,7 +310,7 @@ class GererRappels(bp_Dialog.Dialog):
         tk.Button(master, text=u"\U0001f4c5".encode('UTF-8'), command=lambda: self.popup_calendar(self.upto, w_upto), borderwidth=0, relief=tk.FLAT).grid(row=0, column=2)
         tk.Label(master, font=bp_custo.LISTBOX_DEFAULT,
                  text="       Nom                            Prénom                    Consultation du   Prix  Rappel le  #").grid(row=1, column=0, columnspan=3, sticky=tk.W)
-        self.list_format = "%-6s %-30s %-30s %s %6.2f  %8s   %d"
+        self.list_format = "%-6s %-30s %-30s %s %6.2f  %10s %d"
         self.list = ListboxWidget(master, 'consultations', 2, 0, columnspan=3)
         self.list.config(selectmode=tk.MULTIPLE)
         self.list.bind('<<ListboxSelect>>', self.update_selection)
@@ -306,7 +318,7 @@ class GererRappels(bp_Dialog.Dialog):
 
         master.grid_columnconfigure(0, weight=1)
         master.grid_columnconfigure(1, weight=1)
-        master.grid_rowconfigure(1, weight=1)
+        master.grid_rowconfigure(2, weight=1)
 
         self.update_list()
 
@@ -350,7 +362,7 @@ class GererRappels(bp_Dialog.Dialog):
                     self.list.itemconfig(tk.END, foreground='#400')
                 elif rappel_cnt > 1:
                     self.list.itemconfig(tk.END, foreground='#800')
-                self.data.append((id_consult, float(prix_cts+majoration_cts+rappel_cts)))
+                self.data.append((id_consult, float(prix_cts+majoration_cts+rappel_cts), sex, nom, prenom, date_consult, rappel_cnt, int(prix_cts), int(majoration_cts), int(rappel_cts)))
         except:
             traceback.print_exc()
             tkMessageBox.showwarning(windows_title.db_error, errors_text.db_read)
@@ -365,7 +377,49 @@ class GererRappels(bp_Dialog.Dialog):
 
     def output_recalls(self, *args):
         for idx in self.list.curselection():
-            id_consult = self.data[idx][0]
+            id_consult, _, sex, nom, prenom, date_consult, rappel_cnt, prix_cts, majoration_cts, rappel_cts = self.data[idx]
+
+            ts = datetime.datetime.now().strftime('%H')
+            filename = normalize_filename(u'rappel_%d_%s_%s_%s_%s_%sh.pdf' % (rappel_cnt+1, nom, prenom, sex, date_consult, ts))
+
+            cursor.execute("""SELECT COALESCE(consultations.therapeute, patients.therapeute), patients.id, MC_accident, date_naiss, bv_ref
+                                FROM consultations INNER JOIN patients ON consultations.id = patients.id
+                               WHERE id_consult = %s""",
+                           [id_consult])
+            therapeute, id_patient, mc_accident, date_naiss, bv_ref = cursor.fetchone()
+
+            cursor.execute("""SELECT entete FROM therapeutes WHERE therapeute = %s""", [therapeute])
+            entete_therapeute, = cursor.fetchone()
+            adresse_therapeute = entete_therapeute + u'\n\n' + labels_text.adresse_pog
+
+            cursor.execute("""SELECT adresse FROM patients WHERE id = %s""", [id_patient])
+            adresse_patient, = cursor.fetchone()
+            titre = {u'Mr': u'Monsieur', u'Mme': u'Madame', u'Enfant': u'Aux parents de'}[sex]
+            if len(u' '.join((prenom, nom))) < 25:
+                identite = [u' '.join((prenom, nom))]
+            else:
+                identite = [prenom, nom]
+            patient_bv = u'\n'.join(identite + [adresse_patient])
+            adresse_patient = u'\n'.join([titre] + identite + [adresse_patient, "", date_naiss.strftime(DATE_FMT)])
+
+            cursor.execute("SELECT description FROM tarifs WHERE prix_cts = %s", [prix_cts])
+            if cursor.rowcount != 0:
+                description_prix, = cursor.fetchone()
+            else:
+                description_prix = ''
+
+            cursor.execute("SELECT description FROM majorations WHERE prix_cts = %s", [majoration_cts])
+            if cursor.rowcount != 0:
+                description_majoration, = cursor.fetchone()
+            else:
+                description_majoration = ''
+
+            cursor.execute("""INSERT INTO rappels (id_consult, rappel_cts, date_rappel)
+                                   VALUES (%s, %s, %s)""",
+                           [id_consult, bp_custo.MONTANT_RAPPEL_CTS, datetime.date.today()])
+            rappel_cost = rappel_cts + bp_custo.MONTANT_RAPPEL_CTS
+
+            facture(filename, adresse_therapeute, adresse_patient, description_prix, mc_accident, prix_cts, description_majoration, majoration_cts, date_consult, patient_bv, bv_ref, rappel_cost)
         self.cancel()
 
 

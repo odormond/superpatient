@@ -328,7 +328,7 @@ class FieldsHeight(Config):
     tarifs = 10
     tarif = 6
     description = 6
-    consultations = 50
+    consultations = 40
     addresses = 20
     address = 6
 
