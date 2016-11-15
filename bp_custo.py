@@ -369,3 +369,13 @@ class FieldsWidth(Config):
 
 
 fields_width = FieldsWidth()
+
+
+# Utility functions used by more than one module
+
+def normalize_filename(filename):
+    for char in '\'"/`!$[]{}':
+        filename = filename.replace(char, '-')
+    return os.path.join(PDF_DIR, filename).encode('UTF-8')
+
+

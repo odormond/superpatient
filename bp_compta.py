@@ -26,8 +26,15 @@ except:
     sys.exit()
 
 try:
+    from bp_model import Consultation
+except:
+    tkMessageBox.showwarning("Missing file", "bp_model.py is missing")
+    sys.exit()
+
+try:
     import bp_custo
-    from bp_custo import windows_title, errors_text, buttons_text, menus_text, labels_text, DATE_FMT
+    from bp_custo import windows_title, errors_text, buttons_text, menus_text, labels_text
+    from bp_custo import normalize_filename
 except:
     tkMessageBox.showwarning("Missing file", "bp_custo.py is missing")
     sys.exit()
@@ -45,7 +52,7 @@ except:
     sys.exit()
 
 try:
-    from bp_factures import facture
+    import bp_factures
 except:
     tkMessageBox.showwarning("Missing file", "bp_factures.py is missing")
     sys.exit()
@@ -109,12 +116,6 @@ def sum_found(positions):
 
 def sum_notfound(positions):
     return sum(p[3] for p in positions) / 100.0
-
-
-def normalize_filename(filename):
-    for char in '\'"/`!$[]{}':
-        filename = filename.replace(char, '-')
-    return os.path.join(bp_custo.PDF_DIR, filename).encode('UTF-8')
 
 
 class Statistics(bp_Dialog.Dialog):
@@ -377,57 +378,22 @@ class GererRappels(bp_Dialog.Dialog):
         self.total.set('%0.2f CHF' % (total/100.))
 
     def output_reminders(self, *args):
-        filenames = []
+        filename = normalize_filename(datetime.datetime.now().strftime('rappels_%F_%Hh%Mm%Ss.pdf'))
+        today = datetime.date.today()
+        consultations = []
         for idx in self.list.curselection():
-            id_consult, _, sex, nom, prenom, date_consult, rappel_cnt, prix_cts, majoration_cts, rappel_cts = self.data[idx]
-
-            today = datetime.date.today()
-            filename = normalize_filename(u'rappel_%d_%s_%s_%s_%s_%s.pdf' % (rappel_cnt+1, today, nom, prenom, sex, date_consult))
-
-            cursor.execute("""SELECT COALESCE(consultations.therapeute, patients.therapeute), patients.id, MC_accident, date_naiss, bv_ref
-                                FROM consultations INNER JOIN patients ON consultations.id = patients.id
-                               WHERE id_consult = %s""",
-                           [id_consult])
-            therapeute, id_patient, mc_accident, date_naiss, bv_ref = cursor.fetchone()
-
-            cursor.execute("""SELECT entete FROM therapeutes WHERE therapeute = %s""", [therapeute])
-            entete_therapeute, = cursor.fetchone()
-            adresse_therapeute = entete_therapeute + u'\n\n' + labels_text.adresse_pog
-
-            cursor.execute("""SELECT adresse FROM patients WHERE id = %s""", [id_patient])
-            adresse_patient, = cursor.fetchone()
-            titre = {u'Mr': u'Monsieur', u'Mme': u'Madame', u'Enfant': u'Aux parents de'}[sex]
-            if len(u' '.join((prenom, nom))) < 25:
-                identite = [u' '.join((prenom, nom))]
-            else:
-                identite = [prenom, nom]
-            patient_bv = u'\n'.join(identite + [adresse_patient])
-            adresse_patient = u'\n'.join([titre] + identite + [adresse_patient, "", date_naiss.strftime(DATE_FMT)])
-
-            cursor.execute("SELECT description FROM tarifs WHERE prix_cts = %s", [prix_cts])
-            if cursor.rowcount != 0:
-                description_prix, = cursor.fetchone()
-            else:
-                description_prix = ''
-
-            cursor.execute("SELECT description FROM majorations WHERE prix_cts = %s", [majoration_cts])
-            if cursor.rowcount != 0:
-                description_majoration, = cursor.fetchone()
-            else:
-                description_majoration = ''
-
+            id_consult = self.data[idx][0]
             cursor.execute("""INSERT INTO rappels (id_consult, rappel_cts, date_rappel)
                                    VALUES (%s, %s, %s)""",
                            [id_consult, bp_custo.MONTANT_RAPPEL_CTS, today])
-            rappel_cost = rappel_cts + bp_custo.MONTANT_RAPPEL_CTS
 
-            facture(filename, adresse_therapeute, adresse_patient, description_prix, mc_accident, prix_cts, description_majoration, majoration_cts, date_consult, patient_bv, bv_ref, rappel_cost)
-            filenames.append(filename)
-        if filenames:
-            cmd, cap = mailcap.findmatch(mailcap.getcaps(), 'application/pdf', 'view', filenames[0])
-            cmd = ' '.join([cmd] + ["'%s'" % filename for filename in filenames[1:]])
+            consultations.append(Consultation.load(cursor, id_consult))
+        if consultations:
+            bp_factures.consultations(filename, cursor, consultations)
+            cmd, cap = mailcap.findmatch(mailcap.getcaps(), 'application/pdf', 'view', filename)
             os.system(cmd)
         self.cancel()
+        return
 
 
 class SummariesImport(bp_Dialog.Dialog):
