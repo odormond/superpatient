@@ -35,6 +35,7 @@ try:
     import bp_custo
     from bp_custo import windows_title, errors_text, buttons_text, menus_text, labels_text
     from bp_custo import normalize_filename
+    from bp_custo import STATUS_PRINTED, STATUS_SENT, STATUS_PAYED, STATUS_ABANDONED
 except:
     tkMessageBox.showwarning("Missing file", "bp_custo.py is missing")
     sys.exit()
@@ -573,7 +574,10 @@ class Application(tk.Tk):
 
         bvrmenu = tk.Menu(menubar, tearoff=0)
         bvrmenu.add_command(label=menus_text.import_bvr, command=self.import_bvr)
-        bvrmenu.add_command(label=menus_text.manage_reminders, command=lambda: GererRappels(self))
+        def gerer_rappel():
+            GererRappels(self)
+            self.update_list()
+        bvrmenu.add_command(label=menus_text.manage_reminders, command=gerer_rappel)
 
         menubar.add_cascade(label=menus_text.payments, menu=bvrmenu)
 
@@ -601,16 +605,18 @@ class Application(tk.Tk):
         today = datetime.date.today()
         month_end = datetime.date(today.year, today.month, 1) - datetime.timedelta(days=1)
         last_month = datetime.date(month_end.year, month_end.month, 1)
-        self.therapeute = OptionWidget(self, 'therapeute', 0, 0, therapeutes, value='Tous')
+        self.therapeute = OptionWidget(self, 'therapeute', 0, 0, therapeutes, value=u'Tous')
         self.paye_par = OptionWidget(self, 'paye_par', 1, 0, [''] + bp_custo.MOYEN_DE_PAYEMENT + bp_custo.ANCIEN_MOYEN_DE_PAYEMENT, value='')
         self.date_du, w_date_du = EntryWidget(self, 'date_du', 0, 2, value=last_month, want_widget=True)
         self.date_au, w_date_au = EntryWidget(self, 'date_au', 1, 2, want_widget=True)
-        self.etat = OptionWidget(self, 'etat_payement', 2, 0, bp_custo.ETAT_PAYEMENT, value='Tous')
+        self.etat = OptionWidget(self, 'etat_payement', 2, 0, bp_custo.ETAT_PAYEMENT, value=u'Tous')
+        self.status = OptionWidget(self, 'status_facture', 2, 0, bp_custo.STATUS_FACTURE, value=u'Tous')
         self.therapeute.trace('w', self.update_list)
         self.paye_par.trace('w', self.update_list)
         w_date_du.bind('<KeyRelease-Return>', self.date_du_changed)
         w_date_au.bind('<KeyRelease-Return>', self.update_list)
         self.etat.trace('w', self.update_list)
+        self.status.trace('w', self.update_list)
         tk.Button(self, text=u"\U0001f4c5".encode('UTF-8'), command=lambda: self.popup_calendar(self.date_du, w_date_du), borderwidth=0, relief=tk.FLAT).grid(row=0, column=4)
         tk.Button(self, text=u"\U0001f4c5".encode('UTF-8'), command=lambda: self.popup_calendar(self.date_au, w_date_au), borderwidth=0, relief=tk.FLAT).grid(row=1, column=4)
         self.nom, widget = EntryWidget(self, 'nom', 3, 0, want_widget=True)
@@ -621,8 +627,8 @@ class Application(tk.Tk):
 
         # Middle block: list display
         tk.Label(self, font=bp_custo.LISTBOX_DEFAULT,
-                 text="       Nom                            Prénom                    Consultation du   Prix Payé le").grid(row=4, column=0, columnspan=4, sticky=tk.W)
-        self.list_format = "%-6s %-30s %-30s %s %6.2f %s"
+                 text="S        Nom                            Prénom                    Consultation du   Prix Payé le").grid(row=4, column=0, columnspan=4, sticky=tk.W)
+        self.list_format = "%s %-6s %-30s %-30s %s %6.2f %s"
         self.list = ListboxWidget(self, 'consultations', 5, 0, columnspan=5)
         self.list.config(selectmode=tk.MULTIPLE)
         self.count = EntryWidget(self, 'count', 6, 0, readonly=True)
@@ -634,6 +640,10 @@ class Application(tk.Tk):
         # Bottom block: available action on selected items
         self.paye_le = EntryWidget(self, 'paye_le', 10, 0, value=today)
         tk.Button(self, text=buttons_text.mark_paye, command=self.mark_paid).grid(row=10, column=2, sticky=tk.W)
+        tk.Button(self, text=buttons_text.reprint, command=self.reprint).grid(row=11, column=0, sticky=tk.EW)
+        tk.Button(self, text=buttons_text.mark_printed, command=self.mark_printed).grid(row=11, column=1, sticky=tk.EW)
+        tk.Button(self, text=buttons_text.mark_mailed, command=self.mark_mailed).grid(row=11, column=2, sticky=tk.EW)
+        tk.Button(self, text=buttons_text.mark_abandoned, command=self.mark_abandoned).grid(row=11, column=3, sticky=tk.EW)
 
         self.grid_columnconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
@@ -652,6 +662,7 @@ class Application(tk.Tk):
         date_du = parse_date(self.date_du.get().strip())
         date_au = parse_date(self.date_au.get().strip())
         etat = self.etat.get().encode('UTF-8')
+        status = self.status.get().encode('UTF-8')
         prenom = self.prenom.get().strip()
         nom = self.nom.get().strip()
         conditions = ['TRUE']
@@ -682,6 +693,16 @@ class Application(tk.Tk):
         elif etat == 'Non-comptabilisé':
             conditions.append('paye_le IS NULL')
             manual_bills_conditions.append('paye_le IS NULL')
+        if status != 'Tous':
+            status = status[0]
+            if status == u'O':
+                conditions.append("consultations.status in ('O', 'I', 'E')")
+                manual_bills_conditions.append("status in ('O', 'I', 'E')")
+            else:
+                conditions.append('consultations.status = %s')
+                args.append(status)
+                manual_bills_conditions.append('status = %s')
+                manual_bills_args.append(status)
         if prenom:
             conditions.append('prenom LIKE %s')
             args.append(prenom.replace('*', '%'))
@@ -703,7 +724,7 @@ class Application(tk.Tk):
         total_majoration = 0
         total_rappel = 0
         try:
-            cursor.execute("""SELECT consultations.id_consult, date_consult, paye_le, prix_cts, majoration_cts, sex, nom, prenom, COALESCE(CAST(SUM(rappel_cts) AS SIGNED), 0), count(date_rappel)
+            cursor.execute("""SELECT consultations.id_consult, date_consult, paye_le, prix_cts, majoration_cts, sex, nom, prenom, COALESCE(CAST(SUM(rappel_cts) AS SIGNED), 0), count(date_rappel), consultations.status
                                 FROM consultations INNER JOIN patients ON consultations.id = patients.id
                                 LEFT OUTER JOIN rappels ON consultations.id_consult = rappels.id_consult
                                WHERE %s
@@ -711,13 +732,17 @@ class Application(tk.Tk):
                                ORDER BY date_consult""" % ' AND '.join(conditions), args)
             data = list(cursor)
             if paye_par in ('', 'BVR'):
-                cursor.execute("""SELECT -id, date, paye_le, montant_cts, 0, '-', identifiant, '', 0, 0
+                cursor.execute("""SELECT -id, date, paye_le, montant_cts, 0, '-', identifiant, '', 0, 0, status
                                     FROM factures_manuelles
                                    WHERE %s
                                    ORDER BY date""" % ' AND '.join(manual_bills_conditions), manual_bills_args)
                 data += list(cursor)
-            for id_consult, date_consult, paye_le, prix_cts, majoration_cts, sex, nom, prenom, rappel_cts, rappel_cnt in data:
-                self.list.insert(tk.END, self.list_format % (sex, nom, prenom, date_consult, (prix_cts+majoration_cts+rappel_cts)/100., paye_le or ''))
+            aux_cursor = db.cursor()
+            for id_consult, date_consult, paye_le, prix_cts, majoration_cts, sex, nom, prenom, rappel_cts, rappel_cnt, status in data:
+                if status not in (STATUS_ABANDONED, STATUS_PAYED) and rappel_cnt != 0:
+                    aux_cursor.execute("""SELECT status FROM rappels WHERE id_consult = %s ORDER BY date_rappel DESC LIMIT 1""", [id_consult])
+                    status, = aux_cursor.fetchone()
+                self.list.insert(tk.END, self.list_format % (status, sex, nom, prenom, date_consult, (prix_cts+majoration_cts+rappel_cts)/100., paye_le or ''))
                 if rappel_cnt == 1:
                     self.list.itemconfig(self.list.size()-1, foreground='#400')
                 elif rappel_cnt > 1:
@@ -736,23 +761,70 @@ class Application(tk.Tk):
         self.total_rappel.set('%0.2f CHF' % (total_rappel/100.))
         self.total.set('%0.2f CHF' % ((total_consultation + total_majoration + total_rappel)/100.))
 
+    def reprint(self, *args):
+        consult_ids = [id for i, id in enumerate(self.data) if self.list.selection_includes(i) and id >= 0]
+        if consult_ids:
+            filename_consult = normalize_filename(datetime.datetime.now().strftime('consultations_%F_%Hh%Mm%Ss.pdf'))
+            bp_factures.consultations(filename_consult, cursor, [Consultation.load(cursor, id_consult) for id_consult in consult_ids])
+            cmd, cap = mailcap.findmatch(mailcap.getcaps(), 'application/pdf', 'view', filename_consult)
+            os.system(cmd + '&')
+        manual_bills_ids = [-id for i, id in enumerate(self.data) if self.list.selection_includes(i) and id < 0]
+        if manual_bills_ids:
+            filename_manual = normalize_filename(datetime.datetime.now().strftime('fact_manuelles_%F_%Hh%Mm%Ss.pdf'))
+            cursor.execute("""SELECT therapeute, destinataire, motif, montant_cts, remarque, bv_ref
+                                FROM factures_manuelles
+                               WHERE id in %s""",
+                           [manual_bills_ids])
+            bp_factures.manuals(filename_manual, list(cursor))
+            cmd, cap = mailcap.findmatch(mailcap.getcaps(), 'application/pdf', 'view', filename_manual)
+            os.system(cmd + '&')
+
     def mark_paid(self, *args):
         paye_le = parse_date(self.paye_le.get())
         consult_ids = [id for i, id in enumerate(self.data) if self.list.selection_includes(i) and id >= 0]
         manual_bills_ids = [-id for i, id in enumerate(self.data) if self.list.selection_includes(i) and id < 0]
         try:
             if len(consult_ids) > 1:
-                cursor.execute("""UPDATE consultations SET paye_le = %s
+                cursor.execute("""UPDATE consultations SET paye_le = %s, status = 'P'
                                 WHERE paye_le IS NULL AND id_consult IN %s""",
                                [paye_le, tuple(consult_ids)])
             elif len(consult_ids) == 1:
-                cursor.execute("""UPDATE consultations SET paye_le = %s WHERE id_consult = %s""", [paye_le, consult_ids[0]])
+                cursor.execute("""UPDATE consultations SET paye_le = %s, status = 'P' WHERE id_consult = %s""", [paye_le, consult_ids[0]])
             if len(manual_bills_ids) > 1:
-                cursor.execute("""UPDATE factures_manuelles SET paye_le = %s
+                cursor.execute("""UPDATE factures_manuelles SET paye_le = %s, status = 'P'
                                 WHERE paye_le IS NULL AND id IN %s""",
                                [paye_le, tuple(manual_bills_ids)])
             elif len(manual_bills_ids) == 1:
-                cursor.execute("""UPDATE factures_manuelles SET paye_le = %s WHERE id = %s""", [paye_le, manual_bills_ids[0]])
+                cursor.execute("""UPDATE factures_manuelles SET paye_le = %s, status = 'P' WHERE id = %s""", [paye_le, manual_bills_ids[0]])
+        except:
+            traceback.print_exc()
+            tkMessageBox.showwarning(windows_title.db_error, errors_text.db_update)
+        self.update_list()
+
+    def mark_printed(self, *args):
+        self.mark_status(STATUS_PRINTED)
+
+    def mark_mailed(self, *args):
+        self.mark_status(STATUS_SENT)
+
+    def mark_abandoned(self, *args):
+        self.mark_status(STATUS_ABANDONED)
+
+    def mark_status(self, status):
+        consult_ids = [id for i, id in enumerate(self.data) if self.list.selection_includes(i) and id >= 0]
+        manual_bills_ids = [-id for i, id in enumerate(self.data) if self.list.selection_includes(i) and id < 0]
+        try:
+            for consult_id in consult_ids:
+                cursor.execute("""SELECT date_rappel FROM rappels WHERE id_consult = %s ORDER BY date_rappel DESC LIMIT 1""", [consult_id])
+                last_rappel, = cursor.fetchone()
+                cursor.execute("""UPDATE consultations SET status = %s WHERE status != 'P' AND id_consult = %s""", [status, consult_id])
+                cursor.execute("""UPDATE rappels SET status = %s WHERE status != 'P' AND id_consult = %s AND date_rappel = %s""", [status, consult_id, last_rappel])
+            if len(manual_bills_ids) > 1:
+                cursor.execute("""UPDATE factures_manuelles SET status = %s
+                                WHERE status != 'P' AND id IN %s""",
+                               [status, tuple(manual_bills_ids)])
+            elif len(manual_bills_ids) == 1:
+                cursor.execute("""UPDATE factures_manuelles SET status = %s WHERE status != 'P' AND id = %s""", [status, manual_bills_ids[0]])
         except:
             traceback.print_exc()
             tkMessageBox.showwarning(windows_title.db_error, errors_text.db_update)

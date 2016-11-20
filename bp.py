@@ -53,6 +53,7 @@ try:
     from bp_custo import windows_title, errors_text, fields_font, fields_height
     from bp_custo import bvr, DATE_FMT
     from bp_custo import normalize_filename
+    from bp_custo import STATUS_OPENED, STATUS_PAYED, STATUS_ABANDONED
 except:
     tkMessageBox.showwarning(u"Missing file", u"bp_custo.py is missing")
     sys.exit()
@@ -118,7 +119,6 @@ def parse_date(s):
 
 try:
     import bp_factures
-    from bp_factures import facture_manuelle
 except:
     tkMessageBox.showwarning(u"Missing file", u"bp_factures.py is missing")
     sys.exit()
@@ -538,14 +538,7 @@ class ListeConsultations(bp_Dialog.Dialog):
 
     def auto_affiche(self):
         try:
-            cursor.execute("""SELECT sex, nom, prenom, date_naiss, ATCD_perso, ATCD_fam, important, ass_compl FROM patients WHERE id = %s""", [self.id_patient])
-            sex, nom, prenom, date_naiss, ATCD_perso, ATCD_fam, Important, ass_compl = cursor.fetchone()
-            cursor.execute("""SELECT id_consult, date_consult, MC, MC_accident, EG, APT_thorax, APT_abdomen, APT_tete, APT_MS,
-                                      APT_MI, APT_system, A_osteo, exam_phys, traitement, divers, exam_pclin, paye, therapeute, paye_le
-                                 FROM consultations
-                                WHERE id=%s
-                             ORDER BY date_consult DESC""",
-                           [self.id_patient])
+            patient = PatientModel.load(cursor, self.id_patient)
         except:
             print "id_patient:", self.id_patient
             traceback.print_exc()
@@ -556,67 +549,67 @@ class ListeConsultations(bp_Dialog.Dialog):
         self.toutes.tag_config("titre", foreground="blue", font=("Helvetica", 15))
         self.toutes.tag_config("personne", foreground="black", font=("Helvetica", 15, "bold"))
         self.toutes.tag_config("important", foreground="darkblue", font=("Helvetica", 15, "bold"))
-        self.toutes.insert(tk.END, sex+u' '+prenom+u' '+nom+u', '+date_naiss.strftime(DATE_FMT)+u'\n', "personne")
+        self.toutes.insert(tk.END, patient.sex+u' '+patient.prenom+u' '+patient.nom+u', '+patient.date_naiss.strftime(DATE_FMT)+u'\n', "personne")
         self.toutes.insert(tk.END, labels_text.atcdp+u'\n', "titre")
-        self.toutes.insert(tk.END, ATCD_perso+u'\n')
+        self.toutes.insert(tk.END, patient.ATCD_perso+u'\n')
         self.toutes.insert(tk.END, labels_text.atcdf+u'\n', "titre")
-        self.toutes.insert(tk.END, ATCD_fam+u'\n')
+        self.toutes.insert(tk.END, patient.ATCD_fam+u'\n')
         self.toutes.insert(tk.END, labels_text.important+u'\n', "important")
-        self.toutes.insert(tk.END, Important+u'\n')
+        self.toutes.insert(tk.END, patient.important+u'\n')
         self.toutes.insert(tk.END, labels_text.ass_comp+u'\n', "titre")
-        self.toutes.insert(tk.END, ass_compl+u'\n')
-        for id_consult, date_consult, MC, MC_accident, EG, APT_thorax, APT_abdomen, APT_tete, APT_MS, APT_MI, APT_system, A_osteo, exam_phys, traitement, divers, exam_pclin, paye, therapeute, paye_le in cursor:
-            self.toutes.insert(tk.END, u'\n********** '+labels_text.date_consult+date_consult.strftime(DATE_FMT)+u' **********'+u'\n', "date")
-            if paye_le is None:
+        self.toutes.insert(tk.END, patient.ass_compl+u'\n')
+        for consult in ConsultationModel.yield_all(cursor, where=dict(id=patient.id), order='-date_consult'):
+            self.toutes.insert(tk.END, u'\n********** '+labels_text.date_consult+consult.date_consult.strftime(DATE_FMT)+u' **********'+u'\n', "date")
+            if consult.paye_le is None:
                 self.toutes.insert(tk.END, u'!!!!! Non-payé !!!!!\n', "non_paye")
-            if EG.strip():
+            if consult.EG.strip():
                 self.toutes.insert(tk.END, labels_text.eg+u'\n', "titre")
-                self.toutes.insert(tk.END, EG+u'\n')
-            if therapeute:
+                self.toutes.insert(tk.END, consult.EG+u'\n')
+            if consult.therapeute:
                 self.toutes.insert(tk.END, labels_text.therapeute+u'\n', "titre")
-                self.toutes.insert(tk.END, therapeute+u'\n')
+                self.toutes.insert(tk.END, consult.therapeute+u'\n')
             self.toutes.insert(tk.END, labels_text.mc+u'\n', "titre")
-            if MC_accident:
+            if consult.MC_accident:
                 self.toutes.insert(tk.END, labels_text.accident+u'\n')
             else:
                 self.toutes.insert(tk.END, labels_text.maladie+u'\n')
-            self.toutes.insert(tk.END, MC+u'\n')
-            if APT_thorax.strip():
+            self.toutes.insert(tk.END, consult.MC+u'\n')
+            if consult.APT_thorax.strip():
                 self.toutes.insert(tk.END, labels_text.thorax+u'\n', "titre")
-                self.toutes.insert(tk.END, APT_thorax+u'\n')
-            if APT_abdomen.strip():
+                self.toutes.insert(tk.END, consult.APT_thorax+u'\n')
+            if consult.APT_abdomen.strip():
                 self.toutes.insert(tk.END, labels_text.abdomen+u'\n', "titre")
-                self.toutes.insert(tk.END, APT_abdomen+u'\n')
-            if APT_tete.strip():
+                self.toutes.insert(tk.END, consult.APT_abdomen+u'\n')
+            if consult.APT_tete.strip():
                 self.toutes.insert(tk.END, labels_text.tete+u'\n', "titre")
-                self.toutes.insert(tk.END, APT_tete+u'\n')
-            if APT_MS.strip():
+                self.toutes.insert(tk.END, consult.APT_tete+u'\n')
+            if consult.APT_MS.strip():
                 self.toutes.insert(tk.END, labels_text.ms+u'\n', "titre")
-                self.toutes.insert(tk.END, APT_MS+u'\n')
-            if APT_MI.strip():
+                self.toutes.insert(tk.END, consult.APT_MS+u'\n')
+            if consult.APT_MI.strip():
                 self.toutes.insert(tk.END, labels_text.mi+u'\n', "titre")
-                self.toutes.insert(tk.END, APT_MI+u'\n')
-            if APT_system.strip():
+                self.toutes.insert(tk.END, consult.APT_MI+u'\n')
+            if consult.APT_system.strip():
                 self.toutes.insert(tk.END, labels_text.gen+u'\n', "titre")
-                self.toutes.insert(tk.END, APT_system+u'\n')
-            if A_osteo.strip():
+                self.toutes.insert(tk.END, consult.APT_system+u'\n')
+            if consult.A_osteo.strip():
                 self.toutes.insert(tk.END, labels_text.a_osteo+u'\n', "titre")
-                self.toutes.insert(tk.END, A_osteo+u'\n')
-            if exam_phys.strip():
+                self.toutes.insert(tk.END, consult.A_osteo+u'\n')
+            if consult.exam_phys.strip():
                 self.toutes.insert(tk.END, labels_text.exph+u'\n', "titre")
-                self.toutes.insert(tk.END, exam_phys+u'\n')
-            if traitement.strip():
+                self.toutes.insert(tk.END, consult.exam_phys+u'\n')
+            if consult.traitement.strip():
                 self.toutes.insert(tk.END, labels_text.ttt+u'\n', "titre")
-                self.toutes.insert(tk.END, traitement+u'\n')
-            if exam_pclin.strip():
+                self.toutes.insert(tk.END, consult.traitement+u'\n')
+            if consult.exam_pclin.strip():
                 self.toutes.insert(tk.END, labels_text.expc+u'\n', "titre")
-                self.toutes.insert(tk.END, exam_pclin+u'\n')
-            if divers.strip():
+                self.toutes.insert(tk.END, consult.exam_pclin+u'\n')
+            if consult.divers.strip():
                 self.toutes.insert(tk.END, labels_text.remarques+u'\n', "titre")
-                self.toutes.insert(tk.END, divers+u'\n')
-            if paye.strip():
+                self.toutes.insert(tk.END, consult.divers+u'\n')
+            if consult.paye.strip():
                 self.toutes.insert(tk.END, labels_text.paye+u'\n', "titre")
-                self.toutes.insert(tk.END, paye+u'\n')
+                self.toutes.insert(tk.END, consult.paye+u'\n')
 
     def body(self, master):
         self.geometry('+200+5')
@@ -638,6 +631,7 @@ class Consultation(bp_Dialog.Dialog):
     def __init__(self, parent, id_patient, id_consult=None, readonly=False):
         self.patient = PatientModel.load(cursor, id_patient)
         self.consultation = ConsultationModel.load(cursor, id_consult) if id_consult is not None else ConsultationModel(id=id_patient)
+        self.consultation.patient = self.patient
         self.readonly = readonly
         bp_Dialog.Dialog.__init__(self, parent)
 
@@ -723,9 +717,13 @@ class Consultation(bp_Dialog.Dialog):
                 cursor.execute("""SELECT paye_par FROM consultations WHERE id_consult=%s""", [self.consultation.id_consult])
                 old_paye_par, = cursor.fetchone()
                 generate_pdf = self.consultation.paye_par != old_paye_par
-                if old_paye_par != self.consultation.paye_par and self.consultation.paye_par in (u'BVR', u'PVPE'):
+                if old_paye_par != self.consultation.paye_par and self.consultation.paye_par in (u'BVR', u'PVPE') and self.consultation.status != STATUS_ABANDONED:
+                    self.consultation.status = STATUS_OPENED
                     self.consultation.paye_le = None
             else:
+                self.consultation.status = STATUS_OPENED
+                if self.consultation.paye_par in (u'Cash', u'Carte'):
+                    self.consultation.status = STATUS_PAYED
                 generate_pdf = self.consultation.paye_par not in (u'CdM', u'Dû')
             self.consultation.save(cursor)
 
@@ -1448,7 +1446,7 @@ class FactureManuelle(tk.Toplevel):
             traceback.print_exc()
             tkMessageBox.showwarning(windows_title.db_error, errors_text.db_update)
             return
-        facture_manuelle(filename, therapeuteAddress, address, reason, amount, remark, bv_ref)
+        bp_factures.manuals(filename, [(therapeuteAddress, address, reason, amount, remark, bv_ref)])
         cmd, cap = mailcap.findmatch(mailcap.getcaps(), 'application/pdf', 'view', filename)
         os.system(cmd)
 

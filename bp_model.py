@@ -21,6 +21,45 @@ class Model(object):
         fields.update(dict(zip(klass.FIELDS, data)))
         return klass(**fields)
 
+    @classmethod
+    def yield_all(klass, cursor, where=None, order=None):
+        where_cond = []
+        where_args = []
+        if where is not None:
+            for key, value in where.items():
+                if '__' in key:
+                    field, test = key.split('__')
+                else:
+                    field, test = key, 'eq'
+                test = {'eq': '=',
+                        'gt': '>',
+                        'lt': '<',
+                        'ge': '>=',
+                        'le': '<=',
+                        'like': 'LIKE',
+                        'ilike': 'ILIKE',
+                        }[test]
+                where_cond.append('%s %s %%s' % (field, test))
+                where_args.append(value)
+            where = 'WHERE ' + ' AND '.join(where_cond)
+        else:
+            where = ''
+        if order is not None:
+            field, direction = order, 'ASC'
+            if order[0] == '-':
+                field, direction = order[1:], 'DESC'
+            order = 'ORDER BY %s %s' % (field, direction)
+        else:
+            order = ''
+        cursor.execute("SELECT %s FROM %s %s %s"
+                       % (', '.join(klass.FIELDS),
+                          klass.TABLE,
+                          where,
+                          order),
+                       where_args)
+        for data in cursor:
+            yield klass(**dict(zip(klass.FIELDS, data)))
+
     def __init__(self, **kwds):
         for field in self.FIELDS + self.EXTRA_FIELDS:
             setattr(self, field, kwds.pop(field, None))
@@ -71,7 +110,7 @@ class Consultation(Model):
               'exam_pclin', 'exam_phys', 'paye', 'divers', 'APT_thorax',
               'APT_abdomen', 'APT_tete', 'APT_MS', 'APT_MI', 'APT_system',
               'A_osteo', 'traitement', 'therapeute', 'prix_cts',
-              'majoration_cts', 'paye_par', 'paye_le', 'bv_ref']
+              'majoration_cts', 'paye_par', 'paye_le', 'bv_ref', 'status']
     EXTRA_FIELDS = ['patient', 'rappel_cts']
 
     @classmethod
@@ -86,3 +125,7 @@ class Consultation(Model):
         if instance.therapeute is None:
             instance.therapeute = instance.patient.therapeute
         return instance
+
+    def __init__(self, **kwds):
+        super(Consultation, self).__init__(**kwds)
+        self.rappel_cts = 0

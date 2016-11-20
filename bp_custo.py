@@ -23,10 +23,23 @@ ETAT_PAYEMENT = [u'Tous', u'Comptabilisé', u'Non-comptabilisé']
 
 MONTANT_RAPPEL_CTS = 500
 
+STATUS_FACTURE = [u'Tous', u'Ouverte', u'Imprimée', u'Envoyée', u'Payée', u'Abandonnée']
+STATUS_OPENED = u'O'
+STATUS_PRINTED = u'I'
+STATUS_SENT = u'E'
+STATUS_PAYED = u'P'
+STATUS_ABANDONED = u'A'
+
 
 class Config(object):
     def __getitem__(self, key):
-        return getattr(self, key)
+        return self.__getattribute__(key)
+
+    def __getattribute__(self, key):
+        try:
+            return super(Config, self).__getattribute__(key)
+        except AttributeError:
+            return self.DEFAULT
 
 
 class BVR(Config):
@@ -117,6 +130,9 @@ class ButtonsText(Config):
     show_or_change_consult = u"Voir ou modifier une consultation"  # B28
     done = u"Terminé"
     mark_paye = u"Marquer payé"
+    mark_printed = u"Marquer imprimé"
+    mark_mailed = u"Marquer envoyé"
+    mark_abandoned = u"Marquer Abandonné"
     valider_import = u"Valider l'import"
     details = u"Détails"
     output_reminders = u"Générer les rappels"
@@ -214,6 +230,7 @@ class LabelsText(Config):
     date_du = u"Consultations dès le"
     date_au = u"Consultations jusqu'au"
     etat_payement = u"État du payement"
+    status_facture = u"Status de la facture"
     count = u"# entrées"
     total_consultation = u"Total consultation"
     total_majoration = u"Total majoration"
@@ -266,32 +283,19 @@ labels_text = LabelsText()
 
 
 class LabelsFont(Config):
-    id = sexe = therapeute = login = nom = prenom = naissance_le = naissance = LABEL_BOLD
-    date_ouverture = tel_fix = medecin = portable = tel_prof = mail = LABEL_BOLD
-    adr_priv = medecinS = ass_comp = profes = etat = envoye = remarques = LABEL_BOLD
-    mc = eg = expc = atcdp = atcdf = thorax = abdomen = tete = ms = mi = LABEL_BOLD
-    gen = a_osteo = exph = ttt = important = paye = ttes_cons = seance = LABEL_BOLD
-    paye_par = paye_le = entete = collabos = date_du = date_au = etat_payement = LABEL_BOLD
-    count = total_consultation = total_majoration = total_rappel = total = majorations = LABEL_BOLD
-    majoration = tarifs = tarif = description = addresses = address = identifiant = LABEL_BOLD
-    consult_upto = LABEL_BOLD
+    DEFAULT = LABEL_BOLD
 
 
 labels_font = LabelsFont()
 
 
 class FieldsFont(Config):
-    id = sexe = therapeute = login = nom = prenom = naissance_le = naissance = ENTRY_DEFAULT
-    date_ouverture = tel_fix = portable = tel_prof = mail = ENTRY_DEFAULT
-    ass_comp = profes = etat = envoye = seance = count = total_consultation = ENTRY_DEFAULT
-    total_majoration = total_rappel = total = consult_upto = ENTRY_DEFAULT
-    paye_par = paye_le = date_du = date_au = etat_payement = ENTRY_DEFAULT
-    majoration = tarif = description = ENTRY_DEFAULT
+    DEFAULT = ENTRY_DEFAULT
     important = medecin = adr_priv = medecinS = remarques = ttes_cons = TEXT_DEFAULT
     mc = eg = expc = atcdp = atcdf = thorax = abdomen = tete = ms = TEXT_DEFAULT
     mi = gen = a_osteo = exph = ttt = paye = entete = TEXT_DEFAULT
-    rp = rc = collabos = majorations = tarifs = consultations = LISTBOX_DEFAULT
     addresses = address = identifiant = TEXT_DEFAULT
+    rp = rc = collabos = majorations = tarifs = consultations = LISTBOX_DEFAULT
 
 
 fields_font = FieldsFont()

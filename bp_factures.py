@@ -5,7 +5,7 @@ import os
 import datetime
 from math import sqrt
 from reportlab.pdfgen.canvas import Canvas
-from reportlab.platypus import BaseDocTemplate, PageTemplate, Frame, Paragraph, Table, Spacer, PageBreak, FrameBreak
+from reportlab.platypus import Frame, Paragraph, Table, Spacer
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm, cm, inch
@@ -80,7 +80,7 @@ def draw_head(canvas, font_size):
     canvas.restoreState()
 
 
-def draw_bvr(canvas, cursor, consultation):
+def draw_bvr(canvas, prix_cts, address_patient, bv_ref):
     canvas.saveState()
     if PRINT_BV_BG:
         canvas.drawImage(os.path.join(BASE_DIR, "442_05_LAC_609_quer_Bank_CMYK.png"), 0, 0, BV_WIDTH, BV_HEIGHT)
@@ -91,8 +91,8 @@ def draw_bvr(canvas, cursor, consultation):
     # Lignes de codage
     v, x, c = bvr.CCP.split('-')
     codage = u''.join((v, u'0'*(6-len(x)), x, c, u'>'))
-    prix = u'01%010d' % (consultation.prix_cts + consultation.majoration_cts + consultation.rappel_cts)
-    codage = u'%s%d>%s+ %s' % (prix, bvr_checksum(prix), consultation.bv_ref, codage)
+    prix = u'01%010d' % prix_cts
+    codage = u'%s%d>%s+ %s' % (prix, bvr_checksum(prix), bv_ref, codage)
     text_obj = canvas.beginText()
     text_obj.setTextTransform(REF_NO_SCALE, 0, 0, 1, BV_REF_X + 3*BV_COLUMN + REF_NO_SHIFT, BV_REF_Y - 21*BV_LINE)
     text_obj.textLines(codage)
@@ -110,13 +110,7 @@ def draw_bvr(canvas, cursor, consultation):
     text_obj.textLines(bvr.versement_pour+u'\n\n\n'+bvr.en_faveur_de)
     canvas.drawText(text_obj)
     # Versé par
-    patient = consultation.patient
-    if len(u' '.join((patient.prenom, patient.nom))) < 25:
-        identite = [u' '.join((patient.prenom, patient.nom))]
-    else:
-        identite = [patient.prenom, patient.nom]
-    address_patient_bv = u'\n'.join(identite + [patient.adresse])
-    ref = list(consultation.bv_ref)
+    ref = list(bv_ref)
     for i in (2, 8, 14, 20, 26):
         ref.insert(i, u' ')
     ref = u''.join(ref)
@@ -134,18 +128,18 @@ def draw_bvr(canvas, cursor, consultation):
     text_obj = canvas.beginText()
     text_obj.setTextTransform(LEFT_TEXT_SCALE, 0, 0, 1, BV_COLUMN + LEFT_TEXT_SHIFT, BV_REF_Y - 16*BV_LINE)
     text_obj.setLeading(1.5*BV_LINE)
-    text_obj.textLines(address_patient_bv)
+    text_obj.textLines(address_patient)
     canvas.drawText(text_obj)
     text_obj = canvas.beginText()
     text_obj.setTextTransform(RIGHT_TEXT_SCALE, 0, 0, 1, BV_REF_X + 25*BV_COLUMN + RIGHT_TEXT_SHIFT, BV_REF_Y - 13*BV_LINE)
     text_obj.setLeading(1.5*BV_LINE)
-    text_obj.textLines(address_patient_bv)
+    text_obj.textLines(address_patient)
     canvas.drawText(text_obj)
     # Le montant
     offset = 0.5  # 1.3
     spacing = 1.0
     canvas.setFont('OCRB', 12)
-    montant = '%11.2f' % ((consultation.prix_cts + consultation.majoration_cts + consultation.rappel_cts) / 100)
+    montant = '%11.2f' % (prix_cts / 100)
     text_obj = canvas.beginText()
     text_obj.setTextOrigin(offset*BV_COLUMN, BV_REF_Y - 13*BV_LINE)
     text_obj.setCharSpace(spacing*BV_COLUMN)
@@ -227,7 +221,7 @@ def consultation_body(cursor, consultation, style, tstyle):
     return [Table(data, colWidths=[width-5*cm, 1.5*cm, 3.5*cm], style=tstyle)]
 
 
-# Entry point for generating bills or receipt
+# Entry point for generating bills or receipt from a list of consultations
 def consultations(filename, cursor, consultations):
     canvas = Canvas(filename, pagesize=A4)
     width, height = A4
@@ -283,7 +277,13 @@ def consultations(filename, cursor, consultations):
         frame = Frame(MARGIN, MARGIN, width-2*MARGIN, height-2*MARGIN-LOGO_HEIGHT)
         frame.addFromList(main, canvas)
         if consultation.paye_par in (u'BVR', u'PVPE'):
-            draw_bvr(canvas, cursor, consultation)
+            patient = consultation.patient
+            if len(u' '.join((patient.prenom, patient.nom))) < 25:
+                identite = [u' '.join((patient.prenom, patient.nom))]
+            else:
+                identite = [patient.prenom, patient.nom]
+            address_patient = u'\n'.join(identite + [patient.adresse])
+            draw_bvr(canvas, consultation.prix_cts+consultation.majoration_cts+consultation.rappel_cts, address_patient, consultation.bv_ref)
         canvas.restoreState()
         if consultation.paye_par in (u'BVR', u'PVPE'):
             canvas.showPage()
@@ -301,231 +301,55 @@ def consultations(filename, cursor, consultations):
     canvas.save()
 
 
-def fixed(canvas, doc):
-    if not doc.adresse_bv:
-        canvas.translate(0, doc.pagesize[1])
-        canvas.rotate(-90)
-        canvas.scale(1/SQRT2, 1/SQRT2)
-        font_size = FONT_SIZE
-    else:
-        font_size = FONT_SIZE_BV
+# Entry point for generating manual bills
+def manuals(filename, data):
+    canvas = Canvas(filename, pagesize=A4)
+    width, height = A4
+    for therapeute, adresse, motif, prix, remarque, bv_ref in data:
+        def make_italic(canvas, event, label):
+            canvas.skew(0, 20)
+            canvas.setFont('EuclidBPBold', FONT_SIZE_BV+4)
+            canvas.drawString(0, 0, label)
 
-    DEFAULT_STYLE, COPIE_STYLE, FACTURE_STYLE, DEFAULT_TABLE_STYLE, MAJORATION_OU_RAPPEL_TABLE_STYLE, MAJORATION_ET_RAPPEL_TABLE_STYLE = make_styles(font_size)
+        def make_bold(canvas, event, label):
+            canvas.setFont('EuclidBPBold', FONT_SIZE_BV+2)
+            canvas.drawString(-0.1, 0, label)
+            canvas.drawString(0.1, 0, label)
+            canvas.drawString(0, -0.1, label)
+            canvas.drawString(0, 0.1, label)
 
-    canvas.saveState()
-    canvas.drawImage(os.path.join(BASE_DIR, "logo_pog.png"), doc.leftMargin, doc.pagesize[1]-doc.topMargin-LOGO_HEIGHT, LOGO_WIDTH, LOGO_HEIGHT)
-    canvas.setFont('EuclidBPBold', font_size)
-    canvas.drawRightString(doc.pagesize[0]-doc.rightMargin, doc.pagesize[1]-doc.topMargin-font_size, u"Lausanne, le "+datetime.date.today().strftime(u'%d.%m.%y'))
-    if doc.adresse_bv and doc.page == 1:
-        if PRINT_BV_BG:
-            if doc.bv_ref:
-                canvas.drawImage(os.path.join(BASE_DIR, "442_05_LAC_609_quer_Bank_CMYK.png"), 0, 0, BV_WIDTH, BV_HEIGHT)
-            else:
-                canvas.drawImage(os.path.join(BASE_DIR, "441_02_ES_LAC_105_quer_CMYK.png"), 0, 0, BV_WIDTH, BV_HEIGHT)
-        canvas.saveState()
-        # CCP
-        canvas.setFont('OCRB', 12)
-        canvas.drawString(12*BV_COLUMN, BV_REF_Y - 11*BV_LINE, bvr.CCP)
-        canvas.drawString(BV_REF_X + 12*BV_COLUMN, BV_REF_Y - 11*BV_LINE, bvr.CCP)
-        # Lignes de codage
-        v, x, c = bvr.CCP.split('-')
-        codage = u''.join((v, u'0'*(6-len(x)), x, c, u'>'))
-        if doc.bv_ref:
-            prix = u'01%010d' % (doc.prix * 100)
-            codage = u'%s%d>%s+ %s' % (prix, bvr_checksum(prix), doc.bv_ref, codage)
-            text_obj = canvas.beginText()
-            text_obj.setTextTransform(REF_NO_SCALE, 0, 0, 1, BV_REF_X + 3*BV_COLUMN + REF_NO_SHIFT, BV_REF_Y - 21*BV_LINE)
-            text_obj.textLines(codage)
-            canvas.drawText(text_obj)
-        else:
-            canvas.drawString(BV_REF_X + 46*BV_COLUMN, BV_REF_Y - 21*BV_LINE, codage)
-            canvas.drawString(BV_REF_X + 46*BV_COLUMN, BV_REF_Y - 23*BV_LINE, codage)
-        canvas.setFont('EuclidBPBold', 10-1)
-        # Versé pour
-        text_obj = canvas.beginText()
-        text_obj.setTextTransform(LEFT_TEXT_SCALE, 0, 0, 1, BV_COLUMN + LEFT_TEXT_SHIFT, BV_REF_Y - 3*BV_LINE)
-        text_obj.setLeading(0.9*10)
-        text_obj.textLines(bvr.versement_pour+u'\n\n\n'+bvr.en_faveur_de)
-        canvas.drawText(text_obj)
-        text_obj = canvas.beginText()
-        text_obj.setTextTransform(MIDDLE_TEXT_SCALE, 0, 0, 1, BV_REF_X + BV_COLUMN + MIDDLE_TEXT_SHIFT, BV_REF_Y - 3*BV_LINE)
-        text_obj.setLeading(0.9*10)
-        text_obj.textLines(bvr.versement_pour+u'\n\n\n'+bvr.en_faveur_de)
-        canvas.drawText(text_obj)
-        # Motif
-        if not doc.bv_ref:
-            canvas.drawString(BV_REF_X + 25*BV_COLUMN, BV_REF_Y - 4*BV_LINE, u"Consultation du "+unicode(doc.date.strftime(DATE_FMT)))
-        # Versé par
-        if doc.bv_ref:
-            ref = list(doc.bv_ref)
-            for i in (2, 8, 14, 20, 26):
-                ref.insert(i, u' ')
-            ref = u''.join(ref)
-            canvas.setFont('OCRB', 8)
-            text_obj = canvas.beginText()
-            text_obj.setTextTransform(LEFT_TEXT_SCALE, 0, 0, 1, BV_COLUMN + LEFT_TEXT_SHIFT, BV_REF_Y - 15*BV_LINE)
-            text_obj.textLines(ref)
-            canvas.drawText(text_obj)
-            canvas.setFont('OCRB', 12)
-            text_obj = canvas.beginText()
-            text_obj.setTextTransform(REF_NO_SCALE, 0, 0, 1, BV_REF_X + 25*BV_COLUMN + REF_NO_SHIFT, BV_REF_Y - 9*BV_LINE)
-            text_obj.textLines(ref)
-            canvas.drawText(text_obj)
-            canvas.setFont('EuclidBPBold', 10-1)
-        text_obj = canvas.beginText()
-        text_obj.setTextTransform(LEFT_TEXT_SCALE, 0, 0, 1, BV_COLUMN + LEFT_TEXT_SHIFT, BV_REF_Y - 16*BV_LINE)
-        text_obj.setLeading(1.5*BV_LINE)
-        text_obj.textLines(doc.adresse_bv)
-        canvas.drawText(text_obj)
-        text_obj = canvas.beginText()
-        text_obj.setTextTransform(RIGHT_TEXT_SCALE, 0, 0, 1, BV_REF_X + 25*BV_COLUMN + RIGHT_TEXT_SHIFT, BV_REF_Y - 13*BV_LINE)
-        text_obj.setLeading(1.5*BV_LINE)
-        text_obj.textLines(doc.adresse_bv)
-        canvas.drawText(text_obj)
-        # Le montant
-        offset = 0.5  # 1.3
-        spacing = 1.0
-        canvas.setFont('OCRB', 12)
-        montant = '%11.2f' % doc.prix
-        text_obj = canvas.beginText()
-        text_obj.setTextOrigin(offset*BV_COLUMN, BV_REF_Y - 13*BV_LINE)
-        text_obj.setCharSpace(spacing*BV_COLUMN)
-        text_obj.textLine(montant)
-        canvas.drawText(text_obj)
-        text_obj = canvas.beginText()
-        text_obj.setTextOrigin(BV_REF_X + offset*BV_COLUMN, BV_REF_Y - 13*BV_LINE)
-        text_obj.setCharSpace(spacing*BV_COLUMN)
-        text_obj.textLine(montant)
-        canvas.drawText(text_obj)
-        canvas.setFont('EuclidBPBold', 10-1)
-        canvas.restoreState()
-    else:
-        canvas.drawImage(os.path.join(BASE_DIR, "logo_pog.png"), doc.pagesize[0]+doc.leftMargin, doc.pagesize[1]-doc.topMargin-LOGO_HEIGHT, LOGO_WIDTH, LOGO_HEIGHT)
-        canvas.drawRightString(2*doc.pagesize[0]-doc.rightMargin, doc.pagesize[1]-doc.topMargin-font_size, u"Lausanne, le "+datetime.date.today().strftime('%d.%m.%y'))
-    canvas.restoreState()
+        canvas.make_italic = make_italic
+        canvas.make_bold = make_bold
 
-    def make_italic(canvas, event, label):
-        canvas.skew(0, 20)
-        canvas.setFont('EuclidBPBold', font_size+4)
-        canvas.drawString(0, 0, label)
-
-    def make_bold(canvas, event, label):
-        canvas.setFont('EuclidBPBold', font_size+2)
-        canvas.drawString(-0.1, 0, label)
-        canvas.drawString(0.1, 0, label)
-        canvas.drawString(0, -0.1, label)
-        canvas.drawString(0, 0.1, label)
-
-    canvas.make_italic = make_italic
-    canvas.make_bold = make_bold
-
-
-def facture(filename, therapeute, patient, duree, accident, prix_cts, description_majoration, majoration_cts, date, adresse_bv=None, bv_ref=None, rappel_cts=0):
-    doc = BaseDocTemplate(filename, pagesize=A4, leftMargin=MARGIN, rightMargin=MARGIN, topMargin=MARGIN, bottomMargin=MARGIN)
-    doc.prix = (prix_cts + majoration_cts + rappel_cts) / 100.
-    doc.therapeute = therapeute
-    doc.patient = patient
-    doc.adresse_bv = adresse_bv
-    doc.bv_ref = bv_ref
-    doc.date = date
-    doc.duree = duree
-    doc.rappel_cts = rappel_cts
-    if adresse_bv:
-        templates = [PageTemplate(id='bv', frames=[Frame(doc.leftMargin, doc.rightMargin, doc.width, doc.height)], onPage=fixed)]
-        if rappel_cts == 0:
-            templates.append(PageTemplate(id='copie', frames=[Frame(doc.leftMargin, doc.rightMargin, doc.width, doc.height)], onPage=fixed))
         DEFAULT_STYLE, COPIE_STYLE, FACTURE_STYLE, DEFAULT_TABLE_STYLE, MAJORATION_OU_RAPPEL_TABLE_STYLE, MAJORATION_ET_RAPPEL_TABLE_STYLE = make_styles(FONT_SIZE_BV)
-    else:
-        templates = [PageTemplate(id='recu',
-                                  frames=[Frame(doc.leftMargin, doc.rightMargin, doc.width, doc.height),
-                                          Frame(doc.pagesize[0]+doc.leftMargin, doc.rightMargin, doc.width, doc.height)],
-                                  onPage=fixed)]
-        DEFAULT_STYLE, COPIE_STYLE, FACTURE_STYLE, DEFAULT_TABLE_STYLE, MAJORATION_OU_RAPPEL_TABLE_STYLE, MAJORATION_ET_RAPPEL_TABLE_STYLE = make_styles(FONT_SIZE)
-
-    doc.addPageTemplates(templates)
-    prix = u'%0.2f CHF' % (prix_cts/100.)
-    tstyle = DEFAULT_TABLE_STYLE
-    data = [[Paragraph(u"Prise en charge ostéopathique %s datée du %s" % (duree, date.strftime(DATE_FMT)), DEFAULT_STYLE), None, prix], ]
-    if majoration_cts:
-        data += [[description_majoration, None, u'%0.2f CHF' % (majoration_cts/100.)]]
-    if rappel_cts != 0:
-        data += [["Frais de rappel", None, u'%0.2f CHF' % (rappel_cts/100.)]]
-    if majoration_cts or rappel_cts:
-        tstyle = MAJORATION_OU_RAPPEL_TABLE_STYLE
-        if majoration_cts and rappel_cts:
-            tstyle = MAJORATION_ET_RAPPEL_TABLE_STYLE
-        data += [[None, u'TOTAL', u'%0.2f CHF' % doc.prix]]
-    if accident:
-        data += [[u"Raison : accident", None, ]]
-    else:
-        data += [[u"Raison : maladie", None, ]]
-    if not adresse_bv:
-        data[-1].append(u"payé")
-    therapeute = [ParagraphOrSpacer(line, DEFAULT_STYLE) for line in therapeute.splitlines()]
-    patient = [ParagraphOrSpacer(line, DEFAULT_STYLE) for line in patient.splitlines()]
-    fact = [Spacer(0, LOGO_HEIGHT),
-            Table([[therapeute, patient]],
-                  colWidths=[doc.width*2/3, doc.width/3],
-                  style=[('ALIGN', (0, 0), (0, 0), 'LEFT'), ('ALIGN', (1, 0), (1, 0), 'RIGHT')]),
-            Spacer(0, MARGIN),
-            Paragraph(u'', DEFAULT_STYLE),
-            Spacer(0, 1*MARGIN),
-            ]
-    if rappel_cts:
-        fact.append(Paragraph(u'<onDraw name=make_italic label="RAPPEL"/>', FACTURE_STYLE))
-    else:
-        fact.append(Paragraph(u'<onDraw name=make_italic label="FACTURE"/>', FACTURE_STYLE))
-    fact += [Spacer(0, 1*MARGIN),
-             Table(data, colWidths=[doc.width-5*cm, 1.5*cm, 3.5*cm], style=tstyle),
-             Spacer(0, 1*MARGIN),
-             Paragraph(u"Avec mes remerciements.", DEFAULT_STYLE),
-             ]
-    recu = fact[:]
-    recu[3] = Paragraph(u'<onDraw name=make_bold label="COPIE"/>', COPIE_STYLE)
-    if adresse_bv:
-        if rappel_cts == 0:
-            story = fact + [PageBreak()] + recu
-        else:
-            story = fact
-    else:
-        story = fact + [FrameBreak()] + recu
-    doc.build(story)
-
-
-def facture_manuelle(filename, therapeute, adresse, motif, prix, remarque, bv_ref):
-    doc = BaseDocTemplate(filename, pagesize=A4, leftMargin=MARGIN, rightMargin=MARGIN, topMargin=MARGIN, bottomMargin=MARGIN)
-    doc.prix = prix
-    doc.therapeute = therapeute
-    doc.adresse_bv = adresse
-    doc.bv_ref = bv_ref
-    templates = [PageTemplate(id='bv', frames=[Frame(doc.leftMargin, doc.rightMargin, doc.width, doc.height)], onPage=fixed)]
-    DEFAULT_STYLE, COPIE_STYLE, FACTURE_STYLE, DEFAULT_TABLE_STYLE, MAJORATION_OU_RAPPEL_TABLE_STYLE, MAJORATION_ET_RAPPEL_TABLE_STYLE = make_styles(FONT_SIZE_BV)
-
-    doc.addPageTemplates(templates)
-    prix = u'%0.2f CHF' % doc.prix
-    tstyle = DEFAULT_TABLE_STYLE
-    therapeute = [ParagraphOrSpacer(line, DEFAULT_STYLE) for line in therapeute.splitlines()]
-    adresse = [ParagraphOrSpacer(line, DEFAULT_STYLE) for line in adresse.splitlines()]
-    story = [Spacer(0, LOGO_HEIGHT),
-             Table([[therapeute, adresse]],
-                   colWidths=[doc.width*2/3, doc.width/3],
-                   style=[('ALIGN', (0, 0), (0, 0), 'LEFT'), ('ALIGN', (1, 0), (1, 0), 'RIGHT')]),
-             Spacer(0, MARGIN),
-             Paragraph(u'', DEFAULT_STYLE),
-             Spacer(0, 1*MARGIN),
-             Paragraph(u'<onDraw name=make_italic label="FACTURE"/>', FACTURE_STYLE),
-             Spacer(0, 1*MARGIN),
-             Table([[Paragraph(motif, DEFAULT_STYLE), prix]], colWidths=[doc.width-6*cm, 5*cm], style=tstyle),
-             ]
-    if remarque:
-        story.append(Spacer(0, 1*MARGIN))
-        story.append(Table([[Paragraph(u"Remarque:", DEFAULT_STYLE), Paragraph(remarque, DEFAULT_STYLE)]],
-                           colWidths=[3*cm, doc.width - 3*cm],
-                           style=[('ALIGN', (0, 0), (1, 0), 'LEFT')]))
-    story += [Spacer(0, 1.5*MARGIN),
-              Paragraph(u"Avec mes remerciements.", DEFAULT_STYLE),
-              ]
-    doc.build(story)
+        tstyle = DEFAULT_TABLE_STYLE
+        story = [Table([[[ParagraphOrSpacer(line, DEFAULT_STYLE) for line in therapeute.splitlines()],
+                         [ParagraphOrSpacer(line, DEFAULT_STYLE) for line in adresse.splitlines()]]],
+                       colWidths=[(width-2*MARGIN)*2/3, (width-2*MARGIN)/3],
+                       style=[('ALIGN', (0, 0), (0, 0), 'LEFT'), ('ALIGN', (1, 0), (1, 0), 'RIGHT')]),
+                 Spacer(0, MARGIN),
+                 Paragraph(u'', DEFAULT_STYLE),
+                 Spacer(0, 1*MARGIN),
+                 Paragraph(u'<onDraw name=make_italic label="FACTURE"/>', FACTURE_STYLE),
+                 Spacer(0, 1*MARGIN),
+                 Table([[Paragraph(motif, DEFAULT_STYLE), u'%0.2f CHF' % prix]], colWidths=[width-2*MARGIN-6*cm, 5*cm], style=tstyle),
+                 ]
+        if remarque:
+            story.append(Spacer(0, 1*MARGIN))
+            story.append(Table([[Paragraph(u"Remarque:", DEFAULT_STYLE), Paragraph(remarque, DEFAULT_STYLE)]],
+                               colWidths=[3*cm, width-2*MARGIN-3*cm],
+                               style=[('ALIGN', (0, 0), (1, 0), 'LEFT')]))
+        story += [Spacer(0, 1.5*MARGIN),
+                  Paragraph(u"Avec mes remerciements.", DEFAULT_STYLE),
+                  ]
+        canvas.saveState()
+        draw_head(canvas, FONT_SIZE_BV)
+        draw_bvr(canvas, int(prix*100+0.5), adresse, bv_ref)
+        frame = Frame(MARGIN, MARGIN, width-2*MARGIN, height-2*MARGIN-LOGO_HEIGHT)
+        frame.addFromList(story, canvas)
+        canvas.restoreState()
+        canvas.showPage()
+    canvas.save()
 
 
 if __name__ == '__main__':
