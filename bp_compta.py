@@ -352,7 +352,7 @@ class GererRappels(bp_Dialog.Dialog):
             cursor.execute("""SELECT consultations.id_consult, date_consult, prix_cts, majoration_cts, sex, nom, prenom, COALESCE(CAST(SUM(rappel_cts) AS SIGNED), 0), count(date_rappel), max(date_rappel)
                                 FROM consultations INNER JOIN patients ON consultations.id = patients.id
                                 LEFT OUTER JOIN rappels ON consultations.id_consult = rappels.id_consult
-                               WHERE paye_le IS NULL AND bv_ref IS NOT NULL AND bv_ref != '' AND date_consult <= %s
+                               WHERE paye_le IS NULL AND bv_ref IS NOT NULL AND bv_ref != '' AND date_consult <= %s AND consultations.status NOT IN ('P', 'A')
                                GROUP BY consultations.id_consult, date_consult, prix_cts, majoration_cts, sex, nom, prenom
                                ORDER BY date_consult""", [upto])
             for id_consult, date_consult, prix_cts, majoration_cts, sex, nom, prenom, rappel_cts, rappel_cnt, rappel_last in cursor:
