@@ -349,6 +349,8 @@ def manuals(filename, data):
         frame.addFromList(story, canvas)
         canvas.restoreState()
         canvas.showPage()
+        # Add an empty page
+        canvas.showPage()
     canvas.save()
 
 
