@@ -14,7 +14,6 @@ try:
     import Tkinter as tk
     import tkMessageBox
     import tkFileDialog
-
 except:
     tkMessageBox.showwarning("Error", "Tkinter is not correctly installed !")
     sys.exit()
@@ -71,15 +70,20 @@ class FrenchParserInfo(parserinfo):
     HMS = [(u'h', u'heure', u'heures'), (u'm', u'minute', u'minutes'), (u's', u'seconde', u'secondes')]
     JUMP = [u' ', u'.', u',', u';', u'-', u'/', u"'", u"le", u"er", u"ième"]
 
+
 datesFR = FrenchParserInfo(dayfirst=True)
 MIN_DATE = datetime.date(1900, 1, 1)  # Cannot strftime before that date
 
 
 def parse_date(s):
-    d = du_parse(s, parserinfo=datesFR).date()
+    try:
+        d = du_parse(s, parserinfo=datesFR).date()
+    except ValueError:
+        return None
     if d < MIN_DATE:
         raise ValueError("Date too old")
     return d
+
 
 try:
     import MySQLdb
@@ -577,6 +581,7 @@ class Application(tk.Tk):
 
         bvrmenu = tk.Menu(menubar, tearoff=0)
         bvrmenu.add_command(label=menus_text.import_bvr, command=self.import_bvr)
+
         def gerer_rappel():
             GererRappels(self)
             self.update_list()
