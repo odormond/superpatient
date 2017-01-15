@@ -424,7 +424,10 @@ class SummariesImport(bp_Dialog.Dialog):
                     if rappel_cts > 0:
                         cursor.execute("SELECT rappel_cts, date_rappel FROM rappels WHERE id_consult = %s ORDER BY date_rappel", [id_consult])
                         for fact_rappel_cts, date_rappel in list(cursor):
-                            cursor.execute("UPDATE rappels SET paye = %s WHERE id_consult = %s AND date_rappel = %s", [rappel_cts >= fact_rappel_cts, id_consult, date_rappel])
+                            if rappel_cts >= fact_rappel_cts:
+                                cursor.execute("UPDATE rappels SET status = 'P' WHERE id_consult = %s AND date_rappel = %s", [id_consult, date_rappel])
+                            else:
+                                break
                             rappel_cts -= fact_rappel_cts
                 else:
                     cursor.execute("UPDATE factures_manuelles SET paye_le = %s WHERE id = %s", [credit_date, -id_consult])

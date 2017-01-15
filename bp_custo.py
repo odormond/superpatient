@@ -43,10 +43,10 @@ class Config(object):
 
 
 class BVR(Config):
-    CCP = u'12-3456-7'
-    prefix = 123456
-    versement_pour = u"UBS SA\n1002 Lausanne"
-    en_faveur_de = u"Permanance ostéopathique de la Gare\nAv. de la gare 5\n1003 Lausanne"
+    CCP = u'01-145-6'
+    prefix = 272335
+    versement_pour = u"UBS Switzerland\n8098 Zurich"
+    en_faveur_de = u"Permanence ostéopathique\nde la Gare (POG) Sàrl\nPl. de la Gare 10\n1003 Lausanne"
 
 bvr = BVR()
 
@@ -64,7 +64,7 @@ class WindowsTitle(Config):
     delete_consultation = u"Supprimer une consultation de %s %s"
     apropos = u"À propos"
     licence = u"Conditions d'utilisation"
-    application = u"BasicPatient"
+    application = u"SuperPatient"
     db_error = u"Problème avec la base de donnée"
     missing_error = u"Information manquante"
     invalid_error = u"Information invalide"
@@ -241,39 +241,35 @@ class LabelsText(Config):
     identifiant = u"Identifiant"
     consult_upto = u"Consultations ou rappel jusqu'au"
     # Info sur l'application
-    apropos_description = u"""BasicPatient ver. 2.0 est un gestionnaire de patients et de consultations open-source.
+    apropos_description = u"""Superpatient ver. 3.0 est un gestionnaire de patients et de consultations open-source.
 
 Il a été créé en 2006 pour satisfaire aux besoins minimaux d'un cabinet de groupe d'ostéopathes.
 
-BasicPatient est sous licence GPL, ce qui vous donne le droit de le modifier et de l'utiliser
+Superpatient est sous licence GPL, ce qui vous donne le droit de le modifier et de l'utiliser
 à votre guise.
-
-Le manuel peut être téléchargé depuis le site web
-
-bp.csernay.ch
 
 Pour tout autre renseignement, veuillez écrire à
 
 csernay@permanence-lausanne.ch"""
     licence_description = u"""Copyright 2006-2015 Tibor Csernay
 
-BasicPatient is free software; you can redistribute it and/or modify
+SuperPatient is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation; either version 2 of the License, or
 (at your option) any later version.
 
-BasicPatient is distributed in the hope that it will be useful,
+SuperPatient is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with BasicPatient; if not, write to the Free Software
+along with SuperPatient; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA"""
     adresse_pog = u"""Permanence Ostéopathique de la Gare
-Av. de la gare 5
+Pl. de la gare 10
 1003 Lausanne
-www.permanence-lausanne.ch
+www.pog.swiss
 021 510 50 50"""
     really_cancel = u"""Voulez-vous vraiment annuler ?
 Les données de cette consultation ne seront pas enregistrées."""

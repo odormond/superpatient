@@ -5,20 +5,20 @@
 
 #    Copyright 2006 Tibor Csernay
 
-#    This file is part of BasicPatient.
+#    This file is part of SuperPatient.
 
-#    BasicPatient is free software; you can redistribute it and/or modify
+#    SuperPatient is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
 #    the Free Software Foundation; either version 2 of the License, or
 #    (at your option) any later version.
 
-#    BasicPatient is distributed in the hope that it will be useful,
+#    SuperPatient is distributed in the hope that it will be useful,
 #    but WITHOUT ANY WARRANTY; without even the implied warranty of
 #    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #    GNU General Public License for more details.
 
 #    You should have received a copy of the GNU General Public License
-#    along with BasicPatient; if not, write to the Free Software
+#    along with SuperPatient; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 import os
@@ -1456,7 +1456,7 @@ def save_db():
 
     fileName = tkFileDialog.asksaveasfilename(filetypes=myFormats, title=u"Sauvegarde de la base de donnée")
     if len(fileName) > 0:
-        os.system("mysqldump -u root basicpatient > %s" % (fileName.encode('UTF-8')))
+        os.system("mysqldump -u root SuperPatient > %s" % (fileName.encode('UTF-8')))
 
 
 def restore_db():
@@ -1464,7 +1464,7 @@ def restore_db():
 
     fileName = tkFileDialog.askopenfilename(filetypes=myFormats, title=u'Restauration de la base de donnée')
     if fileName is not None:
-        os.system("mysql -u root basicpatient < %s" % (fileName.encode('UTF-8')))
+        os.system("mysql -u root SuperPatient < %s" % (fileName.encode('UTF-8')))
 
 
 class apropos(bp_Dialog.Dialog):
@@ -1500,8 +1500,8 @@ class Application(tk.Tk):
         adminmenu.add_command(label=menus_text.manual_bill, command=lambda: FactureManuelle())
         adminmenu.add_separator()
         adminmenu.add_command(label=menus_text.delete_data, command=lambda: GererPatients(self, 'supprimer'), foreground='red')
-        adminmenu.add_command(label=menus_text.save_db, command=save_db)
-        adminmenu.add_command(label=menus_text.restore_db, command=restore_db)
+#        adminmenu.add_command(label=menus_text.save_db, command=save_db)
+#        adminmenu.add_command(label=menus_text.restore_db, command=restore_db)
 
         helpmenu = tk.Menu(menubar, tearoff=0)
         helpmenu.add_command(label=menus_text.about, command=lambda: apropos(self))
@@ -1517,20 +1517,20 @@ class Application(tk.Tk):
         self.cntP_label.grid(row=1, column=1)
 
         tk.Label(self, text=u"").grid(row=2, column=0)
-        tk.Label(self, text=u"Ch").grid(row=2, column=1)
-        self.cntCH_label = tk.Label(self)
-        self.cntCH_label.grid(row=2, column=2)
-        tk.Label(self, text=u"Tib").grid(row=2, column=3)
-        self.cntTib_label = tk.Label(self)
-        self.cntTib_label.grid(row=2, column=4)
+#        tk.Label(self, text=u"Ch").grid(row=2, column=1)
+#        self.cntCH_label = tk.Label(self)
+#        self.cntCH_label.grid(row=2, column=2)
+#        tk.Label(self, text=u"Tib").grid(row=2, column=3)
+#        self.cntTib_label = tk.Label(self)
+#        self.cntTib_label.grid(row=2, column=4)
 
         tk.Button(self, text=buttons_text.new_consult_known_patient, command=lambda: GererPatients(self, 'nouvelle_consultation')).grid(row=3, column=0, sticky=tk.W)
-        tk.Label(self, text=u"LI").grid(row=3, column=1)
-        self.cntLIK_label = tk.Label(self)
-        self.cntLIK_label.grid(row=3, column=2)
-        tk.Label(self, text=u"CRT").grid(row=3, column=3)
-        self.cntCRT_label = tk.Label(self)
-        self.cntCRT_label.grid(row=3, column=4)
+#        tk.Label(self, text=u"LI").grid(row=3, column=1)
+#        self.cntLIK_label = tk.Label(self)
+#        self.cntLIK_label.grid(row=3, column=2)
+#        tk.Label(self, text=u"CRT").grid(row=3, column=3)
+#        self.cntCRT_label = tk.Label(self)
+#        self.cntCRT_label.grid(row=3, column=4)
 
         tk.Button(self, text=buttons_text.show_or_change_consult, command=lambda: GererPatients(self, 'gerer_consultations')).grid(row=4, column=0, sticky=tk.W)
         self.cntC_label = tk.Label(self)
@@ -1549,14 +1549,14 @@ class Application(tk.Tk):
         self.cntP_label['text'], = cursor.fetchone()
         cursor.execute("SELECT count(*) FROM consultations")
         self.cntC_label['text'], = cursor.fetchone()
-        cursor.execute("SELECT count(*) FROM patients WHERE therapeute='ch'")
-        self.cntCH_label['text'], = cursor.fetchone()
-        cursor.execute("SELECT count(*) FROM patients WHERE therapeute='tib'")
-        self.cntTib_label['text'], = cursor.fetchone()
-        cursor.execute("SELECT count(*) FROM patients WHERE therapeute='lik'")
-        self.cntLIK_label['text'], = cursor.fetchone()
-        cursor.execute("SELECT count(*) FROM patients WHERE therapeute='CRT'")
-        self.cntCRT_label['text'], = cursor.fetchone()
+#        cursor.execute("SELECT count(*) FROM patients WHERE therapeute='ch'")
+#        self.cntCH_label['text'], = cursor.fetchone()
+#        cursor.execute("SELECT count(*) FROM patients WHERE therapeute='tib'")
+#        self.cntTib_label['text'], = cursor.fetchone()
+#        cursor.execute("SELECT count(*) FROM patients WHERE therapeute='lik'")
+#        self.cntLIK_label['text'], = cursor.fetchone()
+#        cursor.execute("SELECT count(*) FROM patients WHERE therapeute='CRT'")
+#        self.cntCRT_label['text'], = cursor.fetchone()
 
 
 app = Application()

@@ -179,7 +179,7 @@ def addresses(cursor, consultation, style):
 def pvpe_body(cursor, consultation, style, tstyle):
     prix = u'%0.2f CHF' % (consultation.prix_cts/100.)
     # XXX Adapt text
-    data = [[Paragraph(u"Consultation non décommandée datée du %s" % (consultation.date_consult.strftime(DATE_FMT)), style), None, prix], ]
+    data = [[Paragraph(u"Consultation du %s non annulée 24h à l'avance" % (consultation.date_consult.strftime(DATE_FMT)), style), None, prix], ]
     if consultation.majoration_cts:
         cursor.execute("""SELECT description FROM majorations WHERE prix_cts=%s""", [consultation.majoration_cts])
         description_majoration, = cursor.fetchone()
