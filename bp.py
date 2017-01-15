@@ -106,6 +106,7 @@ class FrenchParserInfo(parserinfo):
     HMS = [(u'h', u'heure', u'heures'), (u'm', u'minute', u'minutes'), (u's', u'seconde', u'secondes')]
     JUMP = [u' ', u'.', u',', u';', u'-', u'/', u"'", u"le", u"er", u"ième"]
 
+
 datesFR = FrenchParserInfo(dayfirst=True)
 MIN_DATE = datetime.date(1900, 1, 1)  # Cannot strftime before that date
 
@@ -749,11 +750,13 @@ class Consultation(bp_Dialog.Dialog):
         self.geometry("+200+5")
         consult = self.consultation
         try:
+            if consult.therapeute is not None:
+                consult.therapeute = consult.therapeute.strip()  # Sanity guard against old data
             cursor.execute("""SELECT therapeute, login FROM therapeutes ORDER BY therapeute""")
             therapeutes = [u'']
             for t, login in cursor:
                 therapeutes.append(t)
-                if login == LOGIN:
+                if consult.therapeute is None and login == LOGIN:
                     consult.therapeute = t
             if consult:
                 title = windows_title.consultation % (consult.date_consult, self.patient.sex, self.patient.nom)
@@ -761,8 +764,6 @@ class Consultation(bp_Dialog.Dialog):
                 consult.date_consult = datetime.date.today()
                 consult.MC_accident = False
                 title = windows_title.new_consultation % (self.patient.sex, self.patient.nom)
-            if consult.therapeute is not None:
-                consult.therapeute = consult.therapeute.strip()  # Sanity guard against old data
         except:
             traceback.print_exc()
             tkMessageBox.showwarning(windows_title.db_error, errors_text.db_read)
