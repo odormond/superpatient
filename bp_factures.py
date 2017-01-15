@@ -216,7 +216,7 @@ def consultation_body(cursor, consultation, style, tstyle):
     else:
         data += [[u"Raison : maladie", None, ]]
     if not consultation.bv_ref:
-        data[-1].append(u"payé")
+        data[-1].append(u"payé par " + consultation.paye_par.lower())
     width = A4[0] - 2*MARGIN
     return [Table(data, colWidths=[width-5*cm, 1.5*cm, 3.5*cm], style=tstyle)]
 
@@ -364,6 +364,6 @@ if __name__ == '__main__':
     patient = bp_model.Patient.load(cursor, 1)
     print patient.__dict__
     c1 = bp_model.Consultation(id=1, patient=patient, therapeute=patient.therapeute, date_consult=datetime.date.today(), prix_cts=10000, paye_par=u'BVR', bv_ref='012345678901234567890123458', majoration_cts=0, rappel_cts=0)
-    c2 = bp_model.Consultation(id=1, patient=patient,  therapeute=patient.therapeute, date_consult=datetime.date.today(), prix_cts=10000, paye_par=u'PVPE', bv_ref='012345678901234567890123458', majoration_cts=0, rappel_cts=300)
-    c3 = bp_model.Consultation(id=1, patient=patient,  therapeute=patient.therapeute, date_consult=datetime.date.today(), prix_cts=10000, paye_par=u'Carte', majoration_cts=300, rappel_cts=0)
+    c2 = bp_model.Consultation(id=1, patient=patient, therapeute=patient.therapeute, date_consult=datetime.date.today(), prix_cts=10000, paye_par=u'PVPE', bv_ref='012345678901234567890123458', majoration_cts=0, rappel_cts=300)
+    c3 = bp_model.Consultation(id=1, patient=patient, therapeute=patient.therapeute, date_consult=datetime.date.today(), prix_cts=10000, paye_par=u'Carte', majoration_cts=300, rappel_cts=0)
     consultations(sys.argv[1], cursor, [c1, c2, c3])
