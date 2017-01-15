@@ -654,7 +654,7 @@ class Consultation(bp_Dialog.Dialog):
         box.pack()
 
     def verify_cancel(self, *args):
-        if tkMessageBox.askyesno(windows_title.really_cancel, labels_text.really_cancel, default=tkMessageBox.NO):
+        if self.readonly or tkMessageBox.askyesno(windows_title.really_cancel, labels_text.really_cancel, default=tkMessageBox.NO):
             self.cancel()
 
     def get_cost(self):
