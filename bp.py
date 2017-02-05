@@ -183,46 +183,14 @@ def MCWidget(parent, key, row, column, rowspan=1, columnspan=1, value=None, acci
     return var, radiovar
 
 
-def MajorationWidget(parent, key, row, column, value=None, readonly=False, side_by_side=True, fg='black', field_fg='black', want_widget=False):
+def TarifWidget(parent, table, key, row, column, value=None, readonly=False, side_by_side=True, fg='black', field_fg='black', want_widget=False):
     if side_by_side:
         rowshift, colshift = 0, 1
     else:
         rowshift, colshift = 1, 0
     tk.Label(parent, text=labels_text[key], font=labels_font[key], fg=fg).grid(row=row, column=column, sticky=tk.W)
     try:
-        cursor.execute("""SELECT description, prix_cts FROM majorations ORDER BY prix_cts""")
-        majorations = [(0, u"Pas de majoration", u"Pas de majoration")]
-        for description, prix_cts in cursor:
-            label = u'%s : %0.2f CHF' % (description, prix_cts/100.)
-            majorations.append((prix_cts, description, label))
-    except:
-        traceback.print_exc()
-        tkMessageBox.showwarning(windows_title.db_error, errors_text.db_read)
-        majorations = [u"-- ERREUR --"]
-    var = tk.StringVar()
-    try:
-        idx = [p for p, d, l in majorations].index(value)
-        var.set(majorations[idx][2])
-    except ValueError:
-        pass
-
-    widget = tk.OptionMenu(parent, var, *[l for p, d, l in majorations])
-    if readonly:
-        widget.config(state=tk.DISABLED)
-    widget.grid(row=row+rowshift, column=column+colshift, sticky=tk.W+tk.E)
-    if want_widget:
-        return var, widget
-    return var
-
-
-def TarifWidget(parent, key, row, column, value=None, readonly=False, side_by_side=True, fg='black', field_fg='black', want_widget=False):
-    if side_by_side:
-        rowshift, colshift = 0, 1
-    else:
-        rowshift, colshift = 1, 0
-    tk.Label(parent, text=labels_text[key], font=labels_font[key], fg=fg).grid(row=row, column=column, sticky=tk.W)
-    try:
-        cursor.execute("""SELECT description, prix_cts FROM tarifs ORDER BY prix_cts""")
+        cursor.execute("""SELECT description, prix_cts FROM %s ORDER BY prix_cts""" % table)
         tarifs = []
         for description, prix_cts in cursor:
             label = u'%s : %0.2f CHF' % (description, prix_cts/100.)
@@ -233,7 +201,7 @@ def TarifWidget(parent, key, row, column, value=None, readonly=False, side_by_si
         tarifs = [u"-- ERREUR --"]
     var = tk.StringVar()
     try:
-        idx = [p for p, d, l in tarifs].index(value)
+        idx = [(p, d) for p, d, l in tarifs].index(value)
         var.set(tarifs[idx][2])
     except ValueError:
         pass
@@ -687,7 +655,7 @@ class Consultation(bp_Dialog.Dialog):
         consult.A_osteo = self.A_osteoVar.get(1.0, tk.END).strip()
         consult.traitement = self.traitementVar.get(1.0, tk.END).strip()
         consult.therapeute = self.therapeuteVar.get().strip()
-        _, consult.prix_cts, _, consult.majoration_cts = self.get_cost()
+        consult.prix_txt, consult.prix_cts, consult.majoration_txt, consult.majoration_cts = self.get_cost()
         consult.paye_par = self.paye_parVar.get().strip()
         if consult.paye_le is None and consult.paye_par not in (u'BVR', u'CdM', u'Dû', u'PVPE'):
             consult.paye_le = datetime.date.today()
@@ -814,14 +782,9 @@ class Consultation(bp_Dialog.Dialog):
         self.therapeuteVar = OptionWidget(master, key='therapeute', row=12, column=1, side_by_side=False, value=consult.therapeute, options=therapeutes, readonly=self.readonly)
         self.payeVar = TextWidget(master, key='paye', row=12, column=2, rowspan=3, side_by_side=False, value=consult.paye, field_fg='red', readonly=self.readonly)
 
-        self.majorationVar = tk.IntVar()
-        if consult.majoration_cts:
-            self.majorationVar.set(1)
-        else:
-            self.majorationVar.set(0)
         f = tk.Frame(master)
-        self.prixVar = TarifWidget(f, key='seance', row=0, column=0, side_by_side=True, value=consult.prix_cts, readonly=self.readonly)
-        self.majorationVar = MajorationWidget(f, key='majoration', row=1, column=0, side_by_side=True, value=consult.majoration_cts, readonly=self.readonly)
+        self.prixVar = TarifWidget(f, table='tarifs', key='seance', row=0, column=0, side_by_side=True, value=(consult.prix_cts, consult.prix_txt), readonly=self.readonly)
+        self.majorationVar = TarifWidget(f, table='majorations', key='majoration', row=1, column=0, side_by_side=True, value=(consult.majoration_cts, consult.majoration_txt), readonly=self.readonly)
         f.grid(row=14, column=0, rowspan=2, sticky=tk.W+tk.E)
         f.grid_columnconfigure(1, weight=1)
 

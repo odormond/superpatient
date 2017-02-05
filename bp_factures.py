@@ -181,9 +181,7 @@ def pvpe_body(cursor, consultation, style, tstyle):
     # XXX Adapt text
     data = [[Paragraph(u"Consultation du %s non annulée 24h à l'avance" % (consultation.date_consult.strftime(DATE_FMT)), style), None, prix], ]
     if consultation.majoration_cts:
-        cursor.execute("""SELECT description FROM majorations WHERE prix_cts=%s""", [consultation.majoration_cts])
-        description_majoration, = cursor.fetchone()
-        data += [[description_majoration, None, u'%0.2f CHF' % (consultation.majoration_cts/100)]]
+        data += [[consultation.majoration_txt, None, u'%0.2f CHF' % (consultation.majoration_cts/100)]]
     if consultation.rappel_cts != 0:
         data += [["Frais de rappel", None, u'%0.2f CHF' % (consultation.rappel_cts/100)]]
     if consultation.majoration_cts or consultation.rappel_cts:
@@ -200,13 +198,9 @@ def pvpe_body(cursor, consultation, style, tstyle):
 
 def consultation_body(cursor, consultation, style, tstyle):
     prix = u'%0.2f CHF' % (consultation.prix_cts/100.)
-    cursor.execute("""SELECT description FROM tarifs WHERE prix_cts=%s""", [consultation.prix_cts])
-    duree, = cursor.fetchone()
-    data = [[Paragraph(u"Prise en charge ostéopathique %s datée du %s" % (duree, consultation.date_consult.strftime(DATE_FMT)), style), None, prix], ]
+    data = [[Paragraph(u"Prise en charge ostéopathique %s datée du %s" % (consultation.prix_txt, consultation.date_consult.strftime(DATE_FMT)), style), None, prix], ]
     if consultation.majoration_cts:
-        cursor.execute("""SELECT description FROM majorations WHERE prix_cts=%s""", [consultation.majoration_cts])
-        description_majoration, = cursor.fetchone()
-        data += [[description_majoration, None, u'%0.2f CHF' % (consultation.majoration_cts/100)]]
+        data += [[consultation.majoration_txt, None, u'%0.2f CHF' % (consultation.majoration_cts/100)]]
     if consultation.rappel_cts != 0:
         data += [["Frais de rappel", None, u'%0.2f CHF' % (consultation.rappel_cts/100)]]
     if consultation.majoration_cts or consultation.rappel_cts:
