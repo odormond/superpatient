@@ -243,8 +243,8 @@ class Patient(bp_Dialog.Dialog):
         patient.sex = self.sexVar.get()
         patient.nom = self.nomVar.get().strip()
         patient.prenom = self.prenomVar.get().strip()
-        patient.ATCD_perso = u""
-        patient.ATCD_fam = u""
+        patient.ATCD_perso = getattr(patient, 'ATCD_perso', u"")
+        patient.ATCD_fam = getattr(patient, 'ATCD_fam', u"")
         patient.medecin = self.medecinVar.get(1.0, tk.END).strip()
         patient.autre_medecin = self.autre_medecinVar.get(1.0, tk.END).strip()
         patient.phone = self.phoneVar.get().strip()
