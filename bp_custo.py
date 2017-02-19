@@ -39,7 +39,9 @@ class Config(object):
         try:
             return super(Config, self).__getattribute__(key)
         except AttributeError:
-            return self.DEFAULT
+            if hasattr(self, 'DEFAULT'):
+                return self.DEFAULT
+            raise
 
 
 class BVR(Config):
@@ -47,6 +49,7 @@ class BVR(Config):
     prefix = 272335
     versement_pour = u"UBS Switzerland\n8098 Zurich"
     en_faveur_de = u"Permanence ostéopathique\nde la Gare (POG) Sàrl\nPl. de la Gare 10\n1003 Lausanne"
+
 
 bvr = BVR()
 
@@ -72,14 +75,16 @@ class WindowsTitle(Config):
     done = u"Fait"
     cons_pat = u"Consultation patient"
     manage_colleagues = u"Gérer les collaborateurs"
-    manage_majorations = u"Gérer les majorations"
     manage_tarifs = u"Gérer les tarifs"
+    manage_majorations = u"Gérer les majorations"
+    manage_frais_admins = u"Gérer les frais administratifs"
     manage_addresses = u"Gérer les adresses"
     compta = u"Gestion comptable"
     really_cancel = u"Confirmation d'annulation"
     summaries_import = u"Résumé de l'import"
     compta_statistics = u"Statistiques"
     manage_reminders = u"Gérer les rappels"
+
 
 windows_title = WindowsTitle()
 
@@ -96,8 +101,9 @@ class ErrorsText(Config):
     missing_payment_info = u"Veuillez préciser le prix et le moyen de payement"
     missing_data = u"Veuillez compléter les champs en rouge"
     invalid_date = u"Veuillez vérifier le format des champs date"
-    invalid_majoration = u"Majoration invalide"
     invalid_tarif = u"Tarif invalide"
+    invalid_majoration = u"Majoration invalide"
+    invalid_frais_admin = u"Frais administratif invalide"
     invalid_amount = u"Montant invalide"
 
 
@@ -143,8 +149,9 @@ buttons_text = ButtonsText()
 
 class MenusText(Config):
     manage_colleagues = u"Gestion des collaborateurs"
-    manage_majorations = u"Gestion des majorations"
     manage_tarifs = u"Gestion des tarifs"
+    manage_majorations = u"Gestion des majorations"
+    manage_frais_admins = u"Gestion des frais administratifs"
     manage_addresses = u"Gestion des adresses"
     manual_bill = u"Facture manuelle"
     delete_data = u"Supprimer des données"
@@ -222,10 +229,13 @@ class LabelsText(Config):
     cons_sup = u"Consultation supprimée de la base"
     collabos = u"Collaborateurs"
     entete = u"Entête d'adresse"
-    majorations = u"Majorations"
-    majoration = u"Majoration"
     tarifs = u"Tarifs"
     tarif = u"Tarif"
+    majorations = u"Majorations"
+    majoration = u"Majoration"
+    frais_admins = u"Frais administratifs"
+    frais_admin = u"Frais administratif"
+    prix = u"Prix"
     description = u"Description"
     date_du = u"Consultations dès le"
     date_au = u"Consultations jusqu'au"
@@ -234,6 +244,7 @@ class LabelsText(Config):
     count = u"# entrées"
     total_consultation = u"Total consultation"
     total_majoration = u"Total majoration"
+    total_frais_admin = u"Total frais administratif"
     total_rappel = u"Total frais de rappel"
     total = u"Total"
     addresses = u"Adresses"
@@ -291,7 +302,7 @@ class FieldsFont(Config):
     mc = eg = expc = atcdp = atcdf = thorax = abdomen = tete = ms = TEXT_DEFAULT
     mi = gen = a_osteo = exph = ttt = paye = entete = TEXT_DEFAULT
     addresses = address = identifiant = TEXT_DEFAULT
-    rp = rc = collabos = majorations = tarifs = consultations = LISTBOX_DEFAULT
+    rp = rc = collabos = majorations = tarifs = frais_admins = consultations = LISTBOX_DEFAULT
 
 
 fields_font = FieldsFont()
@@ -323,10 +334,12 @@ class FieldsHeight(Config):
     ttes_cons = 39
     entete = 6
     collabos = 10
-    majorations = 10
-    majoration = 6
     tarifs = 10
     tarif = 6
+    majorations = 10
+    majoration = 6
+    frais_admins = 10
+    frais_admin = 6
     description = 6
     consultations = 40
     addresses = 20
@@ -340,8 +353,9 @@ class FieldsWidth(Config):
     rp = 75
     rc = 75
     collabos = 75
-    majorations = 40
     tarifs = 40
+    majorations = 40
+    frais_admins = 40
     consultations = 100
     ttes_cons = 100
     important = 60
@@ -378,5 +392,3 @@ def normalize_filename(filename):
         filename = filename.replace(char, '-')
     filename = filename.replace(' ', '_').replace('\t', '_')
     return os.path.join(PDF_DIR, filename).encode('UTF-8')
-
-

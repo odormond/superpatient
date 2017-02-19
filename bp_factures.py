@@ -42,7 +42,7 @@ MIDDLE_TEXT_SHIFT = 0
 MIDDLE_TEXT_SCALE = 1
 RIGHT_TEXT_SHIFT = 0
 RIGHT_TEXT_SCALE = 1
-REF_NO_SHIFT = -4
+REF_NO_SHIFT = 0
 REF_NO_SCALE = 1.0
 
 
@@ -57,19 +57,15 @@ def make_styles(font_size):
     COPIE_STYLE = ParagraphStyle('default', fontName='EuclidBPBold', fontSize=font_size+2)
     FACTURE_STYLE = ParagraphStyle('title', fontName='EuclidBPBold', fontSize=font_size+4)
 
-    DEFAULT_TABLE_STYLE = [('FONT', (0, 0), (-1, -1), 'EuclidBPBold', font_size),
-                           ('ALIGN', (1, 0), (1, -1), 'RIGHT')]
-    MAJORATION_OU_RAPPEL_TABLE_STYLE = [('FONT', (0, 0), (-1, -1), 'EuclidBPBold', font_size),
-                                        ('ALIGN', (2, 0), (2, -1), 'RIGHT'),
-                                        ('ALIGN', (1, 2), (1, 2), 'RIGHT'),
-                                        ('LINEABOVE', (2, 2), (2, 2), 2, colors.black),
-                                        ]
-    MAJORATION_ET_RAPPEL_TABLE_STYLE = [('FONT', (0, 0), (-1, -1), 'EuclidBPBold', font_size),
-                                        ('ALIGN', (2, 0), (2, -1), 'RIGHT'),
-                                        ('ALIGN', (1, 3), (1, 3), 'RIGHT'),
-                                        ('LINEABOVE', (2, 3), (2, 3), 2, colors.black),
-                                        ]
-    return DEFAULT_STYLE, COPIE_STYLE, FACTURE_STYLE, DEFAULT_TABLE_STYLE, MAJORATION_OU_RAPPEL_TABLE_STYLE, MAJORATION_ET_RAPPEL_TABLE_STYLE
+    NO_TOTAL_TABLE_STYLE = [('FONT', (0, 0), (-1, -1), 'EuclidBPBold', font_size),
+                            ('ALIGN', (2, 0), (2, -1), 'RIGHT'),
+                            ]
+    TOTAL_TABLE_STYLE = [('FONT', (0, 0), (-1, -1), 'EuclidBPBold', font_size),
+                         ('ALIGN', (2, 0), (2, -1), 'RIGHT'),
+                         ('ALIGN', (1, -2), (1, -2), 'RIGHT'),
+                         ('LINEABOVE', (2, -2), (2, -2), 2, colors.black),
+                         ]
+    return DEFAULT_STYLE, COPIE_STYLE, FACTURE_STYLE, NO_TOTAL_TABLE_STYLE, TOTAL_TABLE_STYLE
 
 
 def draw_head(canvas, font_size):
@@ -136,7 +132,7 @@ def draw_bvr(canvas, prix_cts, address_patient, bv_ref):
     text_obj.textLines(address_patient)
     canvas.drawText(text_obj)
     # Le montant
-    offset = 0.5  # 1.3
+    offset = 0.9
     spacing = 1.0
     canvas.setFont('OCRB', 12)
     montant = '%11.2f' % (prix_cts / 100)
@@ -176,35 +172,17 @@ def addresses(cursor, consultation, style):
             ]
 
 
-def pvpe_body(cursor, consultation, style, tstyle):
+def facture_body(consultation, message, style, tstyle):
     prix = u'%0.2f CHF' % (consultation.prix_cts/100.)
-    # XXX Adapt text
-    data = [[Paragraph(u"Consultation du %s non annulée 24h à l'avance" % (consultation.date_consult.strftime(DATE_FMT)), style), None, prix], ]
+    data = [[Paragraph(message, style), None, prix], ]
     if consultation.majoration_cts:
         data += [[consultation.majoration_txt, None, u'%0.2f CHF' % (consultation.majoration_cts/100)]]
+    if consultation.frais_admin_cts:
+        data += [[consultation.frais_admin_txt, None, u'%0.2f CHF' % (consultation.frais_admin_cts/100)]]
     if consultation.rappel_cts != 0:
         data += [["Frais de rappel", None, u'%0.2f CHF' % (consultation.rappel_cts/100)]]
-    if consultation.majoration_cts or consultation.rappel_cts:
-        data += [[None, u'TOTAL', u'%0.2f CHF' % ((consultation.prix_cts + consultation.majoration_cts + consultation.rappel_cts)/100)]]
-    if consultation.MC_accident:
-        data += [[u"Raison : accident", None, ]]
-    else:
-        data += [[u"Raison : maladie", None, ]]
-    if not consultation.bv_ref:
-        data[-1].append(u"payé")
-    width = A4[0] - 2*MARGIN
-    return [Table(data, colWidths=[width-5*cm, 1.5*cm, 3.5*cm], style=tstyle)]
-
-
-def consultation_body(cursor, consultation, style, tstyle):
-    prix = u'%0.2f CHF' % (consultation.prix_cts/100.)
-    data = [[Paragraph(u"Prise en charge ostéopathique %s datée du %s" % (consultation.prix_txt, consultation.date_consult.strftime(DATE_FMT)), style), None, prix], ]
-    if consultation.majoration_cts:
-        data += [[consultation.majoration_txt, None, u'%0.2f CHF' % (consultation.majoration_cts/100)]]
-    if consultation.rappel_cts != 0:
-        data += [["Frais de rappel", None, u'%0.2f CHF' % (consultation.rappel_cts/100)]]
-    if consultation.majoration_cts or consultation.rappel_cts:
-        data += [[None, u'TOTAL', u'%0.2f CHF' % ((consultation.prix_cts + consultation.majoration_cts + consultation.rappel_cts)/100)]]
+    if consultation.majoration_cts or consultation.frais_admin_cts or consultation.rappel_cts:
+        data += [[None, u'TOTAL', u'%0.2f CHF' % ((consultation.prix_cts + consultation.majoration_cts + consultation.frais_admin_cts + consultation.rappel_cts)/100)]]
     if consultation.MC_accident:
         data += [[u"Raison : accident", None, ]]
     else:
@@ -212,7 +190,15 @@ def consultation_body(cursor, consultation, style, tstyle):
     if not consultation.bv_ref:
         data[-1].append(u"payé par " + consultation.paye_par.lower())
     width = A4[0] - 2*MARGIN
-    return [Table(data, colWidths=[width-5*cm, 1.5*cm, 3.5*cm], style=tstyle)]
+    return [Table(data, colWidths=[width-4.8*cm, 1.5*cm, 3.7*cm], style=tstyle)]
+
+
+def pvpe_body(consultation, style, tstyle):
+    return facture_body(consultation, u"Consultation du %s non annulée 24h à l'avance" % (consultation.date_consult.strftime(DATE_FMT)), style, tstyle)
+
+
+def consultation_body(consultation, style, tstyle):
+    return facture_body(consultation, u"Prise en charge ostéopathique %s datée du %s" % (consultation.prix_txt, consultation.date_consult.strftime(DATE_FMT)), style, tstyle)
 
 
 # Entry point for generating bills or receipt from a list of consultations
@@ -237,7 +223,7 @@ def consultations(filename, cursor, consultations):
         canvas.make_italic = make_italic
         canvas.make_bold = make_bold
 
-        DEFAULT_STYLE, COPIE_STYLE, FACTURE_STYLE, DEFAULT_TABLE_STYLE, MAJORATION_OU_RAPPEL_TABLE_STYLE, MAJORATION_ET_RAPPEL_TABLE_STYLE = make_styles(font_size)
+        DEFAULT_STYLE, COPIE_STYLE, FACTURE_STYLE, NO_TOTAL_TABLE_STYLE, TOTAL_TABLE_STYLE = make_styles(font_size)
         main = addresses(cursor, consultation, DEFAULT_STYLE)
         main.append(Spacer(0, MARGIN))
         main.append(Paragraph(u'', DEFAULT_STYLE))  # Will be replaced by COPIE in the copy
@@ -247,16 +233,14 @@ def consultations(filename, cursor, consultations):
         else:
             main.append(Paragraph(u'<onDraw name=make_italic label="FACTURE"/>', FACTURE_STYLE))
         main.append(Spacer(0, 1*MARGIN))
-        if consultation.majoration_cts and consultation.rappel_cts:
-            tstyle = MAJORATION_ET_RAPPEL_TABLE_STYLE
-        elif consultation.majoration_cts or consultation.rappel_cts:
-            tstyle = MAJORATION_OU_RAPPEL_TABLE_STYLE
+        if consultation.majoration_cts or consultation.frais_admin_cts or consultation.rappel_cts:
+            tstyle = TOTAL_TABLE_STYLE
         else:
-            tstyle = DEFAULT_TABLE_STYLE
+            tstyle = NO_TOTAL_TABLE_STYLE
         if consultation.paye_par == u'PVPE':
-            main += pvpe_body(cursor, consultation, DEFAULT_STYLE, tstyle)
+            main += pvpe_body(consultation, DEFAULT_STYLE, tstyle)
         else:
-            main += consultation_body(cursor, consultation, DEFAULT_STYLE, tstyle)
+            main += consultation_body(consultation, DEFAULT_STYLE, tstyle)
         main.append(Spacer(0, 1*MARGIN))
         main.append(Paragraph(u"Avec mes remerciements.", DEFAULT_STYLE))
         copy = main[:]
@@ -277,7 +261,7 @@ def consultations(filename, cursor, consultations):
             else:
                 identite = [patient.prenom, patient.nom]
             address_patient = u'\n'.join(identite + [patient.adresse])
-            draw_bvr(canvas, consultation.prix_cts+consultation.majoration_cts+consultation.rappel_cts, address_patient, consultation.bv_ref)
+            draw_bvr(canvas, consultation.prix_cts+consultation.majoration_cts+consultation.frais_admin_cts+consultation.rappel_cts, address_patient, consultation.bv_ref)
         canvas.restoreState()
         if consultation.paye_par in (u'BVR', u'PVPE'):
             canvas.showPage()
@@ -315,8 +299,8 @@ def manuals(filename, data):
         canvas.make_italic = make_italic
         canvas.make_bold = make_bold
 
-        DEFAULT_STYLE, COPIE_STYLE, FACTURE_STYLE, DEFAULT_TABLE_STYLE, MAJORATION_OU_RAPPEL_TABLE_STYLE, MAJORATION_ET_RAPPEL_TABLE_STYLE = make_styles(FONT_SIZE_BV)
-        tstyle = DEFAULT_TABLE_STYLE
+        DEFAULT_STYLE, COPIE_STYLE, FACTURE_STYLE, NO_TOTAL_TABLE_STYLE, TOTAL_TABLE_STYLE = make_styles(FONT_SIZE_BV)
+        tstyle = NO_TOTAL_TABLE_STYLE
         story = [Table([[[ParagraphOrSpacer(line, DEFAULT_STYLE) for line in therapeute.splitlines()],
                          [ParagraphOrSpacer(line, DEFAULT_STYLE) for line in adresse.splitlines()]]],
                        colWidths=[(width-2*MARGIN)*2/3, (width-2*MARGIN)/3],

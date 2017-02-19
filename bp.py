@@ -183,7 +183,7 @@ def MCWidget(parent, key, row, column, rowspan=1, columnspan=1, value=None, acci
     return var, radiovar
 
 
-def TarifWidget(parent, table, key, row, column, value=None, readonly=False, side_by_side=True, fg='black', field_fg='black', want_widget=False):
+def TarifWidget(parent, table, key, row, column, optional=True, value=None, readonly=False, side_by_side=True, fg='black', field_fg='black', want_widget=False):
     if side_by_side:
         rowshift, colshift = 0, 1
     else:
@@ -191,7 +191,7 @@ def TarifWidget(parent, table, key, row, column, value=None, readonly=False, sid
     tk.Label(parent, text=labels_text[key], font=labels_font[key], fg=fg).grid(row=row, column=column, sticky=tk.W)
     try:
         cursor.execute("""SELECT description, prix_cts FROM %s ORDER BY prix_cts""" % table)
-        tarifs = []
+        tarifs = [(0, '', 'Aucun(e)')] if optional else []
         for description, prix_cts in cursor:
             label = u'%s : %0.2f CHF' % (description, prix_cts/100.)
             tarifs.append((prix_cts, description, label))
@@ -201,7 +201,10 @@ def TarifWidget(parent, table, key, row, column, value=None, readonly=False, sid
         tarifs = [u"-- ERREUR --"]
     var = tk.StringVar()
     try:
-        idx = [(p, d) for p, d, l in tarifs].index(value)
+        if value is None and optional is True:
+            idx = 0
+        else:
+            idx = [(p, d) for p, d, l in tarifs].index(value)
         var.set(tarifs[idx][2])
     except ValueError:
         pass
@@ -634,7 +637,13 @@ class Consultation(bp_Dialog.Dialog):
         except ValueError:
             description_majoration = ""
             majoration_cts = 0
-        return description_prix, prix_cts, description_majoration, majoration_cts
+        try:
+            description_frais_admin, frais_admin = self.frais_adminVar.get().split(u' : ')
+            frais_admin_cts = int(float(frais_admin[:-4]) * 100 + 0.5)
+        except ValueError:
+            description_frais_admin = ""
+            frais_admin_cts = 0
+        return description_prix, prix_cts, description_majoration, majoration_cts, description_frais_admin, frais_admin_cts
 
     def set_consultation_fields(self):
         consult = self.consultation
@@ -655,7 +664,7 @@ class Consultation(bp_Dialog.Dialog):
         consult.A_osteo = self.A_osteoVar.get(1.0, tk.END).strip()
         consult.traitement = self.traitementVar.get(1.0, tk.END).strip()
         consult.therapeute = self.therapeuteVar.get().strip()
-        consult.prix_txt, consult.prix_cts, consult.majoration_txt, consult.majoration_cts = self.get_cost()
+        consult.prix_txt, consult.prix_cts, consult.majoration_txt, consult.majoration_cts, consult.frais_admin_txt, consult.frais_admin_cts = self.get_cost()
         consult.paye_par = self.paye_parVar.get().strip()
         if consult.paye_le is None and consult.paye_par not in (u'BVR', u'CdM', u'Dû', u'PVPE'):
             consult.paye_le = datetime.date.today()
@@ -783,9 +792,10 @@ class Consultation(bp_Dialog.Dialog):
         self.payeVar = TextWidget(master, key='paye', row=12, column=2, rowspan=3, side_by_side=False, value=consult.paye, field_fg='red', readonly=self.readonly)
 
         f = tk.Frame(master)
-        self.prixVar = TarifWidget(f, table='tarifs', key='seance', row=0, column=0, side_by_side=True, value=(consult.prix_cts, consult.prix_txt), readonly=self.readonly)
+        self.prixVar = TarifWidget(f, table='tarifs', key='seance', row=0, column=0, optional=False, side_by_side=True, value=(consult.prix_cts, consult.prix_txt), readonly=self.readonly)
         self.majorationVar = TarifWidget(f, table='majorations', key='majoration', row=1, column=0, side_by_side=True, value=(consult.majoration_cts, consult.majoration_txt), readonly=self.readonly)
-        f.grid(row=14, column=0, rowspan=2, sticky=tk.W+tk.E)
+        self.frais_adminVar = TarifWidget(f, table='frais_admins', key='frais_admin', row=2, column=0, side_by_side=True, value=(consult.frais_admin_cts, consult.frais_admin_txt), readonly=self.readonly)
+        f.grid(row=14, column=0, rowspan=3, sticky=tk.W+tk.E)
         f.grid_columnconfigure(1, weight=1)
 
         self.paye_parVar = RadioWidget(master, key='paye_par', row=14, column=1, side_by_side=False, value=consult.paye_par, options=bp_custo.MOYEN_DE_PAYEMENT, readonly=self.readonly)
@@ -898,7 +908,11 @@ class GererConsultations(bp_Dialog.Dialog):
         self.affiche_toutes()
 
 
-class GererMajorations(bp_Dialog.Dialog):
+class ManageCosts(bp_Dialog.Dialog):
+    def __init__(self, parent, table):
+        self.table = table
+        bp_Dialog.Dialog.__init__(self, parent)
+
     def buttonbox(self):
         box = tk.Button(self, text=buttons_text.done, command=self.cancel)
         self.bind("<Escape>", self.cancel)
@@ -907,15 +921,15 @@ class GererMajorations(bp_Dialog.Dialog):
     def populate(self):
         self.listbox.delete(0, tk.END)
         d_width = 0
-        for description, prix_cts in self.majorations:
+        for description, prix_cts in self.costs:
             d_width = max(d_width, len(description))
-        for description, prix_cts in self.majorations:
+        for description, prix_cts in self.costs:
             self.listbox.insert(tk.END, u"%*s    %7.2f" % (-d_width, description, prix_cts/100.))
         self.listbox.selection_clear(0, tk.END)
 
-    def select_majoration(self, event):
+    def select_cost(self, event):
         indexes = self.listbox.curselection()
-        self.majoration.set(u"")
+        self.price.set(u"")
         self.description.set(u"")
         if indexes:
             index = indexes[0]
@@ -926,175 +940,72 @@ class GererMajorations(bp_Dialog.Dialog):
                 return
             self.index = index
             self.update.config(text=buttons_text.change)
-            description, prix_cts = self.majorations[index]
+            description, prix_cts = self.costs[index]
             self.description.set(description)
-            self.majoration.set('%0.2f' % (prix_cts/100.))
+            self.price.set('%0.2f' % (prix_cts/100.))
         else:
             self.index = None
             self.update.config(text=buttons_text.add)
 
-    def update_majoration(self):
+    def update_cost(self):
         indexes = self.listbox.curselection()
         update = bool(indexes)
         description = self.description.get().strip()
         try:
-            prix_cts = int(float(self.majoration.get().strip()) * 100)
+            prix_cts = int(float(self.price.get().strip()) * 100)
         except:
             traceback.print_exc()
-            tkMessageBox.showwarning(windows_title.invalid_error, errors_text.invalid_majoration)
+            tkMessageBox.showwarning(windows_title.invalid_error, errors_text.invalid_cost)
             return
         try:
             if update:
-                key, _ = self.majorations[indexes[0]]
-                cursor.execute("""UPDATE majorations SET description = %s, prix_cts = %s WHERE description = %s""",
+                key, _ = self.costs[indexes[0]]
+                cursor.execute("""UPDATE %s SET description = %%s, prix_cts = %%s WHERE description = %%s""" % self.table,
                                [description, prix_cts, key])
-                self.majorations[indexes[0]] = (description, prix_cts)
+                self.costs[indexes[0]] = (description, prix_cts)
             else:
-                cursor.execute("""INSERT INTO majorations (description, prix_cts) VALUES (%s, %s)""",
+                cursor.execute("""INSERT INTO %s (description, prix_cts) VALUES (%%s, %%s)""" % self.table,
                                [description, prix_cts])
-                self.majorations.append((description, prix_cts))
+                self.costs.append((description, prix_cts))
         except:
             traceback.print_exc()
             tkMessageBox.showwarning(windows_title.db_error, errors_text.db_update)
         self.populate()
-        self.select_majoration('ignore')
+        self.select_cost('ignore')
 
-    def delete_majoration(self):
+    def delete_cost(self):
         indexes = self.listbox.curselection()
         if indexes:
             try:
-                key, _ = self.majorations[indexes[0]]
-                cursor.execute("""DELETE FROM majorations WHERE description = %s""", [key])
-                del self.majorations[indexes[0]]
+                key, _ = self.costs[indexes[0]]
+                cursor.execute("""DELETE FROM %s WHERE description = %%s""" % self.table, [key])
+                del self.costs[indexes[0]]
             except:
                 traceback.print_exc()
                 tkMessageBox.showwarning(windows_title.db_error, errors_text.db_delete)
         self.populate()
-        self.select_majoration('ignore')
+        self.select_cost('ignore')
 
     def body(self, master):
         try:
-            cursor.execute("""SELECT description, prix_cts FROM majorations""")
-            self.majorations = list(cursor)
+            cursor.execute("""SELECT description, prix_cts FROM %s""" % self.table)
+            self.costs = list(cursor)
         except:
             traceback.print_exc()
             tkMessageBox.showwarning(windows_title.db_error, errors_text.db_read)
             return
 
-        self.title(windows_title.manage_majorations)
-        self.listbox = ListboxWidget(master, key='majorations', row=0, column=0, columnspan=3)
+        self.title(getattr(windows_title, 'manage_'+self.table))
+        self.listbox = ListboxWidget(master, key=self.table, row=0, column=0, columnspan=3)
         self.listbox.config(selectmode=tk.SINGLE)
-        self.listbox.bind('<<ListboxSelect>>', self.select_majoration)
+        self.listbox.bind('<<ListboxSelect>>', self.select_cost)
         self.index = None
         self.populate()
         self.description = EntryWidget(master, key='description', row=2, column=0, side_by_side=False)
-        self.majoration = EntryWidget(master, key='majoration', row=2, column=1, side_by_side=False)
-        self.update = tk.Button(master, text=buttons_text.add, command=self.update_majoration)
+        self.price = EntryWidget(master, key='prix', row=2, column=1, side_by_side=False)
+        self.update = tk.Button(master, text=buttons_text.add, command=self.update_cost)
         self.update.grid(row=3, column=2)
-        self.delete = tk.Button(master, text=buttons_text.delete, command=self.delete_majoration)
-        self.delete.grid(row=4, column=2)
-
-        master.grid_rowconfigure(1, weight=2)
-        master.grid_rowconfigure(3, weight=1)
-        master.grid_rowconfigure(4, weight=1)
-        master.grid_columnconfigure(0, weight=1)
-        master.grid_columnconfigure(1, weight=1)
-
-
-class GererTarifs(bp_Dialog.Dialog):
-    def buttonbox(self):
-        box = tk.Button(self, text=buttons_text.done, command=self.cancel)
-        self.bind("<Escape>", self.cancel)
-        return box
-
-    def populate(self):
-        self.listbox.delete(0, tk.END)
-        d_width = 0
-        for description, prix_cts in self.tarifs:
-            d_width = max(d_width, len(description))
-        for description, prix_cts in self.tarifs:
-            self.listbox.insert(tk.END, u"%*s    %7.2f" % (-d_width, description, prix_cts/100.))
-        self.listbox.selection_clear(0, tk.END)
-
-    def select_tarif(self, event):
-        indexes = self.listbox.curselection()
-        self.tarif.set(u"")
-        self.description.set(u"")
-        if indexes:
-            index = indexes[0]
-            if index == self.index:
-                self.listbox.selection_clear(0, tk.END)
-                self.index = None
-                self.update.config(text=buttons_text.add)
-                return
-            self.index = index
-            self.update.config(text=buttons_text.change)
-            description, prix_cts = self.tarifs[index]
-            self.description.set(description)
-            self.tarif.set('%0.2f' % (prix_cts/100.))
-        else:
-            self.index = None
-            self.update.config(text=buttons_text.add)
-
-    def update_tarif(self):
-        indexes = self.listbox.curselection()
-        update = bool(indexes)
-        description = self.description.get().strip()
-        try:
-            prix_cts = int(float(self.tarif.get().strip()) * 100)
-        except:
-            traceback.print_exc()
-            tkMessageBox.showwarning(windows_title.invalid_error, errors_text.invalid_tarif)
-            return
-        try:
-            if update:
-                key, _ = self.tarifs[indexes[0]]
-                cursor.execute("""UPDATE tarifs SET description = %s, prix_cts = %s WHERE description = %s""",
-                               [description, prix_cts, key])
-                self.tarifs[indexes[0]] = (description, prix_cts)
-            else:
-                cursor.execute("""INSERT INTO tarifs (description, prix_cts) VALUES (%s, %s)""",
-                               [description, prix_cts])
-                self.tarifs.append((description, prix_cts))
-        except:
-            traceback.print_exc()
-            tkMessageBox.showwarning(windows_title.db_error, errors_text.db_update)
-        self.populate()
-        self.select_tarif('ignore')
-
-    def delete_tarif(self):
-        indexes = self.listbox.curselection()
-        if indexes:
-            try:
-                key, _ = self.tarifs[indexes[0]]
-                cursor.execute("""DELETE FROM tarifs WHERE description = %s""", [key])
-                del self.tarifs[indexes[0]]
-            except:
-                traceback.print_exc()
-                tkMessageBox.showwarning(windows_title.db_error, errors_text.db_delete)
-        self.populate()
-        self.select_tarif('ignore')
-
-    def body(self, master):
-        try:
-            cursor.execute("""SELECT description, prix_cts FROM tarifs""")
-            self.tarifs = list(cursor)
-        except:
-            traceback.print_exc()
-            tkMessageBox.showwarning(windows_title.db_error, errors_text.db_read)
-            return
-
-        self.title(windows_title.manage_tarifs)
-        self.listbox = ListboxWidget(master, key='tarifs', row=0, column=0, columnspan=3)
-        self.listbox.config(selectmode=tk.SINGLE)
-        self.listbox.bind('<<ListboxSelect>>', self.select_tarif)
-        self.index = None
-        self.populate()
-        self.description = EntryWidget(master, key='description', row=2, column=0, side_by_side=False)
-        self.tarif = EntryWidget(master, key='tarif', row=2, column=1, side_by_side=False)
-        self.update = tk.Button(master, text=buttons_text.add, command=self.update_tarif)
-        self.update.grid(row=3, column=2)
-        self.delete = tk.Button(master, text=buttons_text.delete, command=self.delete_tarif)
+        self.delete = tk.Button(master, text=buttons_text.delete, command=self.delete_cost)
         self.delete.grid(row=4, column=2)
 
         master.grid_rowconfigure(1, weight=2)
@@ -1458,8 +1369,9 @@ class Application(tk.Tk):
         adminmenu = tk.Menu(menubar, tearoff=0)
         adminmenu.add_separator()
         adminmenu.add_command(label=menus_text.manage_colleagues, command=lambda: GererCollegues(self))
-        adminmenu.add_command(label=menus_text.manage_tarifs, command=lambda: GererTarifs(self))
-        adminmenu.add_command(label=menus_text.manage_majorations, command=lambda: GererMajorations(self))
+        adminmenu.add_command(label=menus_text.manage_tarifs, command=lambda: ManageCosts(self, 'tarifs'))
+        adminmenu.add_command(label=menus_text.manage_majorations, command=lambda: ManageCosts(self, 'majorations'))
+        adminmenu.add_command(label=menus_text.manage_frais_admins, command=lambda: ManageCosts(self, 'frais_admins'))
         adminmenu.add_separator()
         adminmenu.add_command(label=menus_text.manual_bill, command=lambda: FactureManuelle())
         adminmenu.add_separator()

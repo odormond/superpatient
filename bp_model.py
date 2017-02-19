@@ -110,8 +110,8 @@ class Consultation(Model):
               'exam_pclin', 'exam_phys', 'paye', 'divers', 'APT_thorax',
               'APT_abdomen', 'APT_tete', 'APT_MS', 'APT_MI', 'APT_system',
               'A_osteo', 'traitement', 'therapeute', 'prix_cts', 'prix_txt',
-              'majoration_cts', 'majoration_txt', 'paye_par', 'paye_le',
-              'bv_ref', 'status']
+              'majoration_cts', 'majoration_txt', 'frais_admin_cts', 'frais_admin_txt',
+              'paye_par', 'paye_le', 'bv_ref', 'status']
     EXTRA_FIELDS = ['patient', 'rappel_cts']
 
     @classmethod
