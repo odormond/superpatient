@@ -135,14 +135,14 @@ class Statistics(bp_Dialog.Dialog):
 
     def body(self, master):
         self.title(windows_title.compta_statistics)
-        cursor.execute("SELECT DISTINCT COALESCE(consultations.therapeute, patients.therapeute) FROM consultations RIGHT OUTER JOIN patients ON consultations.id = patients.id")
+        cursor.execute("SELECT DISTINCT COALESCE(consultations.therapeute, patients.therapeute) AS therapeute FROM consultations RIGHT OUTER JOIN patients ON consultations.id = patients.id ORDER BY therapeute")
         self.therapeutes = [t for t, in cursor]
-        cursor.execute("SELECT DISTINCT YEAR(date_consult) FROM consultations")
+        cursor.execute("SELECT DISTINCT YEAR(date_consult) AS year FROM consultations ORDER BY year")
         self.years = [y for y, in cursor]
         self.months = [u'tout', u'janvier', u'février', u'mars', u'avril', u'mai', u'juin', u'juillet', u'août', u'septembre', u'octobre', u'novembre', u'décembre']
 
         selector_frame = tk.Frame(master)
-        selector_frame.grid(row=0, column=1, sticky=tk.EW)
+        selector_frame.grid(row=0, column=0, sticky=tk.EW)
         self.yearVar = tk.StringVar()
         self.yearVar.set('tout')
         self.yearWidget = tk.OptionMenu(selector_frame, self.yearVar, *(['tout'] + [str(y) for y in self.years]))
@@ -161,23 +161,23 @@ class Statistics(bp_Dialog.Dialog):
         self.modeVar = tk.StringVar()
         self.modeVar.set('# Consultations')
         self.modeWidget = tk.OptionMenu(master, self.modeVar, '# Consultations', 'CHF Consultations', 'CHF Majorations', 'CHF Frais Admin', 'CHF Total')
-        self.modeWidget.grid(row=0, column=2, sticky=tk.EW)
+        self.modeWidget.grid(row=0, column=1, sticky=tk.EW)
         self.modeVar.trace('w', self.update_display)
 
         self.totals = {}
-        tk.Label(master).grid(row=1, column=0)  # Spacer
-        tk.Label(master).grid(row=2, column=0)  # Spacer
+        totals_frame = tk.Frame(master)
+        totals_frame.grid(row=1, column=1, sticky=tk.S+tk.EW)
+        totals_frame.grid_columnconfigure(0, weight=1)
         for i, therapeute in enumerate(self.therapeutes):
-            tk.Label(master, text=therapeute, anchor=tk.SE, borderwidth=1, relief=tk.RIDGE).grid(row=2+i, column=0, sticky=tk.EW+tk.S)
-            self.totals[therapeute] = widget = tk.Label(master, anchor=tk.SE, borderwidth=1, relief=tk.RIDGE)
-            widget.grid(row=2+i, column=2, sticky=tk.EW+tk.S)
-        tk.Label(master, text="Total", anchor=tk.NE).grid(row=2+len(self.therapeutes), column=1, sticky=tk.NE)
+            bg = 'white' if i % 2 == 0 else '#eee'
+            self.totals[therapeute] = widget = tk.Label(totals_frame, anchor=tk.SE, borderwidth=1, relief=tk.RIDGE, bg=bg)
+            widget.grid(row=i, column=0, sticky=tk.EW+tk.S)
+        tk.Label(master, text="Total", anchor=tk.NE).grid(row=2, column=0, sticky=tk.NE)
         self.total = tk.Label(master, anchor=tk.NE, borderwidth=1, relief=tk.RIDGE)
-        self.total.grid(row=2+len(self.therapeutes), column=2, sticky=tk.EW+tk.N)
+        self.total.grid(row=2, column=1, sticky=tk.EW+tk.N)
 
-        master.grid_columnconfigure(0, weight=0)
-        master.grid_columnconfigure(1, weight=1)
-        master.grid_columnconfigure(2, weight=0)
+        master.grid_columnconfigure(0, weight=1)
+        master.grid_columnconfigure(1, weight=0)
 
         self.master = master
 
@@ -203,7 +203,10 @@ class Statistics(bp_Dialog.Dialog):
 
     def cleanup(self):
         self.table_frame = tk.Frame(self.master)
-        self.table_frame.grid(row=1, rowspan=len(self.therapeutes)+1, column=1, sticky=tk.NSEW)
+        self.table_frame.grid(row=1, column=0, sticky=tk.NSEW)
+        for i, therapeute in enumerate(self.therapeutes):
+            bg = 'white' if i % 2 == 0 else '#eee'
+            tk.Label(self.table_frame, text=therapeute, anchor=tk.SE, borderwidth=1, relief=tk.RIDGE, bg=bg).grid(row=1+i, column=0, sticky=tk.EW+tk.S)
         for label in self.totals.values():
             label.config(text='')
         self.total.config(text='')
@@ -219,7 +222,7 @@ class Statistics(bp_Dialog.Dialog):
                                WHERE YEAR(date_consult) = %s
                                GROUP BY therapeute
                                ORDER BY therapeute""", [year])
-            tk.Label(self.table_frame, text=str(year), anchor=tk.CENTER, borderwidth=1, relief=tk.RIDGE).grid(row=0, column=c, sticky=tk.EW)
+            tk.Label(self.table_frame, text=str(year), anchor=tk.CENTER, borderwidth=1, relief=tk.RIDGE).grid(row=0, column=1+c, sticky=tk.EW)
             for therapeute, count, prix_cts, majoration_cts, frais_admin_cts in cursor:
                 if mode == '# Consultations':
                     value = count
@@ -231,10 +234,12 @@ class Statistics(bp_Dialog.Dialog):
                     value = frais_admin_cts/100.
                 else:
                     value = (prix_cts + majoration_cts + frais_admin_cts)/100.
-                tk.Label(self.table_frame, text=(format % value), anchor=tk.SE, borderwidth=1, relief=tk.RIDGE).grid(row=1+self.therapeutes.index(therapeute), column=c, sticky=tk.EW)
+                line = self.therapeutes.index(therapeute)
+                bg = 'white' if line % 2 == 0 else '#eee'
+                tk.Label(self.table_frame, text=(format % value), anchor=tk.SE, borderwidth=1, relief=tk.RIDGE, bg=bg).grid(row=1+line, column=1+c, sticky=tk.EW)
                 totals[therapeute] = totals.get(therapeute, 0) + value
                 total += value
-            self.table_frame.grid_columnconfigure(c, weight=1)
+            self.table_frame.grid_columnconfigure(1+c, weight=1)
         for therapeute, label in self.totals.items():
             if therapeute in totals:
                 label.config(text=(format % totals[therapeute]))
@@ -252,7 +257,7 @@ class Statistics(bp_Dialog.Dialog):
                                GROUP BY therapeute
                                ORDER BY therapeute""", [year, month])
             c = month - 1
-            tk.Label(self.table_frame, text=self.months[month], anchor=tk.CENTER, borderwidth=1, relief=tk.RIDGE).grid(row=0, column=c, sticky=tk.EW)
+            tk.Label(self.table_frame, text=self.months[month], anchor=tk.CENTER, borderwidth=1, relief=tk.RIDGE).grid(row=0, column=1+c, sticky=tk.EW)
             for therapeute, count, prix_cts, majoration_cts, frais_admin_cts in cursor:
                 if mode == '# Consultations':
                     value = count
@@ -264,10 +269,12 @@ class Statistics(bp_Dialog.Dialog):
                     value = frais_admin_cts/100.
                 else:
                     value = (prix_cts + majoration_cts + frais_admin_cts)/100.
-                tk.Label(self.table_frame, text=(format % value), anchor=tk.SE, borderwidth=1, relief=tk.RIDGE).grid(row=1+self.therapeutes.index(therapeute), column=c, sticky=tk.EW)
+                line = self.therapeutes.index(therapeute)
+                bg = 'white' if line % 2 == 0 else '#eee'
+                tk.Label(self.table_frame, text=(format % value), anchor=tk.SE, borderwidth=1, relief=tk.RIDGE, bg=bg).grid(row=1+line, column=1+c, sticky=tk.EW)
                 totals[therapeute] = totals.get(therapeute, 0) + value
                 total += value
-            self.table_frame.grid_columnconfigure(c, weight=1)
+            self.table_frame.grid_columnconfigure(1+c, weight=1)
         for therapeute, label in self.totals.items():
             if therapeute in totals:
                 label.config(text=(format % totals[therapeute]))
@@ -285,7 +292,7 @@ class Statistics(bp_Dialog.Dialog):
                                GROUP BY therapeute
                                ORDER BY therapeute""", [year, month, day])
             c = day - 1
-            tk.Label(self.table_frame, text=str(day), anchor=tk.CENTER, borderwidth=1, relief=tk.RIDGE).grid(row=0, column=c, sticky=tk.EW)
+            tk.Label(self.table_frame, text=str(day), anchor=tk.CENTER, borderwidth=1, relief=tk.RIDGE).grid(row=0, column=1+c, sticky=tk.EW)
             for therapeute, count, prix_cts, majoration_cts, frais_admin_cts in cursor:
                 if mode == '# Consultations':
                     value = count
@@ -297,10 +304,12 @@ class Statistics(bp_Dialog.Dialog):
                     value = frais_admin_cts/100.
                 else:
                     value = (prix_cts + majoration_cts + frais_admin_cts)/100.
-                tk.Label(self.table_frame, text=(format % value), anchor=tk.SE, borderwidth=1, relief=tk.RIDGE).grid(row=1+self.therapeutes.index(therapeute), column=c, sticky=tk.EW)
+                line = self.therapeutes.index(therapeute)
+                bg = 'white' if line % 2 == 0 else '#eee'
+                tk.Label(self.table_frame, text=(format % value), anchor=tk.SE, borderwidth=1, relief=tk.RIDGE, bg=bg).grid(row=1+line, column=1+c, sticky=tk.EW)
                 totals[therapeute] = totals.get(therapeute, 0) + value
                 total += value
-            self.table_frame.grid_columnconfigure(c, weight=1)
+            self.table_frame.grid_columnconfigure(1+c, weight=1)
         for therapeute, label in self.totals.items():
             if therapeute in totals:
                 label.config(text=(format % totals[therapeute]))
