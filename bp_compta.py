@@ -212,87 +212,49 @@ class Statistics(bp_Dialog.Dialog):
         self.total.config(text='')
 
     def setup_full_view(self):
-        totals = {}
-        total = 0
-        mode = self.modeVar.get()
-        format = '%d' if mode == '# Consultations' else '%0.2f'
-        for c, year in enumerate(self.years):
-            cursor.execute("""SELECT COALESCE(consultations.therapeute, patients.therapeute) AS therapeute, count(*), CAST(SUM(prix_cts) AS SIGNED), CAST(SUM(majoration_cts) AS SIGNED), CAST(SUM(frais_admin_cts) AS SIGNED)
-                                FROM consultations INNER JOIN patients ON consultations.id = patients.id
-                               WHERE YEAR(date_consult) = %s
-                               GROUP BY therapeute
-                               ORDER BY therapeute""", [year])
-            tk.Label(self.table_frame, text=str(year), anchor=tk.CENTER, borderwidth=1, relief=tk.RIDGE).grid(row=0, column=1+c, sticky=tk.EW)
-            for therapeute, count, prix_cts, majoration_cts, frais_admin_cts in cursor:
-                if mode == '# Consultations':
-                    value = count
-                elif mode == 'CHF Consultations':
-                    value = prix_cts/100.
-                elif mode == 'CHF Majorations':
-                    value = majoration_cts/100.
-                elif mode == 'CHF Frais Admin':
-                    value = frais_admin_cts/100.
-                else:
-                    value = (prix_cts + majoration_cts + frais_admin_cts)/100.
-                line = self.therapeutes.index(therapeute)
-                bg = 'white' if line % 2 == 0 else '#eee'
-                tk.Label(self.table_frame, text=(format % value), anchor=tk.SE, borderwidth=1, relief=tk.RIDGE, bg=bg).grid(row=1+line, column=1+c, sticky=tk.EW)
-                totals[therapeute] = totals.get(therapeute, 0) + value
-                total += value
-            self.table_frame.grid_columnconfigure(1+c, weight=1)
-        for therapeute, label in self.totals.items():
-            if therapeute in totals:
-                label.config(text=(format % totals[therapeute]))
-        self.total.config(text=(format % total))
+        sequence = [[year] for year in self.years]
+        sql = """SELECT COALESCE(consultations.therapeute, patients.therapeute) AS therapeute, count(*), CAST(SUM(prix_cts) AS SIGNED), CAST(SUM(majoration_cts) AS SIGNED), CAST(SUM(frais_admin_cts) AS SIGNED)
+                   FROM consultations INNER JOIN patients ON consultations.id = patients.id
+                  WHERE YEAR(date_consult) = %s
+                  GROUP BY therapeute
+                  ORDER BY therapeute"""
+
+        def label_fn(args):
+            return str(args[0])
+        self.setup_view(sequence, sql, label_fn)
 
     def setup_year_view(self, year):
-        totals = {}
-        total = 0
-        mode = self.modeVar.get()
-        format = '%d' if mode == '# Consultations' else '%0.2f'
-        for month in range(1, 13):
-            cursor.execute("""SELECT COALESCE(consultations.therapeute, patients.therapeute) AS therapeute, count(*), CAST(SUM(prix_cts) AS SIGNED), CAST(SUM(majoration_cts) AS SIGNED), CAST(SUM(frais_admin_cts) AS SIGNED)
-                                FROM consultations INNER JOIN patients ON consultations.id = patients.id
-                               WHERE YEAR(date_consult) = %s AND MONTH(date_consult) = %s
-                               GROUP BY therapeute
-                               ORDER BY therapeute""", [year, month])
-            c = month - 1
-            tk.Label(self.table_frame, text=self.months[month], anchor=tk.CENTER, borderwidth=1, relief=tk.RIDGE).grid(row=0, column=1+c, sticky=tk.EW)
-            for therapeute, count, prix_cts, majoration_cts, frais_admin_cts in cursor:
-                if mode == '# Consultations':
-                    value = count
-                elif mode == 'CHF Consultations':
-                    value = prix_cts/100.
-                elif mode == 'CHF Majorations':
-                    value = majoration_cts/100.
-                elif mode == 'CHF Frais Admin':
-                    value = frais_admin_cts/100.
-                else:
-                    value = (prix_cts + majoration_cts + frais_admin_cts)/100.
-                line = self.therapeutes.index(therapeute)
-                bg = 'white' if line % 2 == 0 else '#eee'
-                tk.Label(self.table_frame, text=(format % value), anchor=tk.SE, borderwidth=1, relief=tk.RIDGE, bg=bg).grid(row=1+line, column=1+c, sticky=tk.EW)
-                totals[therapeute] = totals.get(therapeute, 0) + value
-                total += value
-            self.table_frame.grid_columnconfigure(1+c, weight=1)
-        for therapeute, label in self.totals.items():
-            if therapeute in totals:
-                label.config(text=(format % totals[therapeute]))
-        self.total.config(text=(format % total))
+        sequence = [[year, month] for month in range(1, 13)]
+        sql = """SELECT COALESCE(consultations.therapeute, patients.therapeute) AS therapeute, count(*), CAST(SUM(prix_cts) AS SIGNED), CAST(SUM(majoration_cts) AS SIGNED), CAST(SUM(frais_admin_cts) AS SIGNED)
+                   FROM consultations INNER JOIN patients ON consultations.id = patients.id
+                  WHERE YEAR(date_consult) = %s AND MONTH(date_consult) = %s
+                  GROUP BY therapeute
+                  ORDER BY therapeute"""
+
+        def label_fn(args):
+            return self.months[args[1]]
+        self.setup_view(sequence, sql, label_fn)
 
     def setup_month_view(self, year, month):
+        sequence = [[year, month, day] for day in range(1, calendar.mdays[month]+1)]
+        sql = """SELECT COALESCE(consultations.therapeute, patients.therapeute) AS therapeute, count(*), CAST(SUM(prix_cts) AS SIGNED), CAST(SUM(majoration_cts) AS SIGNED), CAST(SUM(frais_admin_cts) AS SIGNED)
+                   FROM consultations INNER JOIN patients ON consultations.id = patients.id
+                  WHERE YEAR(date_consult) = %s AND MONTH(date_consult) = %s AND DAY(date_consult) = %s
+                  GROUP BY therapeute
+                  ORDER BY therapeute"""
+
+        def label_fn(args):
+            return str(args[2])
+        self.setup_view(sequence, sql, label_fn)
+
+    def setup_view(self, sequence, sql, label_fn):
         totals = {}
         total = 0
         mode = self.modeVar.get()
         format = '%d' if mode == '# Consultations' else '%0.2f'
-        for day in range(1, calendar.mdays[month]+1):
-            cursor.execute("""SELECT COALESCE(consultations.therapeute, patients.therapeute) AS therapeute, count(*), CAST(SUM(prix_cts) AS SIGNED), CAST(SUM(majoration_cts) AS SIGNED), CAST(SUM(frais_admin_cts) AS SIGNED)
-                                FROM consultations INNER JOIN patients ON consultations.id = patients.id
-                               WHERE YEAR(date_consult) = %s AND MONTH(date_consult) = %s AND DAY(date_consult) = %s
-                               GROUP BY therapeute
-                               ORDER BY therapeute""", [year, month, day])
-            c = day - 1
-            tk.Label(self.table_frame, text=str(day), anchor=tk.CENTER, borderwidth=1, relief=tk.RIDGE).grid(row=0, column=1+c, sticky=tk.EW)
+        for c, args in enumerate(sequence):
+            cursor.execute(sql, args)
+            tk.Label(self.table_frame, text=label_fn(args), anchor=tk.CENTER, borderwidth=1, relief=tk.RIDGE).grid(row=0, column=1+c, sticky=tk.EW)
             for therapeute, count, prix_cts, majoration_cts, frais_admin_cts in cursor:
                 if mode == '# Consultations':
                     value = count
