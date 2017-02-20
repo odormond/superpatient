@@ -135,7 +135,7 @@ def draw_bvr(canvas, prix_cts, address_patient, bv_ref):
     offset = 0.9
     spacing = 1.0
     canvas.setFont('OCRB', 12)
-    montant = '%11.2f' % (prix_cts / 100.)
+    montant = '%11.2f' % (float(prix_cts) / 100)
     text_obj = canvas.beginText()
     text_obj.setTextOrigin(offset*BV_COLUMN, BV_REF_Y - 13*BV_LINE)
     text_obj.setCharSpace(spacing*BV_COLUMN)
