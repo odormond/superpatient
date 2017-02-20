@@ -265,16 +265,15 @@ def consultations(filename, cursor, consultations):
         canvas.restoreState()
         if consultation.paye_par in (u'BVR', u'PVPE'):
             canvas.showPage()
-        if consultation.rappel_cts == 0:
-            canvas.saveState()
-            if consultation.paye_par not in (u'BVR', u'PVPE'):
-                canvas.translate(0, canvas._pagesize[1]/2)
-                canvas.rotate(-90)
-                canvas.scale(1/SQRT2, 1/SQRT2)
-            draw_head(canvas, font_size)
-            frame = Frame(MARGIN, MARGIN, width-2*MARGIN, height-2*MARGIN-LOGO_HEIGHT)
-            frame.addFromList(copy, canvas)
-            canvas.restoreState()
+        canvas.saveState()
+        if consultation.paye_par not in (u'BVR', u'PVPE'):
+            canvas.translate(0, canvas._pagesize[1]/2)
+            canvas.rotate(-90)
+            canvas.scale(1/SQRT2, 1/SQRT2)
+        draw_head(canvas, font_size)
+        frame = Frame(MARGIN, MARGIN, width-2*MARGIN, height-2*MARGIN-LOGO_HEIGHT)
+        frame.addFromList(copy, canvas)
+        canvas.restoreState()
         canvas.showPage()
     canvas.save()
 
