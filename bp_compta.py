@@ -768,7 +768,14 @@ class Application(tk.Tk):
                                 FROM factures_manuelles
                                WHERE id in %s""",
                            [manual_bills_ids])
-            bp_factures.manuals(filename_manual, list(cursor))
+            factures = []
+            cursor2 = db.cursor()
+            for therapeute, destinataire, motif, montant_cts, remarque, bv_ref in cursor:
+                cursor2.execute("SELECT entete FROM therapeutes WHERE therapeute = %s", [therapeute])
+                entete, = cursor2.fetchone()
+                therapeuteAddress = entete + u'\n\n' + labels_text.adresse_pog
+                factures.append((therapeuteAddress, destinataire, motif, float(montant_cts)/100, remarque, bv_ref))
+            bp_factures.manuals(filename_manual, factures)
             cmd, cap = mailcap.findmatch(mailcap.getcaps(), 'application/pdf', 'view', filename_manual)
             os.system(cmd + '&')
 
