@@ -722,6 +722,9 @@ class Consultation(bp_Dialog.Dialog):
         bp_factures.consultations(filename, cursor, [self.consultation])
         cmd, cap = mailcap.findmatch(mailcap.getcaps(), 'application/pdf', 'view', filename)
         os.system(cmd)
+        if self.consultation.paye_par == u'BVR' and tkMessageBox.askyesno(windows_title.print_completed, labels_text.ask_confirm_print_bvr):
+            self.consultation.status = bp_custo.STATUS_PRINTED
+            self.consultation.save(cursor)
 
     def body(self, master):
         self.geometry("+200+5")
@@ -1317,6 +1320,7 @@ class FactureManuelle(tk.Toplevel):
                                      (identifiant, therapeute, destinataire, motif, montant_cts, remarque, date, bv_ref)
                               VALUES (%s, %s, %s, %s, %s, %s, %s, %s)""",
                            [identifier, therapeute, address, reason, int(amount * 100), remark, now.date(), bv_ref])
+            facture_id = cursor.lastrowid
         except:
             traceback.print_exc()
             tkMessageBox.showwarning(windows_title.db_error, errors_text.db_update)
@@ -1324,6 +1328,8 @@ class FactureManuelle(tk.Toplevel):
         bp_factures.manuals(filename, [(therapeuteAddress, address, reason, amount, remark, bv_ref)])
         cmd, cap = mailcap.findmatch(mailcap.getcaps(), 'application/pdf', 'view', filename)
         os.system(cmd)
+        if tkMessageBox.askyesno(windows_title.print_completed, labels_text.ask_confirm_print_bvr):
+            cursor.execute("UPDATE factures_manuelles SET status = 'I' WHERE id = %s", [facture_id])
 
 
 def save_db():

@@ -84,6 +84,7 @@ class WindowsTitle(Config):
     summaries_import = u"Résumé de l'import"
     compta_statistics = u"Statistiques"
     manage_reminders = u"Gérer les rappels"
+    print_completed = u"Impression effectuée ?"
 
 
 windows_title = WindowsTitle()
@@ -251,6 +252,7 @@ class LabelsText(Config):
     address = u"Adresse"
     identifiant = u"Identifiant"
     consult_upto = u"Consultations ou rappel jusqu'au"
+    ask_confirm_print_bvr = u"Avez-vous imprimé le BVR ?"
     # Info sur l'application
     apropos_description = u"""Superpatient ver. 3.0 est un gestionnaire de patients et de consultations open-source.
 
