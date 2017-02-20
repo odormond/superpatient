@@ -225,14 +225,14 @@ def consultations(filename, cursor, consultations):
 
         DEFAULT_STYLE, COPIE_STYLE, FACTURE_STYLE, NO_TOTAL_TABLE_STYLE, TOTAL_TABLE_STYLE = make_styles(font_size)
         main = addresses(cursor, consultation, DEFAULT_STYLE)
-        main.append(Spacer(0, MARGIN))
+        main.append(Spacer(0, 0.8*MARGIN))
         main.append(Paragraph(u'', DEFAULT_STYLE))  # Will be replaced by COPIE in the copy
-        main.append(Spacer(0, 1*MARGIN))
+        main.append(Spacer(0, 0.8*MARGIN))
         if consultation.rappel_cts:
             main.append(Paragraph(u'<onDraw name=make_italic label="RAPPEL"/>', FACTURE_STYLE))
         else:
             main.append(Paragraph(u'<onDraw name=make_italic label="FACTURE"/>', FACTURE_STYLE))
-        main.append(Spacer(0, 1*MARGIN))
+        main.append(Spacer(0, 0.8*MARGIN))
         if consultation.majoration_cts or consultation.frais_admin_cts or consultation.rappel_cts:
             tstyle = TOTAL_TABLE_STYLE
         else:
