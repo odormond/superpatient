@@ -300,7 +300,7 @@ def manuals(filename, data):
         canvas.make_bold = make_bold
 
         DEFAULT_STYLE, COPIE_STYLE, FACTURE_STYLE, NO_TOTAL_TABLE_STYLE, TOTAL_TABLE_STYLE = make_styles(FONT_SIZE_BV)
-        tstyle = NO_TOTAL_TABLE_STYLE
+        tstyle = [('FONT', (0, 0), (-1, -1), 'EuclidBPBold', FONT_SIZE_BV), ('ALIGN', (1, 0), (1, -1), 'RIGHT')]
         story = [Table([[[ParagraphOrSpacer(line, DEFAULT_STYLE) for line in therapeute.splitlines()],
                          [ParagraphOrSpacer(line, DEFAULT_STYLE) for line in adresse.splitlines()]]],
                        colWidths=[(width-2*MARGIN)*2/3, (width-2*MARGIN)/3],
