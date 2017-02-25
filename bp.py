@@ -670,11 +670,17 @@ class Consultation(bp_Dialog.Dialog):
             consult.paye_le = datetime.date.today()
         try:
             if consult.paye_par in (u'BVR', u'PVPE'):
-                cursor.execute("UPDATE bvr_sequence SET counter = @counter := counter + 1")
-                cursor.execute("SELECT prenom, nom, @counter FROM patients WHERE id = %s", [consult.id])  # Yes, that's the patient id...
-                firstname, lastname, bvr_counter = cursor.fetchone()
-                bv_ref = u'%06d%010d%02d%02d%02d%04d' % (bvr.prefix, bvr_counter, alpha_to_num(firstname[0]), alpha_to_num(lastname[0]), consult.date_consult.month, consult.date_consult.year)
-                consult.bv_ref = bv_ref + str(bvr_checksum(bv_ref))
+                if consult.id_consult:
+                    cursor.execute("SELECT prix_cts + majoration_cts + frais_admin_cts FROM consultations WHERE id_consult = %s", [consult.id_consult])
+                    old_price, = cursor.fetchone()
+                else:
+                    old_price = 0
+                if consult.bv_ref is None or consult.prix_cts + consult.majoration_cts + consult.frais_admin_cts != old_price:
+                    cursor.execute("UPDATE bvr_sequence SET counter = @counter := counter + 1")
+                    cursor.execute("SELECT prenom, nom, @counter FROM patients WHERE id = %s", [consult.id])  # Yes, that's the patient id...
+                    firstname, lastname, bvr_counter = cursor.fetchone()
+                    bv_ref = u'%06d%010d%02d%02d%02d%04d' % (bvr.prefix, bvr_counter, alpha_to_num(firstname[0]), alpha_to_num(lastname[0]), consult.date_consult.month, consult.date_consult.year)
+                    consult.bv_ref = bv_ref + str(bvr_checksum(bv_ref))
             else:
                 consult.bv_ref = None
         except:
