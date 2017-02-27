@@ -673,7 +673,7 @@ class Consultation(bp_Dialog.Dialog):
                 else:
                     old_price = 0
                 if consult.bv_ref is None or consult.prix_cts + consult.majoration_cts + consult.frais_admin_cts != old_price:
-                    consult.bv_ref = gen_bvr_ref(cursor, self.patient.firstname, self.patient.lastname, consult.date_consult)
+                    consult.bv_ref = gen_bvr_ref(cursor, self.patient.prenom, self.patient.nom, consult.date_consult)
             else:
                 consult.bv_ref = None
         except:
