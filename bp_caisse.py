@@ -208,6 +208,14 @@ class Application(tk.Tk):
         self.update_list()
 
     def validate(self):
+        if self.paye_par.get() == u'BVR':
+            id_consult = self.data[self.selected_idx][0]
+            consult = Consultation.load(cursor, id_consult)
+            if consult.status == bp_custo.STATUS_OPENED:
+                filename_consult = normalize_filename(datetime.datetime.now().strftime('consultation_%F_%Hh%Mm%Ss.pdf'))
+                bp_factures.consultations(filename_consult, cursor, [consult])
+                cmd, cap = mailcap.findmatch(mailcap.getcaps(), 'application/pdf', 'view', filename_consult)
+                os.system(cmd + '&')
         self.real_validate()
         self.update_list()
 
