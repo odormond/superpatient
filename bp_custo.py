@@ -30,7 +30,7 @@ STATUS_SENT = u'E'
 STATUS_PAYED = u'P'
 STATUS_ABANDONED = u'A'
 
-PAIEMENT_SORTIE = False
+PAIEMENT_SORTIE = True
 
 
 class Config(object):
@@ -148,6 +148,7 @@ class ButtonsText(Config):
     details = u"Détails"
     output_reminders = u"Générer les rappels"
     refresh = u"Rafraichir"
+    validate = u"Valider"
 
 
 buttons_text = ButtonsText()

@@ -123,7 +123,7 @@ class Application(tk.Tk):
         # Bottom block: available action on selected items
         self.paye_par, self.paye_par_widget = OptionWidget(self, 'paye_par', 4, 0, options=bp_custo.MOYEN_DE_PAYEMENT[:-1], want_widget=True)
         self.paye_par.trace('w', self.confirm_ready)
-        self.btn_pay = tk.Button(self, text=buttons_text.mark_paye, command=self.mark_paid, state=tk.DISABLED)
+        self.btn_pay = tk.Button(self, text=buttons_text.validate, command=self.validate, state=tk.DISABLED)
         self.btn_pay.grid(row=4, column=2, sticky=tk.W)
         self.btn_print = tk.Button(self, text=buttons_text.change_pay_method_and_print, command=self.change_pay_method_and_print, state=tk.DISABLED)
         self.btn_print.grid(row=4, column=3, sticky=tk.EW)
@@ -178,7 +178,7 @@ class Application(tk.Tk):
         try:
             cursor.execute("""SELECT consultations.id_consult, sex, nom, prenom, COALESCE(consultations.therapeute, patients.therapeute), heure_consult, prix_cts + majoration_cts + frais_admin_cts, paye_par
                                 FROM consultations INNER JOIN patients ON consultations.id = patients.id
-                               WHERE date_consult = CURDATE() AND status = 'O'
+                               WHERE date_consult = CURDATE() AND (status = 'O' OR status = 'I' AND paye_par = 'BVR')
                                ORDER BY heure_consult""")
             today = datetime.datetime.combine(datetime.date.today(), datetime.time())
             self.data = [(id_consult, sex, nom, prenom, therapeute, (today + heure_consult).time(), prix_cts, paye_par) for id_consult, sex, nom, prenom, therapeute, heure_consult, prix_cts, paye_par in cursor]
@@ -200,23 +200,23 @@ class Application(tk.Tk):
             consult.bv_ref = None
         consult.paye_par = self.paye_par.get()
         consult.save(cursor)
-        self.real_mark_paid()
         filename_consult = normalize_filename(datetime.datetime.now().strftime('consultation_%F_%Hh%Mm%Ss.pdf'))
         bp_factures.consultations(filename_consult, cursor, [consult])
         cmd, cap = mailcap.findmatch(mailcap.getcaps(), 'application/pdf', 'view', filename_consult)
         os.system(cmd + '&')
+        self.real_validate()
         self.update_list()
 
-    def mark_paid(self):
-        self.real_mark_paid()
+    def validate(self):
+        self.real_validate()
         self.update_list()
 
-    def real_mark_paid(self):
+    def real_validate(self):
         id_consult = self.data[self.selected_idx][0]
         try:
-            if self.paye_par.get() in (u'BVR', u'Dû'):
-                cursor.execute("""UPDATE consultations SET status = 'I' WHERE id_consult = %s""", [id_consult])
-            else:
+            if self.paye_par.get() == u'BVR':
+                cursor.execute("""UPDATE consultations SET status = 'E' WHERE id_consult = %s""", [id_consult])
+            elif self.paye_par.get() not in (u'Dû', u'PVPE'):
                 cursor.execute("""UPDATE consultations SET paye_le = CURDATE(), status = 'P' WHERE id_consult = %s""", [id_consult])
         except:
             traceback.print_exc()
