@@ -106,7 +106,7 @@ class Patient(Model):
 
 class Consultation(Model):
     TABLE = 'consultations'
-    FIELDS = ['id_consult', 'id', 'date_consult', 'MC', 'MC_accident', 'EG',
+    FIELDS = ['id_consult', 'id', 'date_consult', 'heure_consult', 'MC', 'MC_accident', 'EG',
               'exam_pclin', 'exam_phys', 'paye', 'divers', 'APT_thorax',
               'APT_abdomen', 'APT_tete', 'APT_MS', 'APT_MI', 'APT_system',
               'A_osteo', 'traitement', 'therapeute', 'prix_cts', 'prix_txt',

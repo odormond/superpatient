@@ -30,6 +30,8 @@ STATUS_SENT = u'E'
 STATUS_PAYED = u'P'
 STATUS_ABANDONED = u'A'
 
+PAIEMENT_SORTIE = False
+
 
 class Config(object):
     def __getitem__(self, key):
@@ -85,6 +87,7 @@ class WindowsTitle(Config):
     compta_statistics = u"Statistiques"
     manage_reminders = u"Gérer les rappels"
     print_completed = u"Impression effectuée ?"
+    confirm_change = u"Confirmer le changement"
 
 
 windows_title = WindowsTitle()
@@ -140,9 +143,11 @@ class ButtonsText(Config):
     mark_printed = u"Marquer imprimé"
     mark_mailed = u"Marquer envoyé"
     mark_abandoned = u"Marquer Abandonné"
+    change_pay_method_and_print = u"Changer moyen de paiement et imprimer"
     valider_import = u"Valider l'import"
     details = u"Détails"
     output_reminders = u"Générer les rappels"
+    refresh = u"Rafraichir"
 
 
 buttons_text = ButtonsText()
@@ -253,6 +258,7 @@ class LabelsText(Config):
     identifiant = u"Identifiant"
     consult_upto = u"Consultations ou rappel jusqu'au"
     ask_confirm_print_bvr = u"Avez-vous imprimé le BVR ?"
+    ask_confirm_payment_method_change_to_BVR = u"Voulez-vous vraiment changer la méthode de paiement vers BVR ?"
     # Info sur l'application
     apropos_description = u"""Superpatient ver. 3.0 est un gestionnaire de patients et de consultations open-source.
 

@@ -51,7 +51,7 @@ try:
     import bp_custo
     from bp_custo import buttons_text, menus_text, labels_text, labels_font
     from bp_custo import windows_title, errors_text, fields_font, fields_height
-    from bp_custo import bvr, DATE_FMT
+    from bp_custo import DATE_FMT
     from bp_custo import normalize_filename
     from bp_custo import STATUS_OPENED, STATUS_PAYED, STATUS_ABANDONED
 except:
@@ -126,7 +126,7 @@ except:
 
 
 try:
-    from bp_bvr import bvr_checksum
+    from bp_bvr import gen_bvr_ref
 except:
     tkMessageBox.showwarning(u"Missing file", u"bp_bvr.py is missing")
     sys.exit()
@@ -595,10 +595,6 @@ class ListeConsultations(bp_Dialog.Dialog):
         self.auto_affiche()
 
 
-def alpha_to_num(char):
-    return (ord(char) - ord('A')) % 100
-
-
 class Consultation(bp_Dialog.Dialog):
     def __init__(self, parent, id_patient, id_consult=None, readonly=False):
         self.patient = PatientModel.load(cursor, id_patient)
@@ -648,6 +644,7 @@ class Consultation(bp_Dialog.Dialog):
     def set_consultation_fields(self):
         consult = self.consultation
         consult.date_consult = parse_date(self.date_ouvcVar.get().strip())
+        consult.heure_consult = consult.heure_consult or datetime.datetime.now().time()
         consult.MC = self.MCVar.get(1.0, tk.END).strip()
         consult.MC_accident = self.MC_accidentVar.get()
         consult.EG = self.EGVar.get(1.0, tk.END).strip()
@@ -666,7 +663,7 @@ class Consultation(bp_Dialog.Dialog):
         consult.therapeute = self.therapeuteVar.get().strip()
         consult.prix_txt, consult.prix_cts, consult.majoration_txt, consult.majoration_cts, consult.frais_admin_txt, consult.frais_admin_cts = self.get_cost()
         consult.paye_par = self.paye_parVar.get().strip()
-        if consult.paye_le is None and consult.paye_par not in (u'BVR', u'CdM', u'Dû', u'PVPE'):
+        if not bp_custo.PAIEMENT_SORTIE and consult.paye_le is None and consult.paye_par not in (u'BVR', u'CdM', u'Dû', u'PVPE'):
             consult.paye_le = datetime.date.today()
         try:
             if consult.paye_par in (u'BVR', u'PVPE'):
@@ -676,11 +673,7 @@ class Consultation(bp_Dialog.Dialog):
                 else:
                     old_price = 0
                 if consult.bv_ref is None or consult.prix_cts + consult.majoration_cts + consult.frais_admin_cts != old_price:
-                    cursor.execute("UPDATE bvr_sequence SET counter = @counter := counter + 1")
-                    cursor.execute("SELECT prenom, nom, @counter FROM patients WHERE id = %s", [consult.id])  # Yes, that's the patient id...
-                    firstname, lastname, bvr_counter = cursor.fetchone()
-                    bv_ref = u'%06d%010d%02d%02d%02d%04d' % (bvr.prefix, bvr_counter, alpha_to_num(firstname[0]), alpha_to_num(lastname[0]), consult.date_consult.month, consult.date_consult.year)
-                    consult.bv_ref = bv_ref + str(bvr_checksum(bv_ref))
+                    consult.bv_ref = gen_bvr_ref(cursor, self.patient.firstname, self.patient.lastname, consult.date_consult)
             else:
                 consult.bv_ref = None
         except:
@@ -706,7 +699,7 @@ class Consultation(bp_Dialog.Dialog):
                     self.consultation.paye_le = None
             else:
                 self.consultation.status = STATUS_OPENED
-                if self.consultation.paye_par in (u'Cash', u'Carte'):
+                if not bp_custo.PAIEMENT_SORTIE and self.consultation.paye_par in (u'Cash', u'Carte'):
                     self.consultation.status = STATUS_PAYED
                 generate_pdf = self.consultation.paye_par not in (u'CdM', u'Dû')
             self.consultation.save(cursor)
@@ -1317,11 +1310,7 @@ class FactureManuelle(tk.Toplevel):
             return
         remark = self.remark.get('1.0', tk.END).strip()
         try:
-            cursor.execute("UPDATE bvr_sequence SET counter = @counter := counter + 1")
-            cursor.execute("SELECT @counter")
-            bvr_counter, = cursor.fetchone()
-            bv_ref = u'%06d%010d%02d%02d%02d%04d' % (bvr.prefix, bvr_counter, alpha_to_num(identifier[0]), alpha_to_num(identifier[1]), now.month, now.year)
-            bv_ref = bv_ref + str(bvr_checksum(bv_ref))
+            bv_ref = gen_bvr_ref(cursor, identifier[0], identifier[1], now)
             cursor.execute("""INSERT INTO factures_manuelles
                                      (identifiant, therapeute, destinataire, motif, montant_cts, remarque, date, bv_ref)
                               VALUES (%s, %s, %s, %s, %s, %s, %s, %s)""",
