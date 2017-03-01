@@ -181,7 +181,7 @@ class Application(tk.Tk):
                                WHERE date_consult = CURDATE() AND (status = 'O' OR status = 'I' AND paye_par = 'BVR')
                                ORDER BY heure_consult""")
             today = datetime.datetime.combine(datetime.date.today(), datetime.time())
-            self.data = [(id_consult, sex, nom, prenom, therapeute, (today + heure_consult).time(), prix_cts, paye_par) for id_consult, sex, nom, prenom, therapeute, heure_consult, prix_cts, paye_par in cursor]
+            self.data = [(id_consult, sex, nom, prenom, therapeute, (today + (heure_consult or datetime.timedelta(0))).time(), prix_cts, paye_par) for id_consult, sex, nom, prenom, therapeute, heure_consult, prix_cts, paye_par in cursor]
             for id_consult, sex, nom, prenom, therapeute, heure_consult, prix_total_cts, paye_par in self.data:
                 self.list.insert(tk.END, self.list_format % (sex, nom[:30], prenom[:30], therapeute, heure_consult.strftime(u'%H:%M'), prix_total_cts/100., paye_par))
         except:

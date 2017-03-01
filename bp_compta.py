@@ -816,9 +816,10 @@ class Application(tk.Tk):
         try:
             for consult_id in consult_ids:
                 cursor.execute("""SELECT date_rappel FROM rappels WHERE id_consult = %s ORDER BY date_rappel DESC LIMIT 1""", [consult_id])
-                last_rappel, = cursor.fetchone()
+                last_rappel, = cursor.fetchone() or (None,)
                 cursor.execute("""UPDATE consultations SET status = %s WHERE status != 'P' AND id_consult = %s""", [status, consult_id])
-                cursor.execute("""UPDATE rappels SET status = %s WHERE status != 'P' AND id_consult = %s AND date_rappel = %s""", [status, consult_id, last_rappel])
+                if last_rappel is not None:
+                    cursor.execute("""UPDATE rappels SET status = %s WHERE status != 'P' AND id_consult = %s AND date_rappel = %s""", [status, consult_id, last_rappel])
             if len(manual_bills_ids) > 1:
                 cursor.execute("""UPDATE factures_manuelles SET status = %s
                                 WHERE status != 'P' AND id IN %s""",
