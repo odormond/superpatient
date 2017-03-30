@@ -116,7 +116,7 @@ class licence(bp_Dialog.Dialog):
 
 
 def sum_found(positions):
-    return sum(p[7] for p in positions) / 100.0
+    return sum(p[8] for p in positions) / 100.0
 
 
 def sum_notfound(positions):
