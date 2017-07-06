@@ -1,6 +1,24 @@
 #! /usr/bin/env python2
 # coding:UTF-8
 
+#    Copyright 2006 Tibor Csernay
+
+#    This file is part of SuperPatient.
+
+#    SuperPatient is free software; you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation; either version 2 of the License, or
+#    (at your option) any later version.
+
+#    SuperPatient is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+
+#    You should have received a copy of the GNU General Public License
+#    along with SuperPatient; if not, write to the Free Software
+#    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
 import os
 import sys
 import datetime
@@ -289,7 +307,7 @@ class GererRappels(bp_Dialog.Dialog):
     def body(self, master):
         self.title(windows_title.manage_reminders)
         self.upto, w_upto = EntryWidget(master, 'consult_upto', 0, 0, want_widget=True)
-        self.upto.set(str(datetime.date.today() - datetime.timedelta(days=30)))
+        self.upto.set(str(datetime.date.today() - datetime.timedelta(days=40)))
         w_upto.bind('<KeyRelease-Return>', self.update_list)
         tk.Button(master, text=u"\U0001f4c5".encode('UTF-8'), command=lambda: self.popup_calendar(self.upto, w_upto), borderwidth=0, relief=tk.FLAT).grid(row=0, column=2)
         tk.Label(master, font=bp_custo.LISTBOX_DEFAULT,

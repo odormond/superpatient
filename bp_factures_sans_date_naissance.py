@@ -44,8 +44,7 @@ pdfmetrics.registerFont(TTFont('OCRB', os.path.join(BASE_DIR, 'OCRB10PitchBT-Reg
 
 MARGIN = 1*cm
 LOGO_WIDTH = 5.6*cm
-#LOGO_HEIGHT = LOGO_WIDTH*469./676 (OLD LOGO)
-LOGO_HEIGHT = LOGO_WIDTH*423./1280
+LOGO_HEIGHT = LOGO_WIDTH*469./676
 BV_WIDTH = 210*mm
 BV_HEIGHT = 106*mm
 FONT_SIZE = 16
@@ -89,7 +88,7 @@ def make_styles(font_size):
 
 def draw_head(canvas, font_size):
     canvas.saveState()
-    canvas.drawImage(os.path.join(BASE_DIR, "logo_pog.jpg"), MARGIN, canvas._pagesize[1]-MARGIN-LOGO_HEIGHT, LOGO_WIDTH, LOGO_HEIGHT)
+    canvas.drawImage(os.path.join(BASE_DIR, "logo_pog.png"), MARGIN, canvas._pagesize[1]-MARGIN-LOGO_HEIGHT, LOGO_WIDTH, LOGO_HEIGHT)
     canvas.setFont('EuclidBPBold', font_size)
     canvas.drawRightString(canvas._pagesize[0]-MARGIN, canvas._pagesize[1]-MARGIN-font_size, u"Lausanne, le "+datetime.date.today().strftime(u'%d.%m.%y'))
     canvas.restoreState()
@@ -181,7 +180,7 @@ def addresses(cursor, consultation, style):
         identite = [u' '.join((patient.prenom, patient.nom))]
     else:
         identite = [patient.prenom, patient.nom]
-    address_patient = u'\n'.join([titre] + identite + [patient.adresse, "", patient.date_naiss.strftime(DATE_FMT)])
+    address_patient = u'\n'.join([titre] + identite + [patient.adresse, ""])
     patient = [ParagraphOrSpacer(line, style) for line in address_patient.splitlines()]
 
     width = A4[0] - 2*MARGIN

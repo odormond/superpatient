@@ -1,5 +1,23 @@
 # coding:UTF-8
 
+#    Copyright 2006 Tibor Csernay
+
+#    This file is part of SuperPatient.
+
+#    SuperPatient is free software; you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation; either version 2 of the License, or
+#    (at your option) any later version.
+
+#    SuperPatient is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+
+#    You should have received a copy of the GNU General Public License
+#    along with SuperPatient; if not, write to the Free Software
+#    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
 import os
 PDF_DIR = os.path.join(os.path.dirname(__file__), 'factures')
 
@@ -7,7 +25,7 @@ DATE_FMT = u"%d.%m.%Y"
 
 DEFAULT_LABEL_SIZE = 9
 DEFAULT_ENTRY_SIZE = 10
-DEFAULT_FONT_NAME = "Helvetica"
+DEFAULT_FONT_NAME = "Arial"
 FIXED_FONT_SIZE = 12
 FIXED_FONT_NAME = "Bitstream Vera Sans Mono"
 
@@ -82,6 +100,7 @@ class WindowsTitle(Config):
     manage_frais_admins = u"Gérer les frais administratifs"
     manage_addresses = u"Gérer les adresses"
     compta = u"Gestion comptable"
+    encaissement = u"Vérification/Confirmation finale de paiement"
     really_cancel = u"Confirmation d'annulation"
     summaries_import = u"Résumé de l'import"
     compta_statistics = u"Statistiques"
@@ -261,17 +280,19 @@ class LabelsText(Config):
     ask_confirm_print_bvr = u"Avez-vous imprimé le BVR ?"
     ask_confirm_payment_method_change_to_BVR = u"Voulez-vous vraiment changer la méthode de paiement vers BVR ?"
     # Info sur l'application
-    apropos_description = u"""Superpatient ver. 3.0 est un gestionnaire de patients et de consultations open-source.
+    apropos_description = u"""SuperPatient ver. 3.0 est un gestionnaire de patients,
+de consultations, et de facturation.
 
-Il a été créé en 2006 pour satisfaire aux besoins minimaux d'un cabinet de groupe d'ostéopathes.
+Il a été créé en 2006 pour satisfaire aux besoins
+minimaux d'un cabinet de groupe d'ostéopathes.
 
-Superpatient est sous licence GPL, ce qui vous donne le droit de le modifier et de l'utiliser
-à votre guise.
+Superpatient est sous licence GPL.
 
 Pour tout autre renseignement, veuillez écrire à
 
-csernay@permanence-lausanne.ch"""
-    licence_description = u"""Copyright 2006-2015 Tibor Csernay
+Tibor Csernay
+csernay@pog.swiss"""
+    licence_description = u"""POG Sàrl - Copyright 2006-2017 - www.pog.swiss
 
 SuperPatient is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by

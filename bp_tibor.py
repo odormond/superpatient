@@ -110,7 +110,6 @@ class FrenchParserInfo(parserinfo):
 datesFR = FrenchParserInfo(dayfirst=True)
 MIN_DATE = datetime.date(1900, 1, 1)  # Cannot strftime before that date
 
-
 def parse_date(s):
     d = du_parse(s, parserinfo=datesFR).date()
     if d < MIN_DATE:
@@ -1369,16 +1368,16 @@ class Application(tk.Tk):
 
         adminmenu = tk.Menu(menubar, tearoff=0)
         adminmenu.add_separator()
-#        adminmenu.add_command(label=menus_text.manage_colleagues, command=lambda: GererCollegues(self))
-#        adminmenu.add_command(label=menus_text.manage_tarifs, command=lambda: ManageCosts(self, 'tarifs'))
-#        adminmenu.add_command(label=menus_text.manage_majorations, command=lambda: ManageCosts(self, 'majorations'))
-#        adminmenu.add_command(label=menus_text.manage_frais_admins, command=lambda: ManageCosts(self, 'frais_admins'))
-#        adminmenu.add_separator()
+        adminmenu.add_command(label=menus_text.manage_colleagues, command=lambda: GererCollegues(self))
+        adminmenu.add_command(label=menus_text.manage_tarifs, command=lambda: ManageCosts(self, 'tarifs'))
+        adminmenu.add_command(label=menus_text.manage_majorations, command=lambda: ManageCosts(self, 'majorations'))
+        adminmenu.add_command(label=menus_text.manage_frais_admins, command=lambda: ManageCosts(self, 'frais_admins'))
+        adminmenu.add_separator()
         adminmenu.add_command(label=menus_text.manual_bill, command=lambda: FactureManuelle())
         adminmenu.add_separator()
         adminmenu.add_command(label=menus_text.delete_data, command=lambda: GererPatients(self, 'supprimer'), foreground='red')
-#        adminmenu.add_command(label=menus_text.save_db, command=save_db)
-#        adminmenu.add_command(label=menus_text.restore_db, command=restore_db)
+        adminmenu.add_command(label=menus_text.save_db, command=save_db)
+        adminmenu.add_command(label=menus_text.restore_db, command=restore_db)
 
         helpmenu = tk.Menu(menubar, tearoff=0)
         helpmenu.add_command(label=menus_text.about, command=lambda: apropos(self))

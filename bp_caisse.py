@@ -97,7 +97,7 @@ class Application(tk.Tk):
             self.tk.call('console', 'hide')
 
         self.option_add('*font', 'Helvetica -15')
-        self.title(windows_title.compta)
+        self.title(windows_title.encaissement)
 
         menubar = tk.Menu(self)
 

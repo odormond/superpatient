@@ -23,8 +23,6 @@
 
 ## Variables generales
 # sql
-# Mac-mini-de-Laure-Isabelle.local
-#serveur = '192.168.10.11'
 serveur = 'localhost'
 identifiant = 'bpuser'
 secret = 'bppass'
