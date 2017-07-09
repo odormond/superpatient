@@ -945,7 +945,7 @@ class Application(tk.Tk):
                 if cursor.rowcount != 0:
                     id, montant_cts, paye_le = cursor.fetchone()
                     id_consult = -id
-                    prix_cts, majoration_cts = montant_cts, 0
+                    prix_cts, majoration_cts, frais_admin_cts = montant_cts, 0, 0
                     if montant_cts != amount_cts:
                         l = ko
                     elif paye_le is None:
