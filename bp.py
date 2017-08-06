@@ -28,6 +28,23 @@ import mailcap
 import datetime
 import traceback
 
+
+# Define the access rights based on the executable name
+BP_RIGHTS = []
+# Available values are:
+#   MANAGE_DB
+#   MANAGE_THERAPISTS
+#   MANAGE_COSTS
+#   MANAGE_PATIENTS
+#   MANAGE_CONSULTATIONS
+#   MANUAL_BILL
+app_name = os.path.basename(sys.argv[0])
+if app_name in ['bp_admin.py', 'bp_fondateur.py']:
+    BP_RIGHTS += ['MANAGE_PATIENTS', 'MANAGE_CONSULTATIONS', 'MANUAL_BILL']
+if app_name in ['bp_admin.py']:
+    BP_RIGHTS += ['MANAGE_DB', 'MANAGE_THERAPISTS', 'MANAGE_COSTS']
+
+
 LOGIN = pwd.getpwuid(os.geteuid())[0]
 
 sys.path.insert(0, os.path.dirname(__file__))
@@ -471,7 +488,7 @@ class GererPatients(bp_Dialog.Dialog):
                 return
             if tkMessageBox.askyesno(windows_title.delete, labels_text.suppr_def_1+u'\n'+str(sex+u" "+prenom+u" "+nom)+labels_text.suppr_def_2+date_naiss.strftime(DATE_FMT)+u'\n'+labels_text.suppr_def_3):
                 try:
-                    cursor.execute("DELETE FROM rappels WHERE id_consult IN (SELECT id_consult FROM consultations WHERE id=%s", [id])
+                    cursor.execute("DELETE FROM rappels WHERE id_consult IN (SELECT id_consult FROM consultations WHERE id=%s)", [id])
                     cursor.execute("DELETE FROM consultations WHERE id=%s", [id])
                     cursor.execute("DELETE FROM patients WHERE id=%s", [id])
                     tkMessageBox.showinfo(windows_title.done, labels_text.pat_sup_1+str(prenom+u" "+nom+u" ")+labels_text.pat_sup_2)
@@ -748,6 +765,8 @@ class Consultation(bp_Dialog.Dialog):
             tkMessageBox.showwarning(windows_title.db_error, errors_text.db_read)
             return
 
+        fixed_therapist_and_cost = self.readonly or (consult.id_consult is not None and 'MANAGE_CONSULTATIONS' not in BP_RIGHTS)
+
         self.title(title)
 
         # +----------+----------+----------+
@@ -790,17 +809,17 @@ class Consultation(bp_Dialog.Dialog):
         self.diversVar = TextWidget(master, key='remarques', row=10, column=2, side_by_side=False, value=consult.divers, readonly=self.readonly)
 
         self.date_ouvcVar = EntryWidget(master, key='date_ouverture', row=12, column=0, side_by_side=False, value=consult.date_consult.strftime(DATE_FMT), readonly=self.readonly)
-        self.therapeuteVar = OptionWidget(master, key='therapeute', row=12, column=1, side_by_side=False, value=consult.therapeute, options=therapeutes, readonly=self.readonly)
+        self.therapeuteVar = OptionWidget(master, key='therapeute', row=12, column=1, side_by_side=False, value=consult.therapeute, options=therapeutes, readonly=fixed_therapist_and_cost)
         self.payeVar = TextWidget(master, key='paye', row=12, column=2, rowspan=3, side_by_side=False, value=consult.paye, field_fg='red', readonly=self.readonly)
 
         f = tk.Frame(master)
-        self.prixVar = TarifWidget(f, table='tarifs', key='seance', row=0, column=0, optional=False, side_by_side=True, value=(consult.prix_cts, consult.prix_txt), readonly=self.readonly)
-        self.majorationVar = TarifWidget(f, table='majorations', key='majoration', row=1, column=0, side_by_side=True, value=(consult.majoration_cts, consult.majoration_txt), readonly=self.readonly)
-        self.frais_adminVar = TarifWidget(f, table='frais_admins', key='frais_admin', row=2, column=0, side_by_side=True, value=(consult.frais_admin_cts, consult.frais_admin_txt), readonly=self.readonly)
+        self.prixVar = TarifWidget(f, table='tarifs', key='seance', row=0, column=0, optional=False, side_by_side=True, value=(consult.prix_cts, consult.prix_txt), readonly=fixed_therapist_and_cost)
+        self.majorationVar = TarifWidget(f, table='majorations', key='majoration', row=1, column=0, side_by_side=True, value=(consult.majoration_cts, consult.majoration_txt), readonly=fixed_therapist_and_cost)
+        self.frais_adminVar = TarifWidget(f, table='frais_admins', key='frais_admin', row=2, column=0, side_by_side=True, value=(consult.frais_admin_cts, consult.frais_admin_txt), readonly=fixed_therapist_and_cost)
         f.grid(row=14, column=0, rowspan=3, sticky=tk.W+tk.E)
         f.grid_columnconfigure(1, weight=1)
 
-        self.paye_parVar = RadioWidget(master, key='paye_par', row=14, column=1, side_by_side=False, value=consult.paye_par, options=bp_custo.MOYEN_DE_PAYEMENT, readonly=self.readonly)
+        self.paye_parVar = RadioWidget(master, key='paye_par', row=14, column=1, side_by_side=False, value=consult.paye_par, options=bp_custo.MOYEN_DE_PAYEMENT, readonly=fixed_therapist_and_cost)
         if consult and consult.paye_le:
             frame = master.grid_slaves(row=15, column=1)[0]
             tk.Label(frame, text=labels_text.paye_le+u' '+str(consult.paye_le), font=labels_font.paye_le).pack(side=tk.RIGHT)
@@ -1367,24 +1386,30 @@ class Application(tk.Tk):
 
         menubar = tk.Menu(self)
 
-        adminmenu = tk.Menu(menubar, tearoff=0)
-        adminmenu.add_separator()
-#        adminmenu.add_command(label=menus_text.manage_colleagues, command=lambda: GererCollegues(self))
-#        adminmenu.add_command(label=menus_text.manage_tarifs, command=lambda: ManageCosts(self, 'tarifs'))
-#        adminmenu.add_command(label=menus_text.manage_majorations, command=lambda: ManageCosts(self, 'majorations'))
-#        adminmenu.add_command(label=menus_text.manage_frais_admins, command=lambda: ManageCosts(self, 'frais_admins'))
-#        adminmenu.add_separator()
-        adminmenu.add_command(label=menus_text.manual_bill, command=lambda: FactureManuelle())
-        adminmenu.add_separator()
-        adminmenu.add_command(label=menus_text.delete_data, command=lambda: GererPatients(self, 'supprimer'), foreground='red')
-#        adminmenu.add_command(label=menus_text.save_db, command=save_db)
-#        adminmenu.add_command(label=menus_text.restore_db, command=restore_db)
+        if BP_RIGHTS:
+            adminmenu = tk.Menu(menubar, tearoff=0)
+            adminmenu.add_separator()
+            if 'MANAGE_THERAPISTS' in BP_RIGHTS:
+                adminmenu.add_command(label=menus_text.manage_colleagues, command=lambda: GererCollegues(self))
+            if 'MANAGE_COSTS' in BP_RIGHTS:
+                adminmenu.add_command(label=menus_text.manage_tarifs, command=lambda: ManageCosts(self, 'tarifs'))
+                adminmenu.add_command(label=menus_text.manage_majorations, command=lambda: ManageCosts(self, 'majorations'))
+                adminmenu.add_command(label=menus_text.manage_frais_admins, command=lambda: ManageCosts(self, 'frais_admins'))
+                adminmenu.add_separator()
+            if 'MANUAL_BILL' in BP_RIGHTS:
+                adminmenu.add_command(label=menus_text.manual_bill, command=lambda: FactureManuelle())
+                adminmenu.add_separator()
+            if 'MANAGE_PATIENTS' in BP_RIGHTS:
+                adminmenu.add_command(label=menus_text.delete_data, command=lambda: GererPatients(self, 'supprimer'), foreground='red')
+            if 'MANAGE_DB' in BP_RIGHTS:
+                adminmenu.add_command(label=menus_text.save_db, command=save_db)
+                adminmenu.add_command(label=menus_text.restore_db, command=restore_db)
+            menubar.add_cascade(label=menus_text.admin, menu=adminmenu)
 
         helpmenu = tk.Menu(menubar, tearoff=0)
         helpmenu.add_command(label=menus_text.about, command=lambda: apropos(self))
         helpmenu.add_command(label=menus_text.licence, command=lambda: licence(self))
 
-        menubar.add_cascade(label=menus_text.admin, menu=adminmenu)
         menubar.add_cascade(label=menus_text.help, menu=helpmenu)
 
         tk.Button(self, text=buttons_text.new_patient, command=lambda: Patient(self)).grid(row=0, column=0, sticky=tk.W)
@@ -1394,20 +1419,8 @@ class Application(tk.Tk):
         self.cntP_label.grid(row=1, column=1)
 
         tk.Label(self, text=u"").grid(row=2, column=0)
-#        tk.Label(self, text=u"Ch").grid(row=2, column=1)
-#        self.cntCH_label = tk.Label(self)
-#        self.cntCH_label.grid(row=2, column=2)
-#        tk.Label(self, text=u"Tib").grid(row=2, column=3)
-#        self.cntTib_label = tk.Label(self)
-#        self.cntTib_label.grid(row=2, column=4)
 
         tk.Button(self, text=buttons_text.new_consult_known_patient, command=lambda: GererPatients(self, 'nouvelle_consultation')).grid(row=3, column=0, sticky=tk.W)
-#        tk.Label(self, text=u"LI").grid(row=3, column=1)
-#        self.cntLIK_label = tk.Label(self)
-#        self.cntLIK_label.grid(row=3, column=2)
-#        tk.Label(self, text=u"CRT").grid(row=3, column=3)
-#        self.cntCRT_label = tk.Label(self)
-#        self.cntCRT_label.grid(row=3, column=4)
 
         tk.Button(self, text=buttons_text.show_or_change_consult, command=lambda: GererPatients(self, 'gerer_consultations')).grid(row=4, column=0, sticky=tk.W)
         self.cntC_label = tk.Label(self)
@@ -1426,14 +1439,6 @@ class Application(tk.Tk):
         self.cntP_label['text'], = cursor.fetchone()
         cursor.execute("SELECT count(*) FROM consultations")
         self.cntC_label['text'], = cursor.fetchone()
-#        cursor.execute("SELECT count(*) FROM patients WHERE therapeute='ch'")
-#        self.cntCH_label['text'], = cursor.fetchone()
-#        cursor.execute("SELECT count(*) FROM patients WHERE therapeute='tib'")
-#        self.cntTib_label['text'], = cursor.fetchone()
-#        cursor.execute("SELECT count(*) FROM patients WHERE therapeute='lik'")
-#        self.cntLIK_label['text'], = cursor.fetchone()
-#        cursor.execute("SELECT count(*) FROM patients WHERE therapeute='CRT'")
-#        self.cntCRT_label['text'], = cursor.fetchone()
 
 
 app = Application()
