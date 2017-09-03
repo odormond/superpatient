@@ -19,6 +19,8 @@
 #    along with SuperPatient; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
+from __future__ import print_function
+
 import os
 import datetime
 from math import sqrt
@@ -357,7 +359,7 @@ if __name__ == '__main__':
     db = MySQLdb.connect(host=bp_connect.serveur, user=bp_connect.identifiant, passwd=bp_connect.secret, db=bp_connect.base, charset='latin1')
     cursor = db.cursor()
     patient = bp_model.Patient.load(cursor, 1)
-    print patient.__dict__
+    print(patient.__dict__)
     c1 = bp_model.Consultation(id=1, patient=patient, therapeute=patient.therapeute, date_consult=datetime.date.today(), prix_cts=10000, paye_par=u'BVR', bv_ref='012345678901234567890123458', majoration_cts=0, rappel_cts=0)
     c2 = bp_model.Consultation(id=1, patient=patient, therapeute=patient.therapeute, date_consult=datetime.date.today(), prix_cts=10000, paye_par=u'PVPE', bv_ref='012345678901234567890123458', majoration_cts=0, rappel_cts=300)
     c3 = bp_model.Consultation(id=1, patient=patient, therapeute=patient.therapeute, date_consult=datetime.date.today(), prix_cts=10000, paye_par=u'Carte', majoration_cts=300, rappel_cts=0)

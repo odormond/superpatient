@@ -21,6 +21,8 @@
 #    along with SuperPatient; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
+from __future__ import print_function
+
 import os
 import sys
 import pwd
@@ -529,7 +531,7 @@ class ListeConsultations(bp_Dialog.Dialog):
         try:
             patient = PatientModel.load(cursor, self.id_patient)
         except:
-            print "id_patient:", self.id_patient
+            print("id_patient:", self.id_patient)
             traceback.print_exc()
             tkMessageBox.showwarning(windows_title.db_error, errors_text.db_show)
             return

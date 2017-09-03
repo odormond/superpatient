@@ -19,6 +19,7 @@
 #    along with SuperPatient; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
+from __future__ import print_function
 import os
 import sys
 import datetime
@@ -911,7 +912,7 @@ class Application(tk.Tk):
                     assert line in ('', '\n'), "Garbage at end of line %d" % line_no
                 assert total_line is not None and len(records) == count, "Records count does not match total line indication"
             except Exception, e:
-                print e
+                print(e)
                 tkMessageBox.showerror("Fichier corrompu", "Une erreur s'est produite lors de la lecture du fichier de payement.\n%r" % e.args)
                 return
         ignored = []

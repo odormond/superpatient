@@ -19,6 +19,7 @@
 #    along with SuperPatient; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
+
 class Model(object):
     TABLE = None
     FIELDS = []
