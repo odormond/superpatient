@@ -10,8 +10,12 @@ import mailcap
 sys.path.insert(0, os.path.dirname(__file__))
 
 try:
-    import Tkinter as tk
-    import tkMessageBox
+    if sys.version_info.major == 2:
+        import Tkinter as tk
+        import tkMessageBox
+    else:
+        import tkinter as tk
+        import tkinter.messagebox as tkMessageBox
 except:
     tkMessageBox.showwarning("Error", "Tkinter is not correctly installed !")
     sys.exit()

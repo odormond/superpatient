@@ -21,7 +21,11 @@
 #    along with SuperPatient; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
-from Tkinter import Toplevel, Frame, BOTH
+import sys
+if sys.version_info.major == 2:
+    from Tkinter import Toplevel, Frame, BOTH
+else:
+    from tkinter import Toplevel, Frame, BOTH
 
 
 class Dialog(Toplevel):

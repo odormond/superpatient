@@ -19,7 +19,11 @@
 #    along with SuperPatient; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
-import Tkinter as tk
+import sys
+if sys.version_info.major == 2:
+    import Tkinter as tk
+else:
+    import tkinter as tk
 from bp_custo import labels_text, labels_font
 from bp_custo import fields_font, fields_height, fields_width
 
