@@ -448,8 +448,8 @@ class SummariesImport(bp_Dialog.Dialog):
 
         tk.Label(master, text=u"Payements ne correspondant pas au montant attendu").grid(row=2, column=0)
         tk.Label(master, text=str(len(self.ko))).grid(row=2, column=1)
-        tk.Label(master, text=u"%0.2f CHF" % sum_found(self.doubled)).grid(row=2, column=2, sticky=tk.E)
-        if self.doubled:
+        tk.Label(master, text=u"%0.2f CHF" % sum_found(self.ko)).grid(row=2, column=2, sticky=tk.E)
+        if self.ko:
             tk.Button(master, text=buttons_text.details, command=lambda: Details(self, self.ko)).grid(row=2, column=3, sticky=tk.W)
 
         tk.Label(master, text=u"Payements déjà encaissés").grid(row=3, column=0)
