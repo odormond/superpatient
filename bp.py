@@ -25,7 +25,6 @@ from __future__ import print_function
 
 import os
 import sys
-import pwd
 import mailcap
 import datetime
 import traceback
@@ -47,7 +46,7 @@ if app_name in ['bp_admin.py']:
     BP_RIGHTS += ['MANAGE_DB', 'MANAGE_THERAPISTS', 'MANAGE_COSTS']
 
 
-LOGIN = pwd.getpwuid(os.geteuid())[0]
+LOGIN = os.getlogin()
 
 sys.path.insert(0, os.path.dirname(__file__))
 
