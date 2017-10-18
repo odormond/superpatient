@@ -421,4 +421,4 @@ def normalize_filename(filename):
     for char in '\'"/`!$[]{}':
         filename = filename.replace(char, '-')
     filename = filename.replace(' ', '_').replace('\t', '_')
-    return os.path.join(PDF_DIR, filename).encode('UTF-8')
+    return os.path.join(PDF_DIR, filename)  # Py2: .encode('UTF-8')
