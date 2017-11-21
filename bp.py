@@ -156,9 +156,11 @@ except:
 
 try:
     import MySQLdb
+    import MySQLdb.cursors
 except:
     tkMessageBox.showwarning(u"Error", u"Module mysqldb is not correctly installed !")
     sys.exit()
+
 
 try:
     db = MySQLdb.connect(host=bp_connect.serveur, user=bp_connect.identifiant, passwd=bp_connect.secret, db=bp_connect.base, charset='latin1')
@@ -166,9 +168,22 @@ except:
     tkMessageBox.showwarning(u"MySQL", u"Cannot connect to database")
     sys.exit()
 
+db.ping(True)
 db.autocommit(True)
 
-cursor = db.cursor()
+
+class ResilientCursor(MySQLdb.cursors.Cursor):
+    def execute(self, query, args=None):
+        try:
+            return super(ResilientCursor, self).execute(query, args)
+        except MySQLdb.OperationalError as e:
+            if e.args[0] in (2006, 2013):  # Connection was lost. Retry once
+                return super(ResilientCursor, self).execute(query, args)
+            else:
+                raise
+
+
+cursor = db.cursor(ResilientCursor)
 
 
 def MCWidget(parent, key, row, column, rowspan=1, columnspan=1, value=None, accident=False, readonly=False, side_by_side=True, fg='black', field_fg='black'):

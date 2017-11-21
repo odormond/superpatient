@@ -111,6 +111,7 @@ def parse_date(s):
 
 try:
     import MySQLdb
+    import MySQLdb.cursors
 except:
     tkMessageBox.showwarning("Error", "Module mysqldb is not correctly installed !")
     sys.exit()
@@ -121,8 +122,22 @@ except:
     tkMessageBox.showwarning("MySQL", "Cannot connect to database")
     sys.exit()
 
+db.ping(True)
 db.autocommit(True)
-cursor = db.cursor()
+
+
+class ResilientCursor(MySQLdb.cursors.Cursor):
+    def execute(self, query, args=None):
+        try:
+            return super(ResilientCursor, self).execute(query, args)
+        except MySQLdb.OperationalError as e:
+            if e.args[0] in (2006, 2013):  # Connection was lost. Retry once
+                return super(ResilientCursor, self).execute(query, args)
+            else:
+                raise
+
+
+cursor = db.cursor(ResilientCursor)
 
 
 class apropos(bp_Dialog.Dialog):
