@@ -1,7 +1,4 @@
-#! /usr/bin/env python2
-# coding:UTF-8
-
-#    Copyright 2006 Tibor Csernay
+#    Copyright 2006-2017 Tibor Csernay
 
 #    This file is part of SuperPatient.
 
@@ -19,34 +16,39 @@
 #    along with SuperPatient; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
-from __future__ import print_function
-
 import os
 import datetime
 from math import sqrt
-from reportlab.pdfgen.canvas import Canvas
-from reportlab.platypus import Frame, Paragraph, Table, Spacer
-from reportlab.lib.styles import ParagraphStyle
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.units import mm, cm, inch
-from reportlab.lib import colors
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
 
-from bp_custo import bvr, DATE_FMT, labels_text
-from bp_bvr import bvr_checksum
+try:
+    from reportlab.pdfgen.canvas import Canvas
+    from reportlab.platypus import Frame, Paragraph, Table, Spacer
+    from reportlab.lib.styles import ParagraphStyle
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import mm, cm, inch
+    from reportlab.lib import colors
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+
+    BASE_DIR = os.path.join(os.path.dirname(__file__), 'pdfs')
+    pdfmetrics.registerFont(TTFont('EuclidBPBold', os.path.join(BASE_DIR, 'Euclid_BP_Bold.ttf')))
+    pdfmetrics.registerFont(TTFont('OCRB', os.path.join(BASE_DIR, 'OCRB10PitchBT-Regular.ttf')))
+
+    REPORTLAB_IS_MISSING = False
+except ImportError:
+    REPORTLAB_IS_MISSING = True
+
+from .customization import bvr, DATE_FMT, labels_text
+from .bvr import bvr_checksum
 
 PRINT_BV_BG = False
 
 SQRT2 = sqrt(2)
 
-BASE_DIR = os.path.join(os.path.dirname(__file__), 'pdfs')
-pdfmetrics.registerFont(TTFont('EuclidBPBold', os.path.join(BASE_DIR, 'Euclid_BP_Bold.ttf')))
-pdfmetrics.registerFont(TTFont('OCRB', os.path.join(BASE_DIR, 'OCRB10PitchBT-Regular.ttf')))
-
 MARGIN = 1*cm
 LOGO_WIDTH = 5.6*cm
-LOGO_HEIGHT = LOGO_WIDTH*469./676
+#LOGO_HEIGHT = LOGO_WIDTH*469./676 (OLD LOGO)
+LOGO_HEIGHT = LOGO_WIDTH*423./1280
 BV_WIDTH = 210*mm
 BV_HEIGHT = 106*mm
 FONT_SIZE = 16
@@ -90,13 +92,14 @@ def make_styles(font_size):
 
 def draw_head(canvas, font_size):
     canvas.saveState()
-    canvas.drawImage(os.path.join(BASE_DIR, "logo_pog.png"), MARGIN, canvas._pagesize[1]-MARGIN-LOGO_HEIGHT, LOGO_WIDTH, LOGO_HEIGHT)
+    canvas.drawImage(os.path.join(BASE_DIR, "logo_pog.jpg"), MARGIN, canvas._pagesize[1]-MARGIN-LOGO_HEIGHT, LOGO_WIDTH, LOGO_HEIGHT)
     canvas.setFont('EuclidBPBold', font_size)
     canvas.drawRightString(canvas._pagesize[0]-MARGIN, canvas._pagesize[1]-MARGIN-font_size, u"Lausanne, le "+datetime.date.today().strftime(u'%d.%m.%y'))
     canvas.restoreState()
 
 
 def draw_bvr(canvas, prix_cts, address_patient, bv_ref):
+    bv_ref = bv_ref or ''
     canvas.saveState()
     if PRINT_BV_BG:
         canvas.drawImage(os.path.join(BASE_DIR, "442_05_LAC_609_quer_Bank_CMYK.png"), 0, 0, BV_WIDTH, BV_HEIGHT)
@@ -182,7 +185,7 @@ def addresses(cursor, consultation, style):
         identite = [u' '.join((patient.prenom, patient.nom))]
     else:
         identite = [patient.prenom, patient.nom]
-    address_patient = u'\n'.join([titre] + identite + [patient.adresse, ""])
+    address_patient = u'\n'.join([titre] + identite + [patient.adresse, "", patient.date_naiss.strftime(DATE_FMT)])
     patient = [ParagraphOrSpacer(line, style) for line in address_patient.splitlines()]
 
     width = A4[0] - 2*MARGIN
@@ -207,7 +210,7 @@ def facture_body(consultation, message, style, tstyle):
         data += [[u"Raison : accident", None, ]]
     else:
         data += [[u"Raison : maladie", None, ]]
-    if not consultation.bv_ref:
+    if not consultation.bv_ref and consultation.paye_par:
         data[-1].append(u"payé par " + consultation.paye_par.lower())
     width = A4[0] - 2*MARGIN
     return [Table(data, colWidths=[width-4.8*cm, 1.5*cm, 3.7*cm], style=tstyle)]
@@ -353,14 +356,14 @@ def manuals(filename, data):
 
 if __name__ == '__main__':
     import MySQLdb
-    import bp_connect
-    import bp_model
+    from . import db
+    from .models import Patient, Consultation
     import sys
-    db = MySQLdb.connect(host=bp_connect.serveur, user=bp_connect.identifiant, passwd=bp_connect.secret, db=bp_connect.base, charset='latin1')
+    db = MySQLdb.connect(host=db.SERVER, user=db.USERNAME, passwd=db.PASSWORD, db=db.DATABASE, charset='latin1')
     cursor = db.cursor()
-    patient = bp_model.Patient.load(cursor, 1)
+    patient = Patient.load(cursor, 1)
     print(patient.__dict__)
-    c1 = bp_model.Consultation(id=1, patient=patient, therapeute=patient.therapeute, date_consult=datetime.date.today(), prix_cts=10000, paye_par=u'BVR', bv_ref='012345678901234567890123458', majoration_cts=0, rappel_cts=0)
-    c2 = bp_model.Consultation(id=1, patient=patient, therapeute=patient.therapeute, date_consult=datetime.date.today(), prix_cts=10000, paye_par=u'PVPE', bv_ref='012345678901234567890123458', majoration_cts=0, rappel_cts=300)
-    c3 = bp_model.Consultation(id=1, patient=patient, therapeute=patient.therapeute, date_consult=datetime.date.today(), prix_cts=10000, paye_par=u'Carte', majoration_cts=300, rappel_cts=0)
+    c1 = Consultation(id=1, patient=patient, therapeute=patient.therapeute, date_consult=datetime.date.today(), prix_cts=10000, paye_par=u'BVR', bv_ref='012345678901234567890123458', majoration_cts=0, rappel_cts=0)
+    c2 = Consultation(id=1, patient=patient, therapeute=patient.therapeute, date_consult=datetime.date.today(), prix_cts=10000, paye_par=u'PVPE', bv_ref='012345678901234567890123458', majoration_cts=0, rappel_cts=300)
+    c3 = Consultation(id=1, patient=patient, therapeute=patient.therapeute, date_consult=datetime.date.today(), prix_cts=10000, paye_par=u'Carte', majoration_cts=300, rappel_cts=0)
     consultations(sys.argv[1], cursor, [c1, c2, c3])

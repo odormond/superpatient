@@ -1,7 +1,4 @@
-#! /usr/bin/env python2
-# coding: UTF-8
-
-#    Copyright 2006 Tibor Csernay
+#    Copyright 2006-2017 Tibor Csernay
 
 #    This file is part of SuperPatient.
 
@@ -18,6 +15,17 @@
 #    You should have received a copy of the GNU General Public License
 #    along with SuperPatient; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+OLD_PAYMENT_METHODS = [u'CdM']
+PAYMENT_METHODS = [u'Cash', u'Carte', u'BVR', u'Dû', u'PVPE']
+PAYMENT_STATUSES = [u'Tous', u'Comptabilisé', u'Non-comptabilisé']
+
+BILL_STATUSES = [u'Tous', u'Ouverte', u'Imprimée', u'Envoyée', u'Payée', u'Abandonnée']
+STATUS_OPENED = u'O'
+STATUS_PRINTED = u'I'
+STATUS_SENT = u'E'
+STATUS_PAYED = u'P'
+STATUS_ABANDONED = u'A'
 
 
 class Model(object):
@@ -84,7 +92,7 @@ class Model(object):
         if kwds:
             raise TypeError("extraneous parameters %s" % ', '.join("`%s'" % k for k in kwds))
 
-    def __nonzero__(self):
+    def __bool__(self):
         # True if this model already has a key
         return getattr(self, self.FIELDS[0]) is not None
 

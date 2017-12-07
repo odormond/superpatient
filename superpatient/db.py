@@ -1,9 +1,4 @@
-#!/usr/bin/local/python
-# -*- coding: latin1 -*-
-
-# File: bp_connect.py
-
-#    Copyright 2006, 2007 Tibor Csernay
+#    Copyright 2006-2017 Tibor Csernay
 
 #    This file is part of SuperPatient.
 
@@ -21,14 +16,9 @@
 #    along with SuperPatient; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
-## Variables generales
-# sql
-serveur = 'localhost'
-identifiant = 'bpuser'
-secret = 'bppass'
-base = 'superpatient'
+# Database connection parameters
 
-
-class connecte:
-    def body(self):
-        pass
+SERVER = 'localhost'
+DATABASE = 'superpatient'
+USERNAME = 'bpuser'
+PASSWORD = 'bppass'

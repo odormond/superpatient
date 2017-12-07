@@ -1,254 +1,121 @@
-#! /usr/bin/env python2
+#! /usr/bin/env python3
 # coding:UTF-8
 
 import os
-import sys
 import datetime
 import traceback
 import mailcap
 
-sys.path.insert(0, os.path.dirname(__file__))
+#sys.path.insert(0, os.path.dirname(__file__))
 
-try:
-    if sys.version_info.major == 2:
-        import Tkinter as tk
-        import tkMessageBox
-    else:
-        import tkinter as tk
-        import tkinter.messagebox as tkMessageBox
-except:
-    tkMessageBox.showwarning("Error", "Tkinter is not correctly installed !")
-    sys.exit()
+import wx
 
-try:
-    import bp_connect
-except:
-    tkMessageBox.showwarning("Missing file", "bp_connect.py is missing")
-    sys.exit()
-
-try:
-    from bp_model import Patient, Consultation
-except:
-    tkMessageBox.showwarning("Missing file", "bp_model.py is missing")
-    sys.exit()
-
-try:
-    import bp_custo
-    from bp_custo import windows_title, errors_text, buttons_text, menus_text, labels_text
-    from bp_custo import normalize_filename
-except:
-    tkMessageBox.showwarning("Missing file", "bp_custo.py is missing")
-    sys.exit()
-
-try:
-    import bp_Dialog
-except:
-    tkMessageBox.showwarning("Missing file", "bp_Dialog.py is missing")
-    sys.exit()
-
-try:
-    from bp_widgets import ListboxWidget, EntryWidget, OptionWidget
-except:
-    tkMessageBox.showwarning("Missing file", "bp_widgets.py is missing")
-    sys.exit()
-
-try:
-    import bp_factures
-except:
-    tkMessageBox.showwarning("Missing file", "bp_factures.py is missing")
-    sys.exit()
-
-try:
-    from bp_bvr import gen_bvr_ref
-except:
-    tkMessageBox.showwarning(u"Missing file", u"bp_bvr.py is missing")
-    sys.exit()
-
-try:
-    import MySQLdb
-    import MySQLdb.cursors
-except:
-    tkMessageBox.showwarning("Error", "Module mysqldb is not correctly installed !")
-    sys.exit()
-
-try:
-    db = MySQLdb.connect(host=bp_connect.serveur, user=bp_connect.identifiant, passwd=bp_connect.secret, db=bp_connect.base, charset='latin1')
-except:
-    tkMessageBox.showwarning("MySQL", "Cannot connect to database")
-    sys.exit()
-
-db.ping(True)
-db.autocommit(True)
+from superpatient import BaseApp, DBMixin, HelpMenuMixin
+from superpatient import bills, normalize_filename
+from superpatient.bvr import gen_bvr_ref
+from superpatient.customization import windows_title, errors_text, labels_text
+from superpatient.models import Patient, Consultation, PAYMENT_METHODS, STATUS_OPENED
+from superpatient.ui.common import askyesno, showwarning
+from superpatient.ui import cash_register
 
 
-class ResilientCursor(MySQLdb.cursors.Cursor):
-    def execute(self, query, args=None):
-        try:
-            return super(ResilientCursor, self).execute(query, args)
-        except MySQLdb.OperationalError as e:
-            if e.args[0] in (2006, 2013):  # Connection was lost. Retry once
-                return super(ResilientCursor, self).execute(query, args)
-            else:
-                raise
-
-
-cursor = db.cursor(ResilientCursor)
-
-
-class apropos(bp_Dialog.Dialog):
-    def body(self, master):
-        self.title(windows_title.apropos)
-        self.geometry('+350+250')
-        tk.Label(master, text=labels_text.apropos_description, font=("Helvetica", 13, 'bold')).grid(row=0, column=0, sticky=tk.W)
-
-
-class licence(bp_Dialog.Dialog):
-    def body(self, master):
-        self.title(windows_title.licence)
-        self.geometry('+350+250')
-        tk.Label(master, text=labels_text.licence_description, font=("Helvetica", 13, 'bold')).grid(row=0, column=0, sticky=tk.W)
-
-
-class Application(tk.Tk):
-    def __init__(self):
-        tk.Tk.__init__(self)
-        if (sys.platform != 'win32') and hasattr(sys, 'frozen'):
-            self.tk.call('console', 'hide')
-
-        self.option_add('*font', 'Helvetica -15')
-        self.title(windows_title.encaissement)
-
-        menubar = tk.Menu(self)
-
-        helpmenu = tk.Menu(menubar, tearoff=0)
-        helpmenu.add_command(label=menus_text.about, command=lambda: apropos(self))
-        helpmenu.add_command(label=menus_text.licence, command=lambda: licence(self))
-
-        menubar.add_cascade(label=menus_text.help, menu=helpmenu)
-        self.config(menu=menubar)
-
-        # Tpo block: list display
-        tk.Label(self, font=bp_custo.LISTBOX_DEFAULT,
-                 text="Sex     Nom                             Prénom                          Thérapeute  Heure    Prix  Paye par   ").grid(row=0, column=0, columnspan=4, sticky=tk.W)
-        self.list_format = "%-6s  %-30s  %-30s  %-10s  %5s  %6.2f  %8s"
-        self.list = ListboxWidget(self, 'consultations', 1, 0, columnspan=4)
+class CashRegisterFrame(DBMixin, HelpMenuMixin, cash_register.MainFrame):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.payment_method.SetItems(PAYMENT_METHODS[:-1])
         self.selected_idx = None
-        self.list.bind('<<ListboxSelect>>', self.select_item)
-        self.nom = EntryWidget(self, 'nom', 2, 0, readonly=True, side_by_side=False)
-        self.prenom = EntryWidget(self, 'prenom', 2, 1, readonly=True, side_by_side=False)
-        self.therapeute = EntryWidget(self, 'therapeute', 2, 2, readonly=True, side_by_side=False)
-        self.prix = EntryWidget(self, 'prix', 2, 3, readonly=True, side_by_side=False)
+        self.on_refresh(None)
 
-        # Bottom block: available action on selected items
-        self.paye_par, self.paye_par_widget = OptionWidget(self, 'paye_par', 4, 0, options=bp_custo.MOYEN_DE_PAYEMENT[:-1], want_widget=True)
-        self.paye_par.trace('w', self.confirm_ready)
-        self.btn_pay = tk.Button(self, text=buttons_text.validate, command=self.validate, state=tk.DISABLED)
-        self.btn_pay.grid(row=4, column=2, sticky=tk.W)
-        self.btn_print = tk.Button(self, text=buttons_text.change_pay_method_and_print, command=self.change_pay_method_and_print, state=tk.DISABLED)
-        self.btn_print.grid(row=4, column=3, sticky=tk.EW)
-        tk.Button(self, text=buttons_text.refresh, command=self.update_list).grid(row=5, column=0, columnspan=4, sticky=tk.EW)
+    def on_deselect_payment(self, event):
+        self.firstname.SetValue("")
+        self.lastname.SetValue("")
+        self.therapeute.SetValue("")
+        self.price.SetValue("")
+        self.payment_method.SetSelection(wx.NOT_FOUND)
+        self.payment_method.Disable()
+        self.validate_btn.Disable()
+        self.change_payment_method_btn.Disable()
 
-        self.grid_columnconfigure(0, weight=1)
-        self.grid_columnconfigure(1, weight=1)
-        self.grid_columnconfigure(2, weight=1)
-        self.grid_columnconfigure(3, weight=1)
-        self.grid_rowconfigure(1, weight=2)
-        self.update_list()
+    def on_select_payment(self, event):
+        self.selected_idx = self.payments.GetFirstSelected()
+        id_consult, sex, lastname, firstname, therapeute, time_consult, total_price_cts, payment_method = self.data[self.selected_idx]
+        self.lastname.SetValue(lastname)
+        self.firstname.SetValue(firstname)
+        self.therapeute.SetValue(therapeute)
+        self.price.SetValue('%6.2f CHF' % (total_price_cts/100.))
+        self.payment_method.Enable()
 
-    def select_item(self, *args):
-        selected = self.list.curselection()
-        if selected:
-            self.selected_idx, = selected
-            id_consult, sex, nom, prenom, therapeute, heure_consult, prix_total_cts, paye_par = self.data[self.selected_idx]
-            self.nom.set(nom)
-            self.prenom.set(prenom)
-            self.therapeute.set(therapeute)
-            self.prix.set('%6.2f CHF' % (prix_total_cts/100.))
-            self.paye_par_widget.config(state=tk.NORMAL)
+    def on_select_payment_method(self, event):
+        if self.selected_idx is not None and self.payment_method.GetStringSelection() == self.data[self.selected_idx][-1]:
+            self.validate_btn.Enable()
+            self.change_payment_method_btn.Disable()
         else:
-            self.selected_idx = None
-            self.nom.set('')
-            self.prenom.set('')
-            self.therapeute.set('')
-            self.prix.set('')
-            self.paye_par.set('')
-            self.paye_par_widget.config(state=tk.DISABLED)
+            self.validate_btn.Disable()
+            self.change_payment_method_btn.Enable()
 
-    def confirm_ready(self, *args):
-        if self.selected_idx is not None and self.paye_par.get() == self.data[self.selected_idx][-1]:
-            self.btn_pay.config(state=tk.NORMAL)
-            self.btn_print.config(state=tk.DISABLED)
+    def on_validate(self, event):
+        if self.payment_method.GetStringSelection() == u'BVR':
+            id_consult = self.data[self.selected_idx][0]
+            consult = Consultation.load(self.cursor, id_consult)
+            if consult.status == STATUS_OPENED:
+                filename_consult = normalize_filename(datetime.datetime.now().strftime('consultation_%F_%Hh%Mm%Ss.pdf'))
+                bills.consultations(filename_consult, self.cursor, [consult])
+                cmd, cap = mailcap.findmatch(mailcap.getcaps(), 'application/pdf', 'view', filename_consult)
+                os.system(cmd + '&')
+        self.real_validate()
+        self.on_refresh(None)
+
+    def on_change_payment(self, event):
+        id_consult = self.data[self.selected_idx][0]
+        consult = Consultation.load(self.cursor, id_consult)
+        if self.payment_method.GetStringSelection() == u'BVR':
+            if not askyesno(windows_title.confirm_change, labels_text.ask_confirm_payment_method_change_to_BVR):
+                return
+            patient = Patient.load(self.cursor, consult.id)
+            consult.bv_ref = gen_bvr_ref(self.cursor, patient.prenom, patient.nom, consult.date_consult)
         else:
-            self.btn_pay.config(state=tk.DISABLED)
-            self.btn_print.config(state=tk.NORMAL)
+            consult.bv_ref = None
+        consult.paye_par = self.payment_method.GetStringSelection()
+        consult.save(self.cursor)
+        filename_consult = normalize_filename(datetime.datetime.now().strftime('consultation_%F_%Hh%Mm%Ss.pdf'))
+        bills.consultations(filename_consult, self.cursor, [consult])
+        cmd, cap = mailcap.findmatch(mailcap.getcaps(), 'application/pdf', 'view', filename_consult)
+        os.system(cmd + '&')
+        self.real_validate()
+        self.on_refresh(None)
 
-    def update_list(self, *args):
-        self.list.delete(0, tk.END)
-        self.list.selection_clear(0, tk.END)
-        self.nom.set('')
-        self.prenom.set('')
-        self.therapeute.set('')
-        self.prix.set('')
-        self.paye_par.set('')
-        self.paye_par_widget.config(state=tk.DISABLED)
-        self.btn_pay.config(state=tk.DISABLED)
-        self.btn_print.config(state=tk.DISABLED)
-        self.data = []
+    def on_refresh(self, event):
+        "Populate liste based on the filter fields"
+        self.on_deselect_payment(None)
+        self.payments.DeleteAllItems()
         try:
-            cursor.execute("""SELECT consultations.id_consult, sex, nom, prenom, COALESCE(consultations.therapeute, patients.therapeute), heure_consult, prix_cts + majoration_cts + frais_admin_cts, paye_par
+            self.cursor.execute("""SELECT consultations.id_consult, sex, nom, prenom, COALESCE(consultations.therapeute, patients.therapeute), heure_consult, prix_cts + majoration_cts + frais_admin_cts, paye_par
                                 FROM consultations INNER JOIN patients ON consultations.id = patients.id
                                WHERE date_consult = CURDATE() AND (status = 'O' OR status = 'I' AND paye_par = 'BVR')
                                ORDER BY heure_consult""")
             today = datetime.datetime.combine(datetime.date.today(), datetime.time())
-            self.data = [(id_consult, sex, nom, prenom, therapeute, (today + (heure_consult or datetime.timedelta(0))).time(), prix_cts, paye_par) for id_consult, sex, nom, prenom, therapeute, heure_consult, prix_cts, paye_par in cursor]
+            self.data = [(id_consult, sex, nom, prenom, therapeute, (today + (heure_consult or datetime.timedelta(0))).time(), prix_cts, paye_par) for id_consult, sex, nom, prenom, therapeute, heure_consult, prix_cts, paye_par in self.cursor]
             for id_consult, sex, nom, prenom, therapeute, heure_consult, prix_total_cts, paye_par in self.data:
-                self.list.insert(tk.END, self.list_format % (sex, nom[:30], prenom[:30], therapeute, heure_consult.strftime(u'%H:%M'), prix_total_cts/100., paye_par))
+                self.payments.Append((sex, nom, prenom, therapeute, heure_consult.strftime(u'%H:%M'), '%0.2f' % (prix_total_cts/100.), paye_par))
         except:
             traceback.print_exc()
-            tkMessageBox.showwarning(windows_title.db_error, errors_text.db_read)
-
-    def change_pay_method_and_print(self):
-        id_consult = self.data[self.selected_idx][0]
-        consult = Consultation.load(cursor, id_consult)
-        if self.paye_par.get() == u'BVR':
-            if not tkMessageBox.askyesno(windows_title.confirm_change, labels_text.ask_confirm_payment_method_change_to_BVR):
-                return
-            patient = Patient.load(cursor, consult.id)
-            consult.bv_ref = gen_bvr_ref(cursor, patient.prenom, patient.nom, consult.date_consult)
-        else:
-            consult.bv_ref = None
-        consult.paye_par = self.paye_par.get()
-        consult.save(cursor)
-        filename_consult = normalize_filename(datetime.datetime.now().strftime('consultation_%F_%Hh%Mm%Ss.pdf'))
-        bp_factures.consultations(filename_consult, cursor, [consult])
-        cmd, cap = mailcap.findmatch(mailcap.getcaps(), 'application/pdf', 'view', filename_consult)
-        os.system(cmd + '&')
-        self.real_validate()
-        self.update_list()
-
-    def validate(self):
-        if self.paye_par.get() == u'BVR':
-            id_consult = self.data[self.selected_idx][0]
-            consult = Consultation.load(cursor, id_consult)
-            if consult.status == bp_custo.STATUS_OPENED:
-                filename_consult = normalize_filename(datetime.datetime.now().strftime('consultation_%F_%Hh%Mm%Ss.pdf'))
-                bp_factures.consultations(filename_consult, cursor, [consult])
-                cmd, cap = mailcap.findmatch(mailcap.getcaps(), 'application/pdf', 'view', filename_consult)
-                os.system(cmd + '&')
-        self.real_validate()
-        self.update_list()
+            showwarning(windows_title.db_error, errors_text.db_read)
 
     def real_validate(self):
         id_consult = self.data[self.selected_idx][0]
         try:
-            if self.paye_par.get() == u'BVR':
-                cursor.execute("""UPDATE consultations SET status = 'E' WHERE id_consult = %s""", [id_consult])
-            elif self.paye_par.get() not in (u'Dû', u'PVPE'):
-                cursor.execute("""UPDATE consultations SET paye_le = CURDATE(), status = 'P' WHERE id_consult = %s""", [id_consult])
+            if self.payment_method.GetStringSelection() == u'BVR':
+                self.cursor.execute("""UPDATE consultations SET status = 'E' WHERE id_consult = %s""", [id_consult])
+            elif self.payment_method.GetStringSelection() not in (u'Dû', u'PVPE'):
+                self.cursor.execute("""UPDATE consultations SET paye_le = CURDATE(), status = 'P' WHERE id_consult = %s""", [id_consult])
         except:
             traceback.print_exc()
-            tkMessageBox.showwarning(windows_title.db_error, errors_text.db_update)
+            showwarning(windows_title.db_error, errors_text.db_update)
 
 
-app = Application()
-app.mainloop()
+class CashRegisterApp(BaseApp):
+    MainFrameClass = CashRegisterFrame
+
+
+if __name__ == '__main__':
+    CashRegisterApp().MainLoop()

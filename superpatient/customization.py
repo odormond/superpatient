@@ -18,8 +18,8 @@
 #    along with SuperPatient; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
-import os
-PDF_DIR = os.path.join(os.path.dirname(__file__), 'factures')
+from pathlib import Path
+PDF_DIR = str(Path(__file__).parents[1] / 'factures')
 
 DATE_FMT = u"%d.%m.%Y"
 
@@ -35,18 +35,7 @@ ENTRY_DEFAULT = (DEFAULT_FONT_NAME, DEFAULT_ENTRY_SIZE)
 TEXT_DEFAULT = ENTRY_DEFAULT
 LISTBOX_DEFAULT = (FIXED_FONT_NAME, FIXED_FONT_SIZE)
 
-ANCIEN_MOYEN_DE_PAYEMENT = [u'CdM']
-MOYEN_DE_PAYEMENT = [u'Cash', u'Carte', u'BVR', u'Dû', u'PVPE']
-ETAT_PAYEMENT = [u'Tous', u'Comptabilisé', u'Non-comptabilisé']
-
 MONTANT_RAPPEL_CTS = 500
-
-STATUS_FACTURE = [u'Tous', u'Ouverte', u'Imprimée', u'Envoyée', u'Payée', u'Abandonnée']
-STATUS_OPENED = u'O'
-STATUS_PRINTED = u'I'
-STATUS_SENT = u'E'
-STATUS_PAYED = u'P'
-STATUS_ABANDONED = u'A'
 
 PAIEMENT_SORTIE = True
 
@@ -413,12 +402,3 @@ class FieldsWidth(Config):
 
 
 fields_width = FieldsWidth()
-
-
-# Utility functions used by more than one module
-
-def normalize_filename(filename):
-    for char in '\'"/`!$[]{}':
-        filename = filename.replace(char, '-')
-    filename = filename.replace(' ', '_').replace('\t', '_')
-    return os.path.join(PDF_DIR, filename)  # Py2: .encode('UTF-8')
