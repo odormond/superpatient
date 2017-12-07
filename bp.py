@@ -891,16 +891,18 @@ class ConsultationDialog(DBMixin, CancelableMixin, core.ConsultationDialog):
         try:
             if consult.therapeute is not None:
                 consult.therapeute = consult.therapeute.strip()  # Sanity guard against old data
-            self.cursor.execute("""SELECT therapeute, login FROM therapeutes ORDER BY therapeute""")
+            self.cursor.execute("""SELECT therapeute, login, entete FROM therapeutes ORDER BY therapeute""")
         except:
             traceback.print_exc()
             showwarning(windows_title.db_error, errors_text.db_read)
             return
         therapeutes = ['']
-        for t, login in self.cursor:
+        for t, login, header in self.cursor:
             therapeutes.append(t)
             if consult.therapeute is None and login == LOGIN:
                 consult.therapeute = t
+            if consult.therapeute == t:
+                consult.therapeute_header = header
         if consult:
             title = windows_title.consultation % (consult.date_consult, self.patient.sex, self.patient.nom)
         else:
@@ -947,20 +949,16 @@ class ConsultationDialog(DBMixin, CancelableMixin, core.ConsultationDialog):
         if price:
             self.price.StringSelection = price[0]
         else:
-            print("WARN: price not found:", (consult.prix_cts, consult.prix_txt))
-            print(self.prices)
             self.price.Selection = wx.NOT_FOUND
         markup = [l for l, v in self.markups.items() if v == (consult.majoration_cts, consult.majoration_txt)]
         if markup:
             self.markup.StringSelection = markup[0]
         else:
-            print("WARN: majoration not found:", (consult.majoration_cts, consult.majoration_txt))
             self.markup.Selection = wx.NOT_FOUND
         admin_cost = [l for l, v in self.admin_costs.items() if v == (consult.frais_admin_cts, consult.frais_admin_txt)]
         if admin_cost:
             self.admin_cost.StringSelection = admin_cost[0]
         else:
-            print("WARN: price not found:", (consult.frais_admin_cts, consult.frais_admin_txt))
             self.admin_cost.Selection = wx.NOT_FOUND
 
         if consult.paye_par:
@@ -1019,6 +1017,16 @@ class ConsultationDialog(DBMixin, CancelableMixin, core.ConsultationDialog):
         consult.A_osteo = self.anamnesis.Value.strip()
         consult.traitement = self.treatment.Value.strip()
         consult.therapeute = self.therapeute.StringSelection
+        try:
+            self.cursor.execute("SELECT entete FROM therapeutes WHERE therapeute = %s", [consult.therapeute])
+        except:
+            traceback.print_exc()
+            showwarning(windows_title.db_error, errors_text.db_read)
+        else:
+            if self.cursor.rowcount != 0:
+                consult.therapeute_header, = self.cursor.fetchone()
+            else:
+                consult.therapeute_header = ''
         consult.prix_cts, consult.prix_txt = self.prices.get(self.price.StringSelection, ("", 0))
         consult.majoration_cts, consult.majoration_txt = self.markups.get(self.markup.StringSelection, ("", 0))
         consult.frais_admin_cts, consult.frais_admin_txt = self.admin_costs.get(self.admin_cost.StringSelection, ("", 0))
