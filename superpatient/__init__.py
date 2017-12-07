@@ -78,7 +78,7 @@ class BaseApp(wx.App):
             from dateutil.parser import parse, parserinfo
         except:
             showerror("Dependency Error", "The dateutil module is not correctly installed!")
-            sys.exist(1)
+            sys.exit(1)
 
         class FrenchParserInfo(parserinfo):
             MONTHS = [(u'jan', u'janvier'), (u'fév', u'février'), (u'mar', u'mars'), (u'avr', u'avril'), (u'mai', u'mai'), (u'jui', u'juin'), (u'jul', u'juillet'), (u'aoû', u'août'), (u'sep', u'septembre'), (u'oct', u'octobre'), (u'nov', u'novembre'), (u'déc', u'décembre')]

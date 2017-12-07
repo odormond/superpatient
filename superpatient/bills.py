@@ -16,11 +16,16 @@
 #    along with SuperPatient; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
-from .customization import BILL_TYPE
-
-from .custom_bill import manuals, REPORTLAB_IS_MISSING  # noqa
-
-if BILL_TYPE == '590':
-    from .type590_bill import consultations  # noqa
+try:
+    import reportlab  # noqa
+    REPORTLAB_IS_MISSING = False
+except ImportError:
+    REPORTLAB_IS_MISSING = True
 else:
-    from .custom_bill import consultations  # noqa
+    from .custom_bill import manuals  # noqa
+    from .customization import BILL_TYPE
+
+    if BILL_TYPE == '590':
+        from .type590_bill import consultations  # noqa
+    else:
+        from .custom_bill import consultations  # noqa

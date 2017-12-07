@@ -1,22 +1,19 @@
 import re
 import datetime
 
-try:
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, PageBreak
-    from reportlab.platypus.flowables import TopPadder, CallerMacro
-    from reportlab.lib.styles import ParagraphStyle
-    from reportlab.lib.pagesizes import A4
-    from reportlab.lib.units import cm
-    from reportlab.lib import colors
-except ImportError:
-    pass
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, PageBreak
+from reportlab.platypus.flowables import TopPadder, CallerMacro
+from reportlab.lib.styles import ParagraphStyle
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.units import cm
+from reportlab.lib import colors
 
-try:
-    from .customization import DATE_FMT, labels_text
-    from .custom_bill import draw_bvr
-except ImportError:
+if __name__ == '__main__':
     from customization import DATE_FMT, labels_text
     from custom_bill import draw_bvr
+else:
+    from .customization import DATE_FMT, labels_text
+    from .custom_bill import draw_bvr
 
 
 LEFT_MARGIN = 1.7*cm
@@ -89,8 +86,11 @@ def patient(consult):
     else:
         words = address.split()
         street = ' '.join(words[:-2])
-        ZIP = words[-2]
-        city = words[-1]
+        if words[-2:]:
+            ZIP = words[-2]
+            city = words[-1]
+        else:
+            ZIP = city = ''
     data = [
         ["Patient:", "Nom", patient.nom, "{}\n{} {}\n{}".format(titre, patient.prenom, patient.nom, patient.adresse)],
         ["", "Prénom", patient.prenom],

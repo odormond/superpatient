@@ -20,28 +20,23 @@ import os
 import datetime
 from math import sqrt
 
-try:
-    from reportlab.pdfgen.canvas import Canvas
-    from reportlab.platypus import Frame, Paragraph, Table, Spacer
-    from reportlab.lib.styles import ParagraphStyle
-    from reportlab.lib.pagesizes import A4
-    from reportlab.lib.units import mm, cm, inch
-    from reportlab.lib import colors
-    from reportlab.pdfbase import pdfmetrics
-    from reportlab.pdfbase.ttfonts import TTFont
-
-    BASE_DIR = os.path.join(os.path.dirname(__file__), 'pdfs')
-    pdfmetrics.registerFont(TTFont('EuclidBPBold', os.path.join(BASE_DIR, 'Euclid_BP_Bold.ttf')))
-    pdfmetrics.registerFont(TTFont('OCRB', os.path.join(BASE_DIR, 'OCRB10PitchBT-Regular.ttf')))
-
-    REPORTLAB_IS_MISSING = False
-except ImportError:
-    REPORTLAB_IS_MISSING = True
+from reportlab.pdfgen.canvas import Canvas
+from reportlab.platypus import Frame, Paragraph, Table, Spacer
+from reportlab.lib.styles import ParagraphStyle
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.units import mm, cm, inch
+from reportlab.lib import colors
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 
 from .customization import bvr, DATE_FMT, labels_text
 from .bvr import bvr_checksum
 
-PRINT_BV_BG = True
+BASE_DIR = os.path.join(os.path.dirname(__file__), 'pdfs')
+pdfmetrics.registerFont(TTFont('EuclidBPBold', os.path.join(BASE_DIR, 'Euclid_BP_Bold.ttf')))
+pdfmetrics.registerFont(TTFont('OCRB', os.path.join(BASE_DIR, 'OCRB10PitchBT-Regular.ttf')))
+
+PRINT_BV_BG = False
 
 SQRT2 = sqrt(2)
 
