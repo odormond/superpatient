@@ -21,6 +21,7 @@
 from pathlib import Path
 PDF_DIR = str(Path(__file__).parents[1] / 'factures')
 
+BILL_TYPE = '590'
 DATE_FMT = u"%d.%m.%Y"
 
 DEFAULT_LABEL_SIZE = 9

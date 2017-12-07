@@ -138,7 +138,7 @@ class Consultation(Model):
               'A_osteo', 'traitement', 'therapeute', 'prix_cts', 'prix_txt',
               'majoration_cts', 'majoration_txt', 'frais_admin_cts', 'frais_admin_txt',
               'paye_par', 'paye_le', 'bv_ref', 'status']
-    EXTRA_FIELDS = ['patient', 'rappel_cts']
+    EXTRA_FIELDS = ['patient', 'rappel_cts', 'therapeute_header']
 
     @classmethod
     def load(klass, cursor, key):
@@ -151,6 +151,11 @@ class Consultation(Model):
             instance.rappel_cts = 0
         if instance.therapeute is None:
             instance.therapeute = instance.patient.therapeute
+        cursor.execute("""SELECT entete FROM therapeutes WHERE therapeute = %s""", [instance.therapeute])
+        if cursor.rowcount:
+            instance.therapeute_header, = cursor.fetchone()
+        else:
+            instance.therapeute_header = ""
         return instance
 
     def __init__(self, **kwds):

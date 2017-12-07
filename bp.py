@@ -943,20 +943,24 @@ class ConsultationDialog(DBMixin, CancelableMixin, core.ConsultationDialog):
             self.therapeute.StringSelection = consult.therapeute
         self.payment.Value = consult.paye or ''
 
-        price = [l for l, v in self.prices.values() if v == (consult.prix_cts, consult.prix_txt)]
+        price = [l for l, v in self.prices.items() if v == (consult.prix_cts, consult.prix_txt)]
         if price:
             self.price.StringSelection = price[0]
         else:
+            print("WARN: price not found:", (consult.prix_cts, consult.prix_txt))
+            print(self.prices)
             self.price.Selection = wx.NOT_FOUND
-        markup = [l for l, v in self.markups.values() if v == (consult.majoration_cts, consult.majoration_txt)]
+        markup = [l for l, v in self.markups.items() if v == (consult.majoration_cts, consult.majoration_txt)]
         if markup:
             self.markup.StringSelection = markup[0]
         else:
+            print("WARN: majoration not found:", (consult.majoration_cts, consult.majoration_txt))
             self.markup.Selection = wx.NOT_FOUND
-        admin_cost = [l for l, v in self.admin_costs.values() if v == (consult.frais_admin_cts, consult.frais_admin_txt)]
+        admin_cost = [l for l, v in self.admin_costs.items() if v == (consult.frais_admin_cts, consult.frais_admin_txt)]
         if admin_cost:
             self.admin_cost.StringSelection = admin_cost[0]
         else:
+            print("WARN: price not found:", (consult.frais_admin_cts, consult.frais_admin_txt))
             self.admin_cost.Selection = wx.NOT_FOUND
 
         if consult.paye_par:
@@ -987,7 +991,7 @@ class ConsultationDialog(DBMixin, CancelableMixin, core.ConsultationDialog):
             costs = [('Aucun(e)', (0, ''))] if optional else []
             for description, prix_cts in self.cursor:
                 label = u'%s : %0.2f CHF' % (description, prix_cts/100.)
-                costs.append((label, (description, prix_cts)))
+                costs.append((label, (prix_cts, description)))
         except:
             traceback.print_exc()
             showwarning(windows_title.db_error, errors_text.db_read)
@@ -1015,9 +1019,9 @@ class ConsultationDialog(DBMixin, CancelableMixin, core.ConsultationDialog):
         consult.A_osteo = self.anamnesis.Value.strip()
         consult.traitement = self.treatment.Value.strip()
         consult.therapeute = self.therapeute.StringSelection
-        consult.prix_txt, consult.prix_cts = self.prices.get(self.price.StringSelection, ("", 0))
-        consult.majoration_txt, consult.majoration_cts = self.markups.get(self.markup.StringSelection, ("", 0))
-        consult.frais_admin_txt, consult.frais_admin_cts = self.admin_costs.get(self.admin_cost.StringSelection, ("", 0))
+        consult.prix_cts, consult.prix_txt = self.prices.get(self.price.StringSelection, ("", 0))
+        consult.majoration_cts, consult.majoration_txt = self.markups.get(self.markup.StringSelection, ("", 0))
+        consult.frais_admin_cts, consult.frais_admin_txt = self.admin_costs.get(self.admin_cost.StringSelection, ("", 0))
         consult.paye_par = self.payment_method.StringSelection
         if not custo.PAIEMENT_SORTIE and consult.paye_le is None and consult.paye_par not in (u'BVR', u'CdM', u'Dû', u'PVPE'):
             consult.paye_le = datetime.date.today()
