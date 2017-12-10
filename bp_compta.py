@@ -67,11 +67,11 @@ class AccountingFrame(DBMixin, HelpMenuMixin, accounting.MainFrame):
         self.update_list()
 
     def update_list(self):
-        from dateutil import parse_date
+        from dateutil import parse_ISO
         therapeute = self.therapeute.StringSelection
         payment_method = self.payment_method.StringSelection
-        filter_start = parse_date(self.filter_start.Value.strip())
-        filter_end = parse_date(self.filter_end.Value.strip())
+        filter_start = parse_ISO(self.filter_start.Value.strip())
+        filter_end = parse_ISO(self.filter_end.Value.strip())
         bill_status = self.bill_status.StringSelection
         filter_firstname = self.filter_firstname.Value.strip()
         filter_lastname = self.filter_lastname.Value.strip()
@@ -161,6 +161,8 @@ class AccountingFrame(DBMixin, HelpMenuMixin, accounting.MainFrame):
         except:
             traceback.print_exc()
             showwarning(windows_title.db_error, errors_text.db_read)
+        for c in range(self.payments.ColumnCount):
+            self.payments.SetColumnWidth(c, wx.LIST_AUTOSIZE)
         self.payments_count.Value = str(count)
         self.total_consultations.Value = '%0.2f CHF' % (total_consultations/100.)
         self.total_majorations.Value = '%0.2f CHF' % (total_majorations/100.)
@@ -291,8 +293,8 @@ class AccountingFrame(DBMixin, HelpMenuMixin, accounting.MainFrame):
         self.update_list()
 
     def on_mark_paid(self, event):
-        from dateutil import parse_date
-        payment_date = parse_date(self.payment_date.Value.strip())
+        from dateutil import parse_ISO
+        payment_date = parse_ISO(self.payment_date.Value.strip())
         consult_ids = [id for i, id in enumerate(self.data) if self.payments.IsSelected(i) and id >= 0]
         manual_bills_ids = [-id for i, id in enumerate(self.data) if self.payments.IsSelected(i) and id < 0]
         try:
@@ -376,8 +378,9 @@ class RemindersManagementDialog(DBMixin, accounting.RemindersManagementDialog):
         self.on_update_list()
 
     def on_update_list(self, *args):
-        from dateutil import parse_date
-        upto = parse_date(self.upto.Value.strip())
+        print("update_list")
+        from dateutil import parse_ISO
+        upto = parse_ISO(self.upto.Value.strip())
         self.reminders.DeleteAllItems()
         self.total.Value = ''
         self.data = []
@@ -429,6 +432,7 @@ class RemindersManagementDialog(DBMixin, accounting.RemindersManagementDialog):
         dlg.CenterOnParent()
         dlg.ShowModal()
         self.upto.Value = dlg.Value.strftime('%Y-%m-%d')
+        self.on_update_list()
 
     def on_generate(self, event):
         filename = normalize_filename(datetime.datetime.now().strftime('rappels_%F_%Hh%Mm%Ss.pdf'))

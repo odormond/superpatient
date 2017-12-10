@@ -158,6 +158,7 @@ class MainFrame(wx.Frame):
         self.SetSizer(sizer_0)
         sizer_0.Fit(self)
         self.Layout()
+        self.SetSize((800, 600))
 
     def on_import_payments(self, event):
         print("Event handler 'on_import_payments' not implemented!")
@@ -208,7 +209,7 @@ class RemindersManagementDialog(wx.Dialog):
     def __init__(self, *args, **kwds):
         kwds["style"] = wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER
         super().__init__(*args, **kwds)
-        self.upto = wx.TextCtrl(self, wx.ID_ANY, "", style=wx.TE_PROCESS_ENTER)
+        self.upto = wx.TextCtrl(self, wx.ID_ANY, "", style=wx.TE_PROCESS_ENTER | wx.TE_READONLY)
         self.button_6 = wx.Button(self, wx.ID_ANY, u"\U0001f4c5", style=wx.BU_EXACTFIT)
         self.reminders = wx.ListCtrl(self, wx.ID_ANY, style=wx.LC_HRULES | wx.LC_REPORT | wx.LC_VRULES)
         #self.base_font = wx.Font(wx.FontInfo(12))
@@ -258,7 +259,7 @@ class RemindersManagementDialog(wx.Dialog):
         self.SetSizer(sizer_3)
         sizer_3.Fit(self)
         self.Layout()
-        self.SetSize((600, 600))
+        self.SetSize((900, 600))
 
     def on_update_list(self, event):
         print("Event handler 'on_update_list' not implemented!")

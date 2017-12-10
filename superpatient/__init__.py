@@ -86,7 +86,7 @@ class BaseApp(wx.App):
             HMS = [(u'h', u'heure', u'heures'), (u'm', u'minute', u'minutes'), (u's', u'seconde', u'secondes')]
             JUMP = [u' ', u'.', u',', u';', u'-', u'/', u"'", u"le", u"er", u"ième"]
 
-        datesFR = FrenchParserInfo(dayfirst=False)
+        datesFR = FrenchParserInfo(dayfirst=True)
         MIN_DATE = datetime.date(1900, 1, 1)  # Cannot strftime before that date
 
         def parse_date(s):
@@ -97,8 +97,17 @@ class BaseApp(wx.App):
             if d < MIN_DATE:
                 raise ValueError("Date too old")
             return d
-
         dateutil.parse_date = parse_date
+
+        def parse_ISO(s):
+            try:
+                d = parse(s).date()
+            except ValueError:
+                return None
+            if d < MIN_DATE:
+                raise ValueError("Date too old")
+            return d
+        dateutil.parse_ISO = parse_ISO
 
 
 class DBMixin:
