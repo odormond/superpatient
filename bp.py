@@ -1027,9 +1027,9 @@ class ConsultationDialog(DBMixin, CancelableMixin, core.ConsultationDialog):
                 consult.therapeute_header, = self.cursor.fetchone()
             else:
                 consult.therapeute_header = ''
-        consult.prix_cts, consult.prix_txt = self.prices.get(self.price.StringSelection, ("", 0))
-        consult.majoration_cts, consult.majoration_txt = self.markups.get(self.markup.StringSelection, ("", 0))
-        consult.frais_admin_cts, consult.frais_admin_txt = self.admin_costs.get(self.admin_cost.StringSelection, ("", 0))
+        consult.prix_cts, consult.prix_txt = self.prices.get(self.price.StringSelection, (0, ""))
+        consult.majoration_cts, consult.majoration_txt = self.markups.get(self.markup.StringSelection, (0, ""))
+        consult.frais_admin_cts, consult.frais_admin_txt = self.admin_costs.get(self.admin_cost.StringSelection, (0, ""))
         consult.paye_par = self.payment_method.StringSelection
         if not custo.PAIEMENT_SORTIE and consult.paye_le is None and consult.paye_par not in (u'BVR', u'CdM', u'Dû', u'PVPE'):
             consult.paye_le = datetime.date.today()
