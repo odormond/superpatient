@@ -58,8 +58,11 @@ class AccountingFrame(DBMixin, HelpMenuMixin, accounting.MainFrame):
             showwarning(windows_title.db_error, errors_text.db_read)
             sys.exit(1)
         self.therapeute.SetItems(therapeutes)
+        self.therapeute.StringSelection = therapeutes[0]
         self.payment_method.SetItems([''] + PAYMENT_METHODS + OLD_PAYMENT_METHODS)
+        self.payment_method.StringSelection = ''
         self.bill_status.SetItems(BILL_STATUSES)
+        self.bill_status.StringSelection = BILL_STATUSES[0]
         today = datetime.date.today()
         month_end = datetime.date(today.year, today.month, 1) - datetime.timedelta(days=1)
         last_month = datetime.date(month_end.year, month_end.month, 1)
