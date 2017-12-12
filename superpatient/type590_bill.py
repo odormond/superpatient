@@ -34,13 +34,8 @@ BOXED_TSTYLE = BASE_TSTYLE + [('FONT', (0, 0), (0, -1), TITLE_STYLE.fontName, 8,
 THERAPEUTE_TSTYLE = BOXED_TSTYLE + [('SPAN', (0, 1), (0, 2)),
                                     ('SPAN', (0, 3), (0, 4)),
                                     ('SPAN', (1, 0), (-1, 0)),
-                                    ('SPAN', (3, 1), (4, 1)),
-                                    ('SPAN', (3, 3), (4, 3)),
-                                    ('SPAN', (5, 1), (6, 1)),
-                                    ('SPAN', (5, 3), (6, 3)),
                                     ('LEADING', (0, 1), (0, -1), 8),
                                     ('VALIGN', (0, 1), (0, -1), 'TOP'),
-                                    ('ALIGN', (4, 1), (4, -1), 'RIGHT'),
                                     ]
 PATIENT_TSTYLE = BOXED_TSTYLE + [('SPAN', (3, 0), (4, 16)),
                                  ('VALIGN', (3, 0), (3, 0), 'MIDDLE'),
@@ -59,13 +54,12 @@ def therapeute(consult):
     name = header.splitlines()[0]
     rcc = ([l.split(' ', 1)[1] for l in header.splitlines() if l.startswith('RCC')] or [''])[0]
     pog, address, zip_city, web, phone = labels_text.adresse_pog.splitlines()
-    zip, city = zip_city.split()
     data = [
         ["Document", "{} {} {}".format(consult.id_consult, consult.date_consult, consult.heure_consult or '')],
-        ["Auteur\nfacture", "N° GLN", "", name, "", web],
-        ["", "N° RCC", rcc, address, zip, city, "Tél: " + phone],
-        ["Four. de\nprestations", "N° GLN", "", name, "", web],
-        ["", "N° RCC", rcc, address, zip, city, "Tél: " + phone],
+        ["Auteur\nfacture", "N° GLN", "", name, web],
+        ["", "N° RCC", rcc, address, zip_city, "Tél: " + phone],
+        ["Four. de\nprestations", "N° GLN", "", name, web],
+        ["", "N° RCC", rcc, address, zip_city, "Tél: " + phone],
     ]
     return Table(data, colWidths=[2*cm, 1.5*cm, '*'], rowHeights=[13] + [11]*(len(data)-1), style=THERAPEUTE_TSTYLE)
 
