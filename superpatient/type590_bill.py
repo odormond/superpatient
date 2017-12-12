@@ -1,8 +1,8 @@
 import re
 import datetime
 
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, PageBreak
-from reportlab.platypus.flowables import TopPadder, CallerMacro
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, Spacer, PageBreak
+from reportlab.platypus.flowables import CallerMacro
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import cm
@@ -157,7 +157,8 @@ def positions(consult):
               [('SPAN', (2, row), (-1, row)) for row in range(2, len(data), 2)])
     total = [["", "", "", "", "Montant dû", "", "", '%0.2f' % ((consult.prix_cts + (consult.majoration_cts or 0) + (consult.frais_admin_cts or 0)) / 100)]]
     return [Table(data, colWidths=[2*cm, 1*cm, '*', 1*cm, 1*cm, 1*cm, 1*cm, 1.5*cm], style=tstyle),
-            TopPadder(Table(total, colWidths=[2*cm, 1*cm, '*', 1*cm, 1*cm, 1*cm, 1*cm, 1.5*cm], style=TOTAL_TSTYLE)),
+            Spacer(0, 1*cm),
+            Table(total, colWidths=[2*cm, 1*cm, '*', 1*cm, 1*cm, 1*cm, 1*cm, 1.5*cm], style=TOTAL_TSTYLE),
             ]
 
 
@@ -189,7 +190,7 @@ def consultations(filename, cursor, consultations):
                 y = flowable._frame._y
                 canvas.translate(-x, -y)
                 draw_bvr(canvas, consult.prix_cts+consult.majoration_cts+consult.frais_admin_cts, address_patient, consult.bv_ref)
-            story += [PageBreak(), CallerMacro(render_bvr)]
+            story += [CallerMacro(render_bvr)]
         if consult:
             story.append(PageBreak())
     doc.build(story)
