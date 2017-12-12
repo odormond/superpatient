@@ -345,7 +345,7 @@ def manuals(filename, data):
         canvas.restoreState()
         canvas.showPage()
         # Add an empty page
-        canvas.showPage()
+        #canvas.showPage()
     canvas.save()
 
 
