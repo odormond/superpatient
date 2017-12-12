@@ -803,7 +803,7 @@ class ConsultationDialog(wx.Dialog):
         self.lower_limbs = wx.TextCtrl(self.panel_3, wx.ID_ANY, "", style=wx.TE_MULTILINE)
         self.other = wx.TextCtrl(self.panel_3, wx.ID_ANY, "", style=wx.TE_MULTILINE)
         self.important = wx.TextCtrl(self.panel_3, wx.ID_ANY, "", style=wx.TE_MULTILINE)
-        self.anamnesis = wx.TextCtrl(self.panel_3, wx.ID_ANY, "", style=wx.TE_MULTILINE)
+        self.diagnostic = wx.TextCtrl(self.panel_3, wx.ID_ANY, "", style=wx.TE_MULTILINE)
         self.treatment = wx.TextCtrl(self.panel_3, wx.ID_ANY, "", style=wx.TE_MULTILINE)
         self.remarks = wx.TextCtrl(self.panel_3, wx.ID_ANY, "", style=wx.TE_MULTILINE)
         self.consultation_date = wx.TextCtrl(self.panel_3, wx.ID_ANY, "")
@@ -843,7 +843,7 @@ class ConsultationDialog(wx.Dialog):
             self.lower_limbs,
             self.other,
             self.important,
-            self.anamnesis,
+            self.diagnostic,
             self.treatment,
             self.remarks,
             self.consultation_date,
@@ -875,7 +875,7 @@ class ConsultationDialog(wx.Dialog):
         self.lower_limbs.SetMinSize((300, 70))
         self.other.SetMinSize((300, 70))
         self.important.SetMinSize((300, 70))
-        self.anamnesis.SetMinSize((300, 70))
+        self.diagnostic.SetMinSize((300, 70))
         self.treatment.SetMinSize((300, 70))
         self.remarks.SetMinSize((300, 70))
         self.payment.SetMinSize((300, -1))
@@ -901,8 +901,8 @@ class ConsultationDialog(wx.Dialog):
         left_sizer.Add(self.head_neck, 1, wx.EXPAND, 0)
         left_sizer.Add(wx.StaticText(self.panel_3, wx.ID_ANY, "Membres inférieurs"), 0, wx.EXPAND, 0)
         left_sizer.Add(self.lower_limbs, 1, wx.EXPAND, 0)
-        left_sizer.Add(wx.StaticText(self.panel_3, wx.ID_ANY, "Anamnèse ostéopathique"), 0, wx.EXPAND, 0)
-        left_sizer.Add(self.anamnesis, 1, wx.EXPAND, 0)
+        left_sizer.Add(wx.StaticText(self.panel_3, wx.ID_ANY, "Diagnostic"), 0, wx.EXPAND, 0)
+        left_sizer.Add(self.diagnostic, 1, wx.EXPAND, 0)
         left_sizer.Add(wx.StaticText(self.panel_3, wx.ID_ANY, "Date d'ouverture"), 0, wx.EXPAND, 0)
         left_sizer.Add(self.consultation_date, 0, wx.EXPAND, 0)
         cost_sizer = wx.FlexGridSizer(3, 2, 0, 0)
@@ -1026,7 +1026,7 @@ class ConsultationDialog(wx.Dialog):
         grid_sizer_9.Add(label_49, (10, 1), (1, 1), 0, 0)
         label_50 = wx.StaticText(self.panel_3, wx.ID_ANY, "Remarques")
         grid_sizer_9.Add(label_50, (10, 2), (1, 1), 0, 0)
-        grid_sizer_9.Add(self.anamnesis, (11, 0), (1, 1), wx.EXPAND, 0)
+        grid_sizer_9.Add(self.diagnostic, (11, 0), (1, 1), wx.EXPAND, 0)
         grid_sizer_9.Add(self.treatment, (11, 1), (1, 1), wx.EXPAND, 0)
         grid_sizer_9.Add(self.remarks, (11, 2), (1, 1), wx.EXPAND, 0)
         label_51 = wx.StaticText(self.panel_3, wx.ID_ANY, "Date d'ouverture")

@@ -124,8 +124,8 @@ def mandant(consult):
 
 
 def diagnostic(consult):
-    data = [["Diagnostic", "Text", ""]]
-    return Table(data, colWidths=[2*cm, 2.5*cm, '*'], rowHeights=[13] + [11]*(len(data)-1), style=BOXED_TSTYLE)
+    data = [["Diagnostic", consult.A_osteo.replace('\n', ' ')]]
+    return Table(data, colWidths=[2*cm, '*'], rowHeights=[13] + [11]*(len(data)-1), style=BOXED_TSTYLE)
 
 
 def therapy(consult):

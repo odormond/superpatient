@@ -941,7 +941,7 @@ class ConsultationDialog(DBMixin, CancelableMixin, core.ConsultationDialog):
         self.lower_limbs.Value = consult.APT_MI or ''
         self.other.Value = consult.APT_system or ''
         self.important.Value = self.patient.important or ''
-        self.anamnesis.Value = consult.A_osteo or ''
+        self.diagnostic.Value = consult.A_osteo or ''
         self.treatment.Value = consult.traitement or ''
         self.remarks.Value = consult.divers or ''
         self.consultation_date.Value = consult.date_consult.strftime(DATE_FMT)
@@ -973,7 +973,7 @@ class ConsultationDialog(DBMixin, CancelableMixin, core.ConsultationDialog):
         if self.readonly:
             for widget in (self.illness, self.accident, self.reason, self.general_state, self.paraclinic_exams,
                            self.medical_background, self.family_history, self.thorax, self.abdomen, self.physical_exam,
-                           self.head_neck, self.upper_limbs, self.lower_limbs, self.other, self.important, self.anamnesis,
+                           self.head_neck, self.upper_limbs, self.lower_limbs, self.other, self.important, self.diagnostic,
                            self.treatment, self.remarks, self.consultation_date, self.therapeute, self.payment, self.price,
                            self.markup, self.admin_cost, self.payment_method):
                 widget.Disable()
@@ -1018,7 +1018,7 @@ class ConsultationDialog(DBMixin, CancelableMixin, core.ConsultationDialog):
         consult.APT_MS = self.upper_limbs.Value.strip()
         consult.APT_MI = self.lower_limbs.Value.strip()
         consult.APT_system = self.other.Value.strip()
-        consult.A_osteo = self.anamnesis.Value.strip()
+        consult.A_osteo = self.diagnostic.Value.strip()
         consult.traitement = self.treatment.Value.strip()
         consult.therapeute = self.therapeute.StringSelection
         try:
