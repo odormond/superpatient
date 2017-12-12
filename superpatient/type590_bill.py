@@ -118,8 +118,9 @@ def patient(consult):
 
 
 def mandant(consult):
-    data = [["Mandataire", "GLN", "", "RCC", "", "Nom", ""]]
-    return Table(data, colWidths=[2*cm, 2.5*cm, 2.5*cm, 2.5*cm, 2.5*cm, '*'], rowHeights=[13] + [11]*(len(data)-1), style=BOXED_TSTYLE)
+    #data = [["Mandataire", "GLN", "", "RCC", "", "Nom", ""]]
+    data = [["Mandataire", ""]]
+    return Table(data, colWidths=[2*cm, '*'], rowHeights=[13] + [11]*(len(data)-1), style=BOXED_TSTYLE)
 
 
 def diagnostic(consult):
