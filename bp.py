@@ -775,6 +775,8 @@ class PatientDialog(DBMixin, CancelableMixin, core.PatientDialog):
                 widget.Disable()
 
     def highlight_missing_fields(self):
+        from dateutil import parse_date
+        birthdate = parse_date(self.birthdate.Value.strip())
         black = wx.Colour(0, 0, 0)
         red = wx.Colour(255, 0, 0)
         if any((self.female.Value, self.male.Value, self.child.Value)):
@@ -793,14 +795,16 @@ class PatientDialog(DBMixin, CancelableMixin, core.PatientDialog):
             self.therapeute_label.SetForegroundColour(black)
         else:
             self.therapeute_label.SetForegroundColour(red)
-        if self.birthdate.Value.strip():
+        if birthdate is not None:
             self.birthdate_label.SetForegroundColour(black)
         else:
             self.birthdate_label.SetForegroundColour(red)
 
     def is_patient_valid(self):
+        from dateutil import parse_date
         sex = 'Mme' if self.female.Value else 'Mr' if self.male.Value else 'Enfant' if self.child.Value else None
-        if not sex or not self.therapeute.StringSelection or not self.lastname.Value.strip() or not self.firstname.Value.strip():
+        birthdate = parse_date(self.birthdate.Value.strip())
+        if not sex or not self.therapeute.StringSelection or not self.lastname.Value.strip() or not self.firstname.Value.strip() or birthdate is None:
             self.highlight_missing_fields()
             showwarning(windows_title.invalid_error, errors_text.missing_data)
             return False
