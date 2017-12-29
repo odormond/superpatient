@@ -82,7 +82,7 @@ def migrate_consultations_to_bills(connection):
                                           comment text DEFAULT NULL
                                           )""")
     cursor.execute("""CREATE TABLE positions (id integer NOT NULL AUTO_INCREMENT UNIQUE, PRIMARY KEY (id),
-                                              id_bill integer NOT NULL, FOREIGN KEY (id_bill) REFERENCES bills(id),
+                                              id_bill integer NOT NULL, FOREIGN KEY (id_bill) REFERENCES bills(id) ON DELETE CASCADE,
                                               position_date date NOT NULL,
                                               tarif_code text NOT NULL,
                                               tarif_description text NOT NULL,
@@ -90,7 +90,7 @@ def migrate_consultations_to_bills(connection):
                                               price_cts integer NOT NULL
                                               )""")
     cursor.execute("""CREATE TABLE reminders (id integer NOT NULL AUTO_INCREMENT UNIQUE, PRIMARY KEY (id),
-                                              id_bill integer NOT NULL, FOREIGN KEY (id_bill) REFERENCES bills(id),
+                                              id_bill integer NOT NULL, FOREIGN KEY (id_bill) REFERENCES bills(id) ON DELETE CASCADE,
                                               reminder_date date NOT NULL,
                                               amount_cts integer NOT NULL,
                                               status varchar(2) NOT NULL

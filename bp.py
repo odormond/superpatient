@@ -551,9 +551,10 @@ class ManagePatientsDialog(DBMixin, CancelableMixin, core.ManagePatientsDialog):
                 return
             if askyesno(windows_title.delete, labels_text.suppr_def_1+u'\n'+str(sex+u" "+prenom+u" "+nom)+labels_text.suppr_def_2+date_naiss.strftime(DATE_FMT)+u'\n'+labels_text.suppr_def_3):
                 try:
-                    self.cursor.execute("DELETE FROM rappels WHERE id_consult IN (SELECT id_consult FROM consultations WHERE id=%s)", [id_patient])
-                    self.cursor.execute("DELETE FROM consultations WHERE id=%s", [id_patient])
-                    self.cursor.execute("DELETE FROM patients WHERE id=%s", [id_patient])
+                    self.cursor.execute("DELETE FROM rappels WHERE id_consult IN (SELECT id_consult FROM consultations WHERE id = %s)", [id_patient])
+                    self.cursor.execute("DELETE FROM bills WHERE id_patient = %s", [id_patient])
+                    self.cursor.execute("DELETE FROM consultations WHERE id = %s", [id_patient])
+                    self.cursor.execute("DELETE FROM patients WHERE id = %s", [id_patient])
                     showinfo(windows_title.done, labels_text.pat_sup_1+str(prenom+u" "+nom+u" ")+labels_text.pat_sup_2)
                 except:
                     traceback.print_exc()
@@ -632,6 +633,7 @@ class ManageConsultationsDialog(DBMixin, CancelableMixin, core.ManageConsultatio
             if askyesno(windows_title.delete, labels_text.sup_def_c):
                 try:
                     self.cursor.execute("DELETE FROM rappels WHERE id_consult=%s", [id_consult])
+                    self.cursor.execute("DELETE FROM bills WHERE id_consult = %s", [id_consult])
                     self.cursor.execute("DELETE FROM consultations WHERE id_consult=%s", [id_consult])
                     showinfo(windows_title.done, labels_text.cons_sup)
                 except:
