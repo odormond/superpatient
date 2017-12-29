@@ -24,6 +24,7 @@ import wx
 
 from . import db
 from .customization import PDF_DIR
+from .models import SEX_MALE
 from .ui.common import showerror, AboutDialog, LicenseDialog
 
 
@@ -154,3 +155,13 @@ def normalize_filename(filename):
         filename = filename.replace(char, '-')
     filename = filename.replace(' ', '_').replace('\t', '_')
     return os.path.join(PDF_DIR, filename)
+
+
+def gen_title(sex, birthdate):
+    today = datetime.date.today()
+    if today.year - birthdate.year < 18:
+        return "Aux parents de"
+    elif sex == SEX_MALE:
+        return "Monsieur"
+    else:
+        return "Madame"

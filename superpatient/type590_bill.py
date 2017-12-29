@@ -1,6 +1,3 @@
-import re
-import datetime
-
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, Spacer, PageBreak
 from reportlab.platypus.flowables import CallerMacro
 from reportlab.lib.styles import ParagraphStyle
@@ -8,12 +5,9 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import cm
 from reportlab.lib import colors
 
-if __name__ == '__main__':
-    from customization import DATE_FMT, labels_text
-    from custom_bill import draw_bvr
-else:
-    from .customization import DATE_FMT, labels_text
-    from .custom_bill import draw_bvr
+from . import gen_title
+from .customization import DATE_FMT, labels_text
+from .custom_bill import draw_bvr
 
 
 LEFT_MARGIN = 1.7*cm
@@ -49,167 +43,112 @@ TOTAL_TSTYLE = POSITION_TSTYLE + [('FONT', (0, -1), (-1, -1), TITLE_STYLE.fontNa
                                   ]
 
 
-def therapeute(consult):
-    header = consult.therapeute_header
-    name = header.splitlines()[0]
-    rcc = ([l.split(' ', 1)[1] for l in header.splitlines() if l.startswith('RCC')] or [''])[0]
+def therapeute(bill):
+    name = bill.author_firstname + ' ' + bill.author_lastname
     pog, address, zip_city, web, phone = labels_text.adresse_pog.splitlines()
     data = [
-        ["Document", "{} {} {}".format(consult.id_consult, consult.date_consult, consult.heure_consult or '')],
+        ["Document", "{} {}".format(bill.id, bill.timestamp)],
         ["Auteur\nfacture", "N° GLN", "", name, web],
-        ["", "N° RCC", rcc, address, zip_city, "Tél: " + phone],
+        ["", "N° RCC", bill.author_rcc, address, zip_city, "Tél: " + phone],
         ["Four. de\nprestations", "N° GLN", "", name, web],
-        ["", "N° RCC", rcc, address, zip_city, "Tél: " + phone],
+        ["", "N° RCC", bill.author_rcc, address, zip_city, "Tél: " + phone],
     ]
     return Table(data, colWidths=[2*cm, 1.5*cm, '*'], rowHeights=[13] + [11]*(len(data)-1), style=THERAPEUTE_TSTYLE)
 
 
-ADDRESS_RE = re.compile(r'(.*)\b(\d{4})\s+(.*)', re.MULTILINE)
-
-
-def patient(consult):
-    patient = consult.patient
-    sex = {"Mme": "F", "Mr": "M", "Enfant": ""}[patient.sex]
-    titre = {'Mr': 'Monsieur', 'Mme': 'Madame', 'Enfant': 'Aux parents de'}[patient.sex]
-    address = patient.adresse.strip()
-    m = ADDRESS_RE.match(address)
-    if m:
-        street = m.group(1)
-        ZIP = m.group(2)
-        city = m.group(3)
-    else:
-        words = address.split()
-        street = ' '.join(words[:-2])
-        if words[-2:]:
-            ZIP = words[-2]
-            city = words[-1]
-        else:
-            ZIP = city = ''
+def patient(bill):
+    titre = gen_title(bill.sex, bill.birthdate)
     data = [
-        ["Patient:", "Nom", patient.nom, "{}\n{} {}\n{}".format(titre, patient.prenom, patient.nom, patient.adresse)],
-        ["", "Prénom", patient.prenom],
-        ["", "Rue", street],
-        ["", "NPA", ZIP],
-        ["", "Localité", city],
-        ["", "Date de naissance", patient.date_naiss.strftime(DATE_FMT)],
+        ["Patient:", "Nom", bill.lastname, "{}\n{} {}\n{}\n{} {}".format(titre, bill.firstname, bill.lastname, bill.street, bill.zip, bill.city)],
+        ["", "Prénom", bill.firstname],
+        ["", "Rue", bill.street],
+        ["", "NPA", bill.zip],
+        ["", "Localité", bill.city],
+        ["", "Date de naissance", bill.birthdate.strftime(DATE_FMT)],
         ["", "Loi", "LCA"],
-        ["", "Sexe", sex],
+        ["", "Sexe", bill.sex],
         ["", "Date cas", ""],
-        ["", "N° patient", consult.id],
+        ["", "N° patient", bill.id_patient],
         ["", "N° AVS", ""],
         ["", "N° CADA", ""],
         ["", "N° assuré", ""],
-        ["", "Canton", "VD"],
-        ["", "Copie", "Non", "Date/N° GaPrCh"],
+        ["", "Canton", bill.canton],
+        ["", "Copie", "Oui" if bill.copy else "Non", "Date/N° GaPrCh"],
         ["", "Type de remb.", "TG", "Date/N° de facture"],
         ["", "N° contrat", "", "Date/N° de rappel"],
-        ["", "Traitement", consult.date_consult.strftime(DATE_FMT), "Motif traitement", "Accident" if consult.MC_accident else "Maladie"],
+        ["", "Traitement", bill.treatment_period, "Motif traitement", bill.treatment_reason],
         ["", "N°/Nom entreprise", "Permanence ostéopathique de la Gare (POG) Sàrl"],
-        ["", "Rôle/Localité", "Ostéopathie / Lausanne"],
-
+        ["", "Rôle/Localité", labels_text.bill_role_locality],
     ]
     return Table(data, colWidths=[2*cm, 2.5*cm, 6.5*cm, '*'], rowHeights=[13] + [11]*(len(data)-1), style=PATIENT_TSTYLE)
 
 
-def mandant(consult):
+def mandant(bill):
     #data = [["Mandataire", "GLN", "", "RCC", "", "Nom", ""]]
-    data = [["Mandataire", ""]]
+    data = [["Mandataire", bill.mandant]]
     return Table(data, colWidths=[2*cm, '*'], rowHeights=[13] + [11]*(len(data)-1), style=BOXED_TSTYLE)
 
 
-def diagnostic(consult):
-    data = [["Diagnostic", consult.A_osteo.replace('\n', ' ')]]
+def diagnostic(bill):
+    data = [["Diagnostic", bill.diagnostic.replace('\n', ' ')]]
     return Table(data, colWidths=[2*cm, '*'], rowHeights=[13] + [11]*(len(data)-1), style=BOXED_TSTYLE)
 
 
-def therapy(consult):
+def therapy(bill):
     data = [["Thérapie", "Thérapie individuelle", "Valeur du point (VPt)", "1.0", "TVA", "Oui"]]
     return Table(data, colWidths=[2*cm, '*', '*', 1*cm, 1*cm, 1.5*cm], rowHeights=[13] + [11]*(len(data)-1), style=BOXED_TSTYLE)
 
 
-def comment(consult):
-    data = [["Commentaire", ""]]
+def comment(bill):
+    data = [["Commentaire", bill.comment]]
     return Table(data, colWidths=[2*cm, '*'], rowHeights=[13] + [11]*(len(data)-1), style=BOXED_TSTYLE)
 
 
-def positions(consult):
+def positions(bill):
     VAT = "8.0%"
     data = [["Date", "Tarif", "Code tarifaire", "Quan.", "Prix", "VPt", "TVA", "Montant"]]
-    positions = []
-    if consult.paye_par == "PVPE":
-        positions.append((1250, "Consultation manquée", consult.prix_cts, 1))
-    else:
-        durations = list(map(int, re.findall(r'\d+', consult.prix_txt)))
-        duration = max(durations) if durations else 0
-        count = duration // 5
-        unit_cts = consult.prix_cts / count if count else 0
-        positions.append((1203, "Ostéopathie, par période de 5 minutes", unit_cts, count))
-    if consult.majoration_cts:
-        positions.append((1251, "Supplément pour consultations de nuit et dimanches et jours fériés", consult.majoration_cts, 1))
-    if consult.frais_admin_cts:
-        positions.append((999, consult.frais_admin_txt, consult.frais_admin_cts, 1))
-
-    for code, title, unit_cts, count in positions:
-        data += [[consult.date_consult.strftime(DATE_FMT), 590, code, count, '%0.2f' % (unit_cts / 100), 1.0, VAT, '%0.2f' % (count * unit_cts / 100)],
-                 ["", "", title]]
+    for position in bill.positions:
+        data += [[position.position_date.strftime(DATE_FMT), 590, position.tarif_code, position.quantity, '%0.2f' % (position.price_cts / 100), 1.0, VAT, '%0.2f' % (position.quantity * position.price_cts / 100)],
+                 ["", "", position.tarif_description]]
     tstyle = (POSITION_TSTYLE +
               [('FONT', (0, row), (-1, row), TITLE_STYLE.fontName, 6) for row in range(2, len(data), 2)] +
               [('SPAN', (2, row), (-1, row)) for row in range(2, len(data), 2)])
-    total = [["", "", "", "", "Montant dû", "", "", '%0.2f' % ((consult.prix_cts + (consult.majoration_cts or 0) + (consult.frais_admin_cts or 0)) / 100)]]
+    total = [["", "", "", "", "Montant dû", "", "", '%0.2f' % (bill.total_cts / 100)]]
     return [Table(data, colWidths=[2*cm, 1*cm, '*', 1*cm, 1*cm, 1*cm, 1*cm, 1.5*cm], style=tstyle),
             Spacer(0, 1*cm),
             Table(total, colWidths=[2*cm, 1*cm, '*', 1*cm, 1*cm, 1*cm, 1*cm, 1.5*cm], style=TOTAL_TSTYLE),
             ]
 
 
-def consultations(filename, cursor, consultations):
+def consultations(filename, cursor, bills):
     doc = SimpleDocTemplate(filename, pagesize=A4, leftMargin=LEFT_MARGIN, topMargin=TOP_MARGIN, rightMargin=RIGHT_MARGIN, bottomMargin=BOTTOM_MARGIN)
     story = []
-    consultations = consultations[:]
-    while consultations:
-        consult = consultations.pop()
+    bills = bills[:]
+    while bills:
+        bill = bills.pop()
         story += [Paragraph("Facture", TITLE_STYLE),
-                  therapeute(consult),
-                  patient(consult),
-                  mandant(consult),
-                  diagnostic(consult),
-                  therapy(consult),
-                  comment(consult),
+                  therapeute(bill),
+                  patient(bill),
+                  mandant(bill),
+                  diagnostic(bill),
+                  therapy(bill),
+                  comment(bill),
                   ]
-        story += positions(consult)
-        if consult.paye_par in ('BVR', 'PVPE'):
-            if len(' '.join((consult.patient.prenom, consult.patient.nom))) < 25:
-                identite = [' '.join((consult.patient.prenom, consult.patient.nom))]
+        story += positions(bill)
+        if bill.payment_method in ('BVR', 'PVPE'):
+            if len(' '.join((bill.firstname, bill.lastname))) < 25:
+                identite = [' '.join((bill.firstname, bill.lastname))]
             else:
-                identite = [consult.patient.prenom, consult.patient.nom]
-            address_patient = '\n'.join(identite + [consult.patient.adresse])
+                identite = [bill.firstname, bill.lastname]
+            address_patient = '\n'.join(identite + [bill.street, bill.zip + ' ' + bill.city])
 
             def render_bvr(flowable):
                 canvas = flowable.canv
                 x = flowable._frame._x + flowable._frame._leftExtraIndent
                 y = flowable._frame._y
                 canvas.translate(-x, -y)
-                draw_bvr(canvas, consult.prix_cts+consult.majoration_cts+consult.frais_admin_cts, address_patient, consult.bv_ref)
+                draw_bvr(canvas, bill.total_cts, address_patient, bill.bv_ref)
             story += [CallerMacro(render_bvr)]
-        if consult:
+        if bills:
             story.append(PageBreak())
     doc.build(story)
-
-
-if __name__ == '__main__':
-    import MySQLdb
-    import sys
-    import db
-    from models import Patient, Consultation
-    db = MySQLdb.connect(host=db.SERVER, user=db.USERNAME, passwd=db.PASSWORD, db=db.DATABASE, charset='latin1')
-    cursor = db.cursor()
-    test_patient = Patient.load(cursor, 1000)
-    cursor.execute("""SELECT entete FROM therapeutes WHERE therapeute = %s""", [test_patient.therapeute])
-    therapeute_header, = cursor.fetchone()
-    print(test_patient.__dict__)
-    print(therapeute_header)
-    c0 = Consultation(id=1000, patient=test_patient, therapeute=test_patient.therapeute, therapeute_header=therapeute_header, date_consult=datetime.date.today(), prix_cts=8000, prix_txt="20 minutes", paye_par='Cash', bv_ref='012345678901234567890123458', frais_admin_cts=500, frais_admin_txt="BV")
-    c1 = Consultation(id=1000, patient=test_patient, therapeute=test_patient.therapeute, therapeute_header=therapeute_header, date_consult=datetime.date.today(), prix_cts=10000, prix_txt="30 minutes", paye_par='BVR', bv_ref='012345678901234567890123458', majoration_cts=0, rappel_cts=0)
-    c2 = Consultation(id=1000, patient=test_patient, therapeute=test_patient.therapeute, therapeute_header=therapeute_header, date_consult=datetime.date.today(), prix_cts=11000, prix_txt="40 minutes", paye_par='PVPE', bv_ref='012345678901234567890123458', majoration_cts=0, rappel_cts=300)
-    c3 = Consultation(id=1000, patient=test_patient, therapeute=test_patient.therapeute, therapeute_header=therapeute_header, date_consult=datetime.date.today(), prix_cts=12000, prix_txt="50 minutes", paye_par='Carte', majoration_cts=300, rappel_cts=0)
-    consultations(sys.argv[1], cursor, [c0, c1, c2, c3])

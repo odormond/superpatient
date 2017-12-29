@@ -22,7 +22,7 @@ from pathlib import Path
 PDF_DIR = str(Path(__file__).parents[1] / 'factures')
 
 BILL_TYPE = '590'
-DATE_FMT = u"%d.%m.%Y"
+DATE_FMT = "%d.%m.%Y"
 
 DEFAULT_LABEL_SIZE = 9
 DEFAULT_ENTRY_SIZE = 10
@@ -57,67 +57,68 @@ class Config(object):
 class BVR(Config):
     CCP = u'01-145-6'
     prefix = 272335
-    versement_pour = u"UBS Switzerland\n8098 Zurich"
-    en_faveur_de = u"Permanence ostéopathique\nde la Gare (POG) Sàrl\nPl. de la Gare 10\n1003 Lausanne"
+    versement_pour = "UBS Switzerland\n8098 Zurich"
+    en_faveur_de = "Permanence ostéopathique\nde la Gare (POG) Sàrl\nPl. de la Gare 10\n1003 Lausanne"
 
 
 bvr = BVR()
 
 
 class WindowsTitle(Config):
-    patient = u"Fiche patient"
-    new_patient = u"Nouveau patient"
-    show_change_patient = u"Voir ou modifier la fiche d'un patient"
-    show_change_consult = u"Voir ou modifier les consultations d'un patient"
-    delete_patient = u"Base de patients - Suppression de données"
-    patients_db = u"Base de patients"
-    consultation = u"Consultation du %s - %s %s"
-    new_consultation = u"Nouvelle consultation - %s %s"
-    show_consultation = u"Afficher une consultation de %s %s"
-    delete_consultation = u"Supprimer une consultation de %s %s"
-    apropos = u"À propos"
-    licence = u"Conditions d'utilisation"
-    application = u"SuperPatient"
-    db_error = u"Problème avec la base de donnée"
-    missing_error = u"Information manquante"
-    invalid_error = u"Information invalide"
-    delete = u"Suppression"
-    done = u"Fait"
-    cons_pat = u"Consultation patient"
-    manage_colleagues = u"Gérer les collaborateurs"
-    manage_tarifs = u"Gérer les tarifs"
-    manage_majorations = u"Gérer les majorations"
-    manage_frais_admins = u"Gérer les frais administratifs"
-    manage_addresses = u"Gérer les adresses"
-    compta = u"Gestion comptable"
-    encaissement = u"Vérification/Confirmation finale de paiement"
-    really_cancel = u"Confirmation d'annulation"
-    summaries_import = u"Résumé de l'import"
-    compta_statistics = u"Statistiques"
-    manage_reminders = u"Gérer les rappels"
-    print_completed = u"Impression effectuée ?"
-    confirm_change = u"Confirmer le changement"
+    patient = "Fiche patient"
+    new_patient = "Nouveau patient"
+    show_change_patient = "Voir ou modifier la fiche d'un patient"
+    show_change_consult = "Voir ou modifier les consultations d'un patient"
+    delete_patient = "Base de patients - Suppression de données"
+    patients_db = "Base de patients"
+    consultation = "Consultation du %s - %s %s"
+    new_consultation = "Nouvelle consultation - %s %s"
+    show_consultation = "Afficher une consultation de %s %s"
+    delete_consultation = "Supprimer une consultation de %s %s"
+    apropos = "À propos"
+    licence = "Conditions d'utilisation"
+    application = "SuperPatient"
+    db_error = "Problème avec la base de donnée"
+    missing_error = "Information manquante"
+    invalid_error = "Information invalide"
+    delete = "Suppression"
+    done = "Fait"
+    cons_pat = "Consultation patient"
+    manage_colleagues = "Gérer les collaborateurs"
+    manage_tarifs = "Gérer les tarifs"
+    manage_majorations = "Gérer les majorations"
+    manage_frais_admins = "Gérer les frais administratifs"
+    manage_addresses = "Gérer les adresses"
+    compta = "Gestion comptable"
+    encaissement = "Vérification/Confirmation finale de paiement"
+    really_cancel = "Confirmation d'annulation"
+    summaries_import = "Résumé de l'import"
+    compta_statistics = "Statistiques"
+    manage_reminders = "Gérer les rappels"
+    print_completed = "Impression effectuée ?"
+    confirm_change = "Confirmer le changement"
 
 
 windows_title = WindowsTitle()
 
 
 class ErrorsText(Config):
-    db_id = u"Impossible d'attribuer un ID !"
-    db_read = u"Impossible de lire les données !"
-    db_update = u"Modification impossible !"
-    db_insert = u"Insertion impossible !"
-    db_delete = u"Suppression impossible !"
-    db_search = u"Recherche impossible !"
-    db_show = u"Affichage impossible !"
-    missing_therapeute = u"Veuillez préciser le thérapeute ayant pris en charge le patient"
-    missing_payment_info = u"Veuillez préciser le prix et le moyen de payement"
-    missing_data = u"Veuillez compléter les champs en rouge"
-    invalid_date = u"Veuillez vérifier le format des champs date"
-    invalid_tarif = u"Tarif invalide"
-    invalid_majoration = u"Majoration invalide"
-    invalid_frais_admin = u"Frais administratif invalide"
-    invalid_amount = u"Montant invalide"
+    db_id = "Impossible d'attribuer un ID !"
+    db_read = "Impossible de lire les données !"
+    db_update = "Modification impossible !"
+    db_insert = "Insertion impossible !"
+    db_delete = "Suppression impossible !"
+    db_search = "Recherche impossible !"
+    db_show = "Affichage impossible !"
+    missing_therapeute = "Veuillez préciser le thérapeute ayant pris en charge le patient"
+    missing_payment_info = "Veuillez préciser le prix et le moyen de payement"
+    missing_positions = "Veuillez ajouter au moins une position à la facture"
+    missing_data = "Veuillez compléter les champs en rouge"
+    invalid_date = "Veuillez vérifier le format des champs date"
+    invalid_tarif = "Tarif invalide"
+    invalid_majoration = "Majoration invalide"
+    invalid_frais_admin = "Frais administratif invalide"
+    invalid_amount = "Montant invalide"
 
 
 errors_text = ErrorsText()
@@ -125,63 +126,63 @@ errors_text = ErrorsText()
 
 # des espaces étaient présent aux deux bouts pour avoir du padding
 class ButtonsText(Config):
-    ok = u"OK"  # B10
-    ok_new_consult = u"OK, ouvrir une nouvelle consultation"  # B1
-    save_close = u"Enregistrer et fermer"  # B2
-    cancel = u"Annuler"  # B3
-    reprint = u"Réimprimmer"
-    search = u"Rechercher"  # B7
-    add = u"Ajouter"
-    change = u"Modifier"  # B11
-    delete = u"Supprimer"
-    show_patient = u"Afficher la fiche patient"  # B8
-    change_patient = u"Modifier la fiche patient"  # B9
-    new_consult = u"Nouvelle consultation pour ce patient"  # B12
-    show_all_consult = u"Afficher toutes les consultations"  # B13
-    show_consults = u"Afficher les consultations du patient"  # B14
-    change_consult = u"Modifier la consultation"  # B15
-    delete_patient = u"Supprimer le patient et toutes ses consultations"  # B16
-    delete_consult = u"Supprimer cette consultation"  # B17
-    show_consult = u"Afficher la consultation"  # B18
-    new_patient = u"Nouveau patient"  # B25
-    show_or_change_patient = u"Voir ou modifier une fiche patient"  # B26
-    new_consult_known_patient = u"Nouvelle consultation (patient existant)"  # B27
-    show_or_change_consult = u"Voir ou modifier une consultation"  # B28
-    done = u"Terminé"
-    mark_paye = u"Marquer payé"
-    mark_printed = u"Marquer imprimé"
-    mark_mailed = u"Marquer envoyé"
-    mark_abandoned = u"Marquer Abandonné"
-    change_pay_method_and_print = u"Changer moyen de paiement et imprimer"
-    valider_import = u"Valider l'import"
-    details = u"Détails"
-    output_reminders = u"Générer les rappels"
-    refresh = u"Rafraichir"
-    validate = u"Valider"
+    ok = "OK"  # B10
+    ok_new_consult = "OK, ouvrir une nouvelle consultation"  # B1
+    save_close = "Enregistrer et fermer"  # B2
+    cancel = "Annuler"  # B3
+    reprint = "Réimprimmer"
+    search = "Rechercher"  # B7
+    add = "Ajouter"
+    change = "Modifier"  # B11
+    delete = "Supprimer"
+    show_patient = "Afficher la fiche patient"  # B8
+    change_patient = "Modifier la fiche patient"  # B9
+    new_consult = "Nouvelle consultation pour ce patient"  # B12
+    show_all_consult = "Afficher toutes les consultations"  # B13
+    show_consults = "Afficher les consultations du patient"  # B14
+    change_consult = "Modifier la consultation"  # B15
+    delete_patient = "Supprimer le patient et toutes ses consultations"  # B16
+    delete_consult = "Supprimer cette consultation"  # B17
+    show_consult = "Afficher la consultation"  # B18
+    new_patient = "Nouveau patient"  # B25
+    show_or_change_patient = "Voir ou modifier une fiche patient"  # B26
+    new_consult_known_patient = "Nouvelle consultation (patient existant)"  # B27
+    show_or_change_consult = "Voir ou modifier une consultation"  # B28
+    done = "Terminé"
+    mark_paye = "Marquer payé"
+    mark_printed = "Marquer imprimé"
+    mark_mailed = "Marquer envoyé"
+    mark_abandoned = "Marquer Abandonné"
+    change_pay_method_and_print = "Changer moyen de paiement et imprimer"
+    valider_import = "Valider l'import"
+    details = "Détails"
+    output_reminders = "Générer les rappels"
+    refresh = "Rafraichir"
+    validate = "Valider"
 
 
 buttons_text = ButtonsText()
 
 
 class MenusText(Config):
-    manage_colleagues = u"Gestion des collaborateurs"
-    manage_tarifs = u"Gestion des tarifs"
-    manage_majorations = u"Gestion des majorations"
-    manage_frais_admins = u"Gestion des frais administratifs"
-    manage_addresses = u"Gestion des adresses"
-    manual_bill = u"Facture manuelle"
-    delete_data = u"Supprimer des données"
-    save_db = u"Sauvegarder la base de données"
-    restore_db = u"Restaurer la base de données"
-    about = u"À propos"
-    licence = u"Conditions d'utilisation"
-    admin = u"Administration"
-    help = u"Aide"
-    bvr = u"BVRs"
-    payments = u"Paiements"
-    import_bvr = u"Importer les paiements"
-    manage_reminders = u"Gestion des rappels"
-    show_stats = u"Statistiques"
+    manage_colleagues = "Gestion des collaborateurs"
+    manage_tarifs = "Gestion des tarifs"
+    manage_majorations = "Gestion des majorations"
+    manage_frais_admins = "Gestion des frais administratifs"
+    manage_addresses = "Gestion des adresses"
+    manual_bill = "Facture manuelle"
+    delete_data = "Supprimer des données"
+    save_db = "Sauvegarder la base de données"
+    restore_db = "Restaurer la base de données"
+    about = "À propos"
+    licence = "Conditions d'utilisation"
+    admin = "Administration"
+    help = "Aide"
+    bvr = "BVRs"
+    payments = "Paiements"
+    import_bvr = "Importer les paiements"
+    manage_reminders = "Gestion des rappels"
+    show_stats = "Statistiques"
 
 
 menus_text = MenusText()
@@ -189,88 +190,88 @@ menus_text = MenusText()
 
 class LabelsText(Config):
     # Données concernant la fiche du patient
-    id = u"ID patient"
-    sexe = u"Sexe"
-    therapeute = u"Thérapeute"
-    login = u"Login"
-    nom = u"Nom"
-    prenom = u"Prénom"
-    naissance_le = u"Naissance le"
-    naissance = u"Naissance"
-    date_ouverture = u"Date d'ouverture"
-    tel_fix = u"Téléphone fixe"
-    medecin = u"Médecin traitant"
-    portable = u"Portable"
-    tel_prof = u"Téléphone professionnel"
-    mail = u"Courriel"
-    adr_priv = u"Adresse privée"
-    medecinS = u"Autres médecins"
-    ass_comp = u"Assurance complémentaire"
-    profes = u"Profession"
-    etat = u"État civil"
-    envoye = u"Envoyé par"
-    remarques = u"Remarques"
+    id = "ID patient"
+    sexe = "Sexe"
+    therapeute = "Thérapeute"
+    login = "Login"
+    nom = "Nom"
+    prenom = "Prénom"
+    naissance_le = "Naissance le"
+    naissance = "Naissance"
+    date_ouverture = "Date d'ouverture"
+    tel_fix = "Téléphone fixe"
+    medecin = "Médecin traitant"
+    portable = "Portable"
+    tel_prof = "Téléphone professionnel"
+    mail = "Courriel"
+    adr_priv = "Adresse privée"
+    medecinS = "Autres médecins"
+    ass_comp = "Assurance complémentaire"
+    profes = "Profession"
+    etat = "État civil"
+    envoye = "Envoyé par"
+    remarques = "Remarques"
     # Données concernant les consultations
-    mc = u"Motif(s) de consultation"
-    eg = u"État général"
-    expc = u"Examens paracliniques"
-    atcdp = u"Antécédents personnels"
-    atcdf = u"Antécédents familiaux"
-    thorax = u"Thorax"
-    abdomen = u"Abdomen"
-    tete = u"Tête et cou"
-    ms = u"Membres supérieurs"
-    mi = u"Membres inférieurs"
-    gen = u"Neuro, vascul, dermato, endocrino, lymph"
-    a_osteo = u"Anamnèse ostéopathique"
-    exph = u"Examen physique"
-    ttt = u"Traitement"
-    important = u"Important"
-    paye = u"Paye ?"
-    ttes_cons = u"Toutes les consultations du patient"
-    seance = u"Durée / Prix"
-    majoration = u"Majoré"
-    paye_par = u"Moyen de payement"
-    paye_le = u"Payement reçu le"
-    date_consult = u"Consultation du "
-    maladie = u"Maladie"
-    accident = u"Accident"
+    mc = "Motif(s) de consultation"
+    eg = "État général"
+    expc = "Examens paracliniques"
+    atcdp = "Antécédents personnels"
+    atcdf = "Antécédents familiaux"
+    thorax = "Thorax"
+    abdomen = "Abdomen"
+    tete = "Tête et cou"
+    ms = "Membres supérieurs"
+    mi = "Membres inférieurs"
+    gen = "Neuro, vascul, dermato, endocrino, lymph"
+    a_osteo = "Anamnèse ostéopathique"
+    exph = "Examen physique"
+    ttt = "Traitement"
+    important = "Important"
+    paye = "Paye ?"
+    ttes_cons = "Toutes les consultations du patient"
+    seance = "Durée / Prix"
+    majoration = "Majoré"
+    paye_par = "Moyen de payement"
+    paye_le = "Payement reçu le"
+    date_consult = "Consultation du "
+    maladie = "Maladie"
+    accident = "Accident"
     # Divers
-    suppr_def_1 = u"Supprimer définitivement"
-    suppr_def_2 = u", né(e) le "
-    suppr_def_3 = u"ainsi que toutes ses consultations ?"
-    pat_sup_1 = u"Patient(e) "
-    pat_sup_2 = u" supprimé(e) de la base"
-    sup_def_c = u"Supprimer définitivement cette consultation ?"
-    cons_sup = u"Consultation supprimée de la base"
-    collabos = u"Collaborateurs"
-    entete = u"Entête d'adresse"
-    tarifs = u"Tarifs"
-    tarif = u"Tarif"
-    majorations = u"Majorations"
-    majoration = u"Majoration"
-    frais_admins = u"Frais administratifs"
-    frais_admin = u"Frais administratif"
-    prix = u"Prix"
-    description = u"Description"
-    date_du = u"Consultations dès le"
-    date_au = u"Consultations jusqu'au"
-    etat_payement = u"État du payement"
-    status_facture = u"Status de la facture"
-    count = u"# entrées"
-    total_consultation = u"Total consultation"
-    total_majoration = u"Total majoration"
-    total_frais_admin = u"Total frais administratif"
-    total_rappel = u"Total frais de rappel"
-    total = u"Total"
-    addresses = u"Adresses"
-    address = u"Adresse"
-    identifiant = u"Identifiant"
-    consult_upto = u"Consultations ou rappel jusqu'au"
-    ask_confirm_print_bvr = u"Avez-vous imprimé le BVR ?"
-    ask_confirm_payment_method_change_to_BVR = u"Voulez-vous vraiment changer la méthode de paiement vers BVR ?"
+    suppr_def_1 = "Supprimer définitivement"
+    suppr_def_2 = ", né(e) le "
+    suppr_def_3 = "ainsi que toutes ses consultations ?"
+    pat_sup_1 = "Patient(e) "
+    pat_sup_2 = " supprimé(e) de la base"
+    sup_def_c = "Supprimer définitivement cette consultation ?"
+    cons_sup = "Consultation supprimée de la base"
+    collabos = "Collaborateurs"
+    entete = "Entête d'adresse"
+    tarifs = "Tarifs"
+    tarif = "Tarif"
+    majorations = "Majorations"
+    majoration = "Majoration"
+    frais_admins = "Frais administratifs"
+    frais_admin = "Frais administratif"
+    prix = "Prix"
+    description = "Description"
+    date_du = "Consultations dès le"
+    date_au = "Consultations jusqu'au"
+    etat_payement = "État du payement"
+    status_facture = "Status de la facture"
+    count = "# entrées"
+    total_consultation = "Total consultation"
+    total_majoration = "Total majoration"
+    total_frais_admin = "Total frais administratif"
+    total_rappel = "Total frais de rappel"
+    total = "Total"
+    addresses = "Adresses"
+    address = "Adresse"
+    identifiant = "Identifiant"
+    consult_upto = "Consultations ou rappel jusqu'au"
+    ask_confirm_print_bvr = "Avez-vous imprimé le BVR ?"
+    ask_confirm_payment_method_change_to_BVR = "Voulez-vous vraiment changer la méthode de paiement vers BVR ?"
     # Info sur l'application
-    apropos_description = u"""SuperPatient ver. 3.0 est un gestionnaire de patients,
+    apropos_description = """SuperPatient ver. 3.0 est un gestionnaire de patients,
 de consultations, et de facturation.
 
 Il a été créé en 2006 pour satisfaire aux besoins
@@ -282,7 +283,7 @@ Pour tout autre renseignement, veuillez écrire à
 
 Tibor Csernay
 csernay@pog.swiss"""
-    licence_description = u"""POG Sàrl - Copyright 2006-2017 - www.pog.swiss
+    licence_description = """POG Sàrl - Copyright 2006-2017 - www.pog.swiss
 
 SuperPatient is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -297,13 +298,16 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with SuperPatient; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA"""
-    adresse_pog = u"""Permanence Ostéopathique de la Gare
+    adresse_pog = """Permanence Ostéopathique de la Gare
 Pl. de la gare 10
 1003 Lausanne
 www.pog.swiss
 021 510 50 50"""
-    really_cancel = u"""Voulez-vous vraiment annuler ?
+    really_cancel = """Voulez-vous vraiment annuler ?
 Les données de cette consultation ne seront pas enregistrées."""
+    bill_really_cancel = """Voulez-vous vraiment annuler ?
+Aucune facture ne sera émise !"""
+    bill_role_locality = "Ostéopathie / Lausanne"
 
 
 labels_text = LabelsText()

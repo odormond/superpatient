@@ -30,13 +30,17 @@ from collections import OrderedDict
 import wx
 
 from superpatient import BaseApp, DBMixin, HelpMenuMixin, CancelableMixin
-from superpatient import bills, normalize_filename
+from superpatient import bills, normalize_filename, gen_title
 from superpatient.bvr import gen_bvr_ref
 import superpatient.customization as custo
 from superpatient.customization import windows_title, errors_text, labels_text, DATE_FMT
-from superpatient.models import Patient, Consultation, PAYMENT_METHODS, STATUS_OPENED, STATUS_PAYED, STATUS_PRINTED, STATUS_ABANDONED
+from superpatient.models import (Patient, Consultation, Bill, Position,
+                                 STATUS_OPENED, STATUS_PAYED, STATUS_PRINTED,
+                                 SEX_ALL, SEX_FEMALE, SEX_MALE,
+                                 BILL_TYPE_CONSULTATION,
+                                 DEFAULT_CANTON, CANTONS)
 from superpatient.ui.common import askyesno, showinfo, showwarning
-from superpatient.ui import core
+from superpatient.ui import core, bill
 
 
 class MainFrame(DBMixin, HelpMenuMixin, core.MainFrame):
@@ -54,14 +58,8 @@ class MainFrame(DBMixin, HelpMenuMixin, core.MainFrame):
     def on_manage_collaborators(self, event):
         ManageCollaboratorsDialog(self).ShowModal()
 
-    def on_manage_tariffs(self, event):
+    def on_manage_tarifs(self, event):
         ManageCostsDialog(self, 'tarifs').ShowModal()
-
-    def on_manage_majorations(self, event):
-        ManageCostsDialog(self, 'majorations').ShowModal()
-
-    def on_manage_admin_costs(self, event):
-        ManageCostsDialog(self, 'frais_admins').ShowModal()
 
     def on_manual_bill(self, event):
         ManualBillDialog(self).ShowModal()
@@ -278,7 +276,7 @@ class ManageCostsDialog(DBMixin, CancelableMixin, core.ManageCostsDialog):
         self.table = table
         self.SetTitle(getattr(windows_title, 'manage_'+self.table))
         try:
-            self.cursor.execute("""SELECT description, prix_cts FROM %s""" % self.table)
+            self.cursor.execute("""SELECT code, description, unit_price_cts FROM %s""" % self.table)
             self.costs = list(self.cursor)
         except:
             traceback.print_exc()
@@ -290,10 +288,10 @@ class ManageCostsDialog(DBMixin, CancelableMixin, core.ManageCostsDialog):
 
     def populate(self):
         self.costs_list.DeleteAllItems()
-        for description, prix_cts in self.costs:
-            self.costs_list.Append((description, '%7.2f' % (prix_cts/100.)))
+        for code, description, unit_price_cts in self.costs:
+            self.costs_list.Append((code, description or '', '%7.2f' % (unit_price_cts/100.) if unit_price_cts is not None else ''))
         for c in range(self.costs_list.ColumnCount):
-            self.costs_list.SetColumnWidth(c, wx.LIST_AUTOSIZE)
+            self.costs_list.SetColumnWidth(c, wx.LIST_AUTOSIZE if c == 1 else wx.LIST_AUTOSIZE_USEHEADER)
         self.on_deselect_cost(None)
         self.Layout()
         self.Fit()
@@ -301,8 +299,9 @@ class ManageCostsDialog(DBMixin, CancelableMixin, core.ManageCostsDialog):
     def on_deselect_cost(self, event):
         self.prev_index = self.index
         self.index = None
-        self.price.Value = ''
+        self.code.Value = ''
         self.description.Value = ''
+        self.price.Value = ''
         self.add_btn.Show()
         self.change_btn.Hide()
         self.remove_btn.Disable()
@@ -310,13 +309,15 @@ class ManageCostsDialog(DBMixin, CancelableMixin, core.ManageCostsDialog):
 
     def on_select_cost(self, event):
         selected = self.costs_list.GetFirstSelected()
-        self.price.Value = ''
+        self.code.Value = ''
         self.description.Value = ''
+        self.price.Value = ''
         if selected != self.prev_index:
             self.index = selected
-            description, prix_cts = self.costs[self.index]
-            self.description.Value = description
-            self.price.Value = '%0.2f' % (prix_cts/100.)
+            code, description, unit_price_cts = self.costs[self.index]
+            self.code.Value = code
+            self.description.Value = description or ''
+            self.price.Value = '%0.2f' % (unit_price_cts/100.) if unit_price_cts is not None else ''
             self.add_btn.Hide()
             self.change_btn.Show()
             self.remove_btn.Enable()
@@ -324,19 +325,28 @@ class ManageCostsDialog(DBMixin, CancelableMixin, core.ManageCostsDialog):
         else:
             self.costs_list.Select(selected, False)
 
+    def _get_values(self):
+        code = self.code.Value.strip()
+        description = self.description.Value.strip() or None
+        unit_price_cts = self.price.Value.strip() or None
+        if unit_price_cts is not None:
+            try:
+                unit_price_cts = int(float(unit_price_cts) * 100)
+            except:
+                traceback.print_exc()
+                showwarning(windows_title.invalid_error, errors_text.invalid_cost)
+                return None
+        return [code, description, unit_price_cts]
+
     def on_add_cost(self, event):
         if self.index is not None:
             return
-        description = self.description.Value.strip()
-        try:
-            prix_cts = int(float(self.price.Value.strip()) * 100)
-        except:
-            traceback.print_exc()
-            showwarning(windows_title.invalid_error, errors_text.invalid_cost)
+        values = self._get_values()
+        if values is None:
             return
         try:
-            self.cursor.execute("""INSERT INTO %s (description, prix_cts) VALUES (%%s, %%s)""" % self.table, [description, prix_cts])
-            self.costs.append((description, prix_cts))
+            self.cursor.execute("""INSERT INTO %s (code, description, unit_price_cts) VALUES (%%s, %%s, %%s)""" % self.table, values)
+            self.costs.append(values)
         except:
             traceback.print_exc()
             showwarning(windows_title.db_error, errors_text.db_update)
@@ -345,18 +355,14 @@ class ManageCostsDialog(DBMixin, CancelableMixin, core.ManageCostsDialog):
     def on_change_cost(self, event):
         if self.index is None:
             return
-        description = self.description.Value.strip()
-        try:
-            prix_cts = int(float(self.price.Value.strip()) * 100)
-        except:
-            traceback.print_exc()
-            showwarning(windows_title.invalid_error, errors_text.invalid_cost)
+        values = self._get_values()
+        if values is None:
             return
         try:
-            key, _ = self.costs[self.index]
-            self.cursor.execute("""UPDATE %s SET description = %%s, prix_cts = %%s WHERE description = %%s""" % self.table,
-                                [description, prix_cts, key])
-            self.costs[self.index] = (description, prix_cts)
+            key, _, _ = self.costs[self.index]
+            self.cursor.execute("""UPDATE %s SET code = %%s, description = %%s, unit_price_cts = %%s WHERE code = %%s""" % self.table,
+                                values + [key])
+            self.costs[self.index] = values
         except:
             traceback.print_exc()
             showwarning(windows_title.db_error, errors_text.db_update)
@@ -366,8 +372,8 @@ class ManageCostsDialog(DBMixin, CancelableMixin, core.ManageCostsDialog):
         if self.index is None:
             return
         try:
-            key, _ = self.costs[self.index]
-            self.cursor.execute("""DELETE FROM %s WHERE description = %%s""" % self.table, [key])
+            key, _, _ = self.costs[self.index]
+            self.cursor.execute("""DELETE FROM %s WHERE code = %%s""" % self.table, [key])
             del self.costs[self.index]
         except:
             traceback.print_exc()
@@ -591,9 +597,10 @@ class ManageConsultationsDialog(DBMixin, CancelableMixin, core.ManageConsultatio
 
     def update_list(self):
         try:
-            self.cursor.execute("""SELECT id_consult, date_consult, therapeute, MC, paye_le
+            self.cursor.execute("""SELECT consultations.id_consult, date_consult, therapeute, MC, payment_date
                                      FROM consultations
-                                    WHERE id=%s
+                                     LEFT OUTER JOIN bills ON consultations.id_consult = bills.id_consult
+                                    WHERE consultations.id=%s
                                  ORDER BY date_consult DESC""",
                                 [self.id_patient])
         except:
@@ -680,7 +687,7 @@ class AllConsultationsDialog(DBMixin, CancelableMixin, core.AllConsultationsDial
         for consult in Consultation.yield_all(self.cursor, where=dict(id=patient.id), order='-date_consult'):
             html += filter(None, [
                 """<hr/><h2 class="date">********** Consultation du {} **********</h2>""".format(consult.date_consult),
-                """<h3 class="unpaid">!!!!! Non-payé !!!!!</h3>""" if consult.paye_le is None else None,
+                """<h3 class="unpaid">!!!!! Non-payé !!!!!</h3>""" if consult.bill is not None and consult.bill.payment_date is None else None,
                 """<h3>{}</h3><div>{}</div>""".format(labels_text.eg, consult.EG) if consult.EG.strip() else None,
                 """<h3>{}</h3><div>{}</div>""".format(labels_text.therapeute, consult.therapeute) if consult.therapeute else None,
                 """<h3>{}&nbsp;: {}</h3><div>{}</div>""".format(labels_text.mc, (labels_text.accident if consult.MC_accident else labels_text.maladie), consult.MC),
@@ -701,7 +708,123 @@ class AllConsultationsDialog(DBMixin, CancelableMixin, core.AllConsultationsDial
         self.html.SetPage('\n'.join(html), "")
 
 
-class PatientDialog(DBMixin, CancelableMixin, core.PatientDialog):
+class FixPatientAddressDialog(CancelableMixin, wx.Dialog):
+    def __init__(self, parent, patient):
+        super().__init__(parent)
+        self.patient = patient
+        self.street = wx.TextCtrl(self, wx.ID_ANY, patient.street or '')
+        self.zip = wx.TextCtrl(self, wx.ID_ANY, patient.zip or '')
+        self.city = wx.TextCtrl(self, wx.ID_ANY, patient.city or '')
+        self.canton = wx.Choice(self, wx.ID_ANY, choices=CANTONS)
+        self.canton.StringSelection = patient.canton or DEFAULT_CANTON
+        self.ok_btn = wx.Button(self, wx.ID_ANY, "OK")
+        self.cancel_btn = wx.Button(self, wx.ID_ANY, "Annuler")
+
+        if self.patient.adresse is None:
+            address = '\n'.join((self.patient.street or '',
+                                (self.patient.zip or '') + ' ' + (self.patient.city or ''),
+                                self.patient.canton or ''))
+        else:
+            address = self.patient.adresse
+        if not address:
+            address = "\nAucune adresse\n"
+        sizer = wx.GridBagSizer(wx.VERTICAL)
+        sizer.Add(wx.StaticText(self, wx.ID_ANY, "Veuillez préciser l'adresse du patient.\n\nInformation existante:\n%s" % address), (0, 0), (1, 3), wx.CENTER | wx.ALL, 5)
+        sizer.Add(wx.StaticText(self, wx.ID_ANY, "Rue"), (1, 0), (1, 1), wx.LEFT, 5)
+        sizer.Add(self.street, (1, 1), (1, 2), wx.EXPAND | wx.RIGHT, 5)
+        sizer.Add(wx.StaticText(self, wx.ID_ANY, "NPA/Localité"), (2, 0), (1, 1), wx.LEFT, 5)
+        sizer.Add(self.zip, (2, 1), (1, 1), wx.EXPAND | wx.RIGHT, 5)
+        sizer.Add(self.city, (2, 2), (1, 1), wx.EXPAND | wx.RIGHT, 5)
+        sizer.Add(wx.StaticText(self, wx.ID_ANY, "Canton"), (3, 0), (1, 1), wx.LEFT, 5)
+        sizer.Add(self.canton, (3, 1), (1, 2), wx.EXPAND | wx.RIGHT, 5)
+        sizer.Add(self.ok_btn, (4, 0), (1, 1), wx.CENTER | wx.ALL, 5)
+        sizer.Add(self.cancel_btn, (4, 2), (1, 1), wx.ALIGN_RIGHT | wx.CENTER | wx.ALL, 5)
+        self.SetSizer(sizer)
+        sizer.SetSizeHints(self)
+        self.Layout()
+
+        self.Bind(wx.EVT_BUTTON, self.on_validate, self.ok_btn)
+        self.Bind(wx.EVT_BUTTON, self.on_close, self.cancel_btn)
+        self.Bind(wx.EVT_CLOSE, self.on_close, self)
+
+    def on_validate(self, event):
+        if (self.street.Value.strip() and self.zip.Value.strip() and self.city.Value.strip() and self.canton.StringSelection):
+            self.EndModal(1)
+
+    def on_close(self, event):
+        self.EndModal(0)
+
+
+class FixPatientSexDialog(CancelableMixin, wx.Dialog):
+    def __init__(self, parent, patient):
+        super().__init__(parent)
+        self.patient = patient
+        self.male = wx.RadioButton(self, wx.ID_ANY, SEX_MALE, style=wx.RB_GROUP)
+        self.female = wx.RadioButton(self, wx.ID_ANY, SEX_FEMALE)
+        self.ok_btn = wx.Button(self, wx.ID_ANY, "OK")
+        self.cancel_btn = wx.Button(self, wx.ID_ANY, "Annuler")
+
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        sizer.Add(wx.StaticText(self, wx.ID_ANY, "Veuillez préciser le sexe du patient"), 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALL, 5)
+        sizer.Add(self.male, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALL, 5)
+        sizer.Add(self.female, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALL, 5)
+        btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        btn_sizer.Add(self.ok_btn, 0, 0, 0)
+        btn_sizer.AddStretchSpacer()
+        btn_sizer.Add(self.cancel_btn, 0, 0, 0)
+        sizer.Add(btn_sizer, 0, wx.EXPAND | wx.ALL, 5)
+        self.SetSizer(sizer)
+        sizer.SetSizeHints(self)
+        self.Layout()
+
+        self.Bind(wx.EVT_BUTTON, self.on_validate, self.ok_btn)
+        self.Bind(wx.EVT_BUTTON, self.on_close, self.cancel_btn)
+        self.Bind(wx.EVT_CLOSE, self.on_close, self)
+
+    def on_validate(self, event):
+        if self.male.Value:
+            self.EndModal(1)
+        elif self.female.Value:
+            self.EndModal(2)
+
+    def on_close(self, event):
+        self.EndModal(0)
+
+
+class FixPatientMixin:
+    def fix_patient(self, update_ui=False):
+        changed = False
+        if self.patient.adresse is not None or not self.patient.canton:
+            with FixPatientAddressDialog(self, self.patient) as dlg:
+                if dlg.ShowModal():
+                    self.patient.street = dlg.street.Value.strip()
+                    self.patient.zip = dlg.zip.Value.strip()
+                    self.patient.city = dlg.city.Value.strip()
+                    self.patient.canton = dlg.canton.StringSelection
+                    if update_ui:
+                        self.street.Value = self.patient.street
+                        self.zip.Value = self.patient.zip
+                        self.city.Value = self.patient.city
+                        self.canton.StringSelection = self.patient.canton
+                    self.adresse = None
+                    changed = True
+        if self.patient.sex not in SEX_ALL:
+            with FixPatientSexDialog(self, self.patient) as dlg:
+                result_code = dlg.ShowModal()
+                if result_code == 1:
+                    self.patient.sex = SEX_MALE
+                    if update_ui:
+                        self.male.SetValue(True)
+                elif result_code == 2:
+                    self.patient.sex = SEX_FEMALE
+                    if update_ui:
+                        self.female.SetValue(True)
+                changed = changed or (result_code != 0)
+        if changed:
+            self.patient.save(self.cursor)
+
+
+class PatientDialog(FixPatientMixin, DBMixin, CancelableMixin, core.PatientDialog):
     def __init__(self, parent, id_patient=None, readonly=False):
         super().__init__(parent)
         patient = self.patient = Patient.load(self.cursor, id_patient) if id_patient is not None else Patient()
@@ -722,8 +845,8 @@ class PatientDialog(DBMixin, CancelableMixin, core.PatientDialog):
         # Setup fields value
         self.patient_id.Value = str(patient.id) if patient else ''
 
-        if patient.sex:
-            {'Mme': self.female, 'Mr': self.male, 'Enfant': self.child}[patient.sex].SetValue(True)
+        if patient.sex in SEX_ALL:
+            {SEX_FEMALE: self.female, SEX_MALE: self.male}[patient.sex].SetValue(True)
         self.lastname.Value = patient.nom or ''
         self.firstname.Value = patient.prenom or ''
 
@@ -755,7 +878,11 @@ class PatientDialog(DBMixin, CancelableMixin, core.PatientDialog):
         self.mobile_phone.Value = patient.portable or ''
         self.professional_phone.Value = patient.profes_phone or ''
         self.email.Value = patient.mail or ''
-        self.private_address.Value = patient.adresse or ''
+        if patient.adresse is None:
+            self.street.Value = patient.street or ''
+            self.zip.Value = patient.zip or ''
+            self.city.Value = patient.city or ''
+            self.canton.StringSelection = patient.canton or DEFAULT_CANTON
         self.important.Value = patient.important or ''
         self.main_doctor.Value = patient.medecin or ''
         self.other_doctors.Value = patient.autre_medecin or ''
@@ -768,43 +895,69 @@ class PatientDialog(DBMixin, CancelableMixin, core.PatientDialog):
         self.highlight_missing_fields()
 
         if self.readonly:
-            for widget in (self.female, self.male, self.child, self.firstname, self.lastname, self.therapeute, self.birthdate,
+            for widget in (self.female, self.male, self.firstname, self.lastname, self.therapeute, self.birthdate,
                            self.opening_date, self.fixed_phone, self.mobile_phone, self.professional_phone, self.email,
-                           self.private_address, self.important, self.main_doctor, self.other_doctors, self.complementary_insurance,
+                           self.street, self.zip, self.city, self.canton, self.important,
+                           self.main_doctor, self.other_doctors, self.complementary_insurance,
                            self.profession, self.civil_status, self.sent_by, self.remarks):
                 widget.Disable()
 
+        if self.patient.id is not None:
+            wx.CallAfter(lambda: self.fix_patient(True))
+
     def highlight_missing_fields(self):
-        from dateutil import parse_date
-        birthdate = parse_date(self.birthdate.Value.strip())
         black = wx.Colour(0, 0, 0)
         red = wx.Colour(255, 0, 0)
-        if any((self.female.Value, self.male.Value, self.child.Value)):
+        patient = self.patient
+        if patient.sex is not None:
             self.sex_label.SetForegroundColour(black)
         else:
             self.sex_label.SetForegroundColour(red)
-        if self.lastname.Value.strip():
+        if patient.nom:
             self.lastname_label.SetForegroundColour(black)
         else:
             self.lastname_label.SetForegroundColour(red)
-        if self.firstname.Value.strip():
+        if patient.prenom:
             self.firstname_label.SetForegroundColour(black)
         else:
             self.firstname_label.SetForegroundColour(red)
-        if self.therapeute.StringSelection:
+        if patient.therapeute:
             self.therapeute_label.SetForegroundColour(black)
         else:
             self.therapeute_label.SetForegroundColour(red)
-        if birthdate is not None:
+        if patient.date_naiss is not None:
             self.birthdate_label.SetForegroundColour(black)
         else:
             self.birthdate_label.SetForegroundColour(red)
+        if patient.street:
+            self.street_label.SetForegroundColour(black)
+        else:
+            self.street_label.SetForegroundColour(red)
+        if patient.zip and patient.city:
+            self.zip_city_label.SetForegroundColour(black)
+        else:
+            self.zip_city_label.SetForegroundColour(red)
+        if patient.canton:
+            self.canton_label.SetForegroundColour(black)
+        else:
+            self.canton_label.SetForegroundColour(red)
+        if patient.date_ouverture:
+            self.opening_date_label.SetForegroundColour(black)
+        else:
+            self.opening_date_label.SetForegroundColour(red)
 
     def is_patient_valid(self):
-        from dateutil import parse_date
-        sex = 'Mme' if self.female.Value else 'Mr' if self.male.Value else 'Enfant' if self.child.Value else None
-        birthdate = parse_date(self.birthdate.Value.strip())
-        if not sex or not self.therapeute.StringSelection or not self.lastname.Value.strip() or not self.firstname.Value.strip() or birthdate is None:
+        self.set_patient_fields()
+        patient = self.patient
+        if (patient.sex is None
+                or patient.date_naiss is None
+                or patient.date_ouverture is None
+                or not patient.therapeute
+                or not patient.nom
+                or not patient.prenom
+                or not patient.street
+                or not patient.zip
+                or not patient.city):
             self.highlight_missing_fields()
             showwarning(windows_title.invalid_error, errors_text.missing_data)
             return False
@@ -816,9 +969,13 @@ class PatientDialog(DBMixin, CancelableMixin, core.PatientDialog):
         patient.date_naiss = parse_date(self.birthdate.Value.strip())
         patient.date_ouverture = parse_date(self.opening_date.Value.strip())
         patient.therapeute = self.therapeute.StringSelection
-        patient.sex = 'Mme' if self.female.Value else 'Mr' if self.male.Value else 'Enfant' if self.child.Value else None
+        patient.sex = SEX_FEMALE if self.female.Value else SEX_MALE if self.male.Value else None
         patient.nom = self.lastname.Value.strip()
         patient.prenom = self.firstname.Value.strip()
+        patient.street = self.street.Value.strip()
+        patient.zip = self.zip.Value.strip()
+        patient.city = self.city.Value.strip()
+        patient.canton = self.canton.StringSelection
         patient.ATCD_perso = getattr(patient, 'ATCD_perso', "")
         patient.ATCD_fam = getattr(patient, 'ATCD_fam', "")
         patient.medecin = self.main_doctor.Value.strip()
@@ -827,7 +984,6 @@ class PatientDialog(DBMixin, CancelableMixin, core.PatientDialog):
         patient.portable = self.mobile_phone.Value.strip()
         patient.profes_phone = self.professional_phone.Value.strip()
         patient.mail = self.email.Value.strip()
-        patient.adresse = self.private_address.Value.strip()
         patient.ass_compl = self.complementary_insurance.Value.strip()
         patient.profes = self.profession.Value.strip()
         patient.etat = self.civil_status.Value.strip()
@@ -853,7 +1009,6 @@ class PatientDialog(DBMixin, CancelableMixin, core.PatientDialog):
         if not self.is_patient_valid():
             return
         try:
-            self.set_patient_fields()
             self.patient.save(self.cursor)
         except:
             traceback.print_exc()
@@ -867,7 +1022,6 @@ class PatientDialog(DBMixin, CancelableMixin, core.PatientDialog):
         if not self.is_patient_valid():
             return
         try:
-            self.set_patient_fields()
             self.patient.save(self.cursor)
         except:
             traceback.print_exc()
@@ -875,7 +1029,7 @@ class PatientDialog(DBMixin, CancelableMixin, core.PatientDialog):
         self.on_cancel()
 
 
-class ConsultationDialog(DBMixin, CancelableMixin, core.ConsultationDialog):
+class ConsultationDialog(FixPatientMixin, DBMixin, CancelableMixin, core.ConsultationDialog):
     def __init__(self, parent, id_patient, id_consult=None, readonly=False):
         super().__init__(parent)
         self.patient = Patient.load(self.cursor, id_patient)
@@ -883,10 +1037,18 @@ class ConsultationDialog(DBMixin, CancelableMixin, core.ConsultationDialog):
         self.consultation.patient = self.patient
         self.readonly = readonly
 
+        if self.consultation:
+            # Existing consultation, editing or viewing it
+            self.save_and_bill_btn.Show(False)
+            self.save_and_close_btn.Show(not self.readonly)
+            self.view_bill_btn.Show(True)
+        else:
+            # New consultation
+            self.save_and_bill_btn.Show(True)
+            self.save_and_close_btn.Show(False)
+            self.view_bill_btn.Show(False)
         self.cancel_btn.Show(not self.readonly)
-        self.save_close_btn.Show(not self.readonly)
         self.ok_btn.Show(self.readonly)
-        self.print_btn.Show(bool(self.consultation))
         self.cursor.execute("SELECT count(*) FROM consultations WHERE id = %s", [self.patient.id])
         count, = self.cursor.fetchone()
         self.show_all_consultations_btn.Show(count > 0)
@@ -905,8 +1067,6 @@ class ConsultationDialog(DBMixin, CancelableMixin, core.ConsultationDialog):
             therapeutes.append(t)
             if consult.therapeute is None and login == LOGIN:
                 consult.therapeute = t
-            if consult.therapeute == t:
-                consult.therapeute_header = header
         if consult:
             title = windows_title.consultation % (consult.date_consult, self.patient.sex, self.patient.nom)
         else:
@@ -915,14 +1075,7 @@ class ConsultationDialog(DBMixin, CancelableMixin, core.ConsultationDialog):
             title = windows_title.new_consultation % (self.patient.sex, self.patient.nom)
         self.therapeute.Set(therapeutes)
 
-        self.prices = self.load_costs('tarifs', False)
-        self.markups = self.load_costs('majorations')
-        self.admin_costs = self.load_costs('frais_admins')
-        self.price.Set(list(self.prices.keys()))
-        self.markup.Set(list(self.markups.keys()))
-        self.admin_cost.Set(list(self.admin_costs.keys()))
-
-        fixed_therapist_and_cost = self.readonly or (consult.id_consult is not None and 'MANAGE_CONSULTATIONS' not in wx.GetApp().ACCESS_RIGHTS)
+        fixed_therapist = self.readonly or (consult.id_consult is not None and 'MANAGE_CONSULTATIONS' not in wx.GetApp().ACCESS_RIGHTS)
 
         self.SetTitle(title)
 
@@ -949,62 +1102,25 @@ class ConsultationDialog(DBMixin, CancelableMixin, core.ConsultationDialog):
             self.therapeute.StringSelection = consult.therapeute
         self.payment.Value = consult.paye or ''
 
-        price = [l for l, v in self.prices.items() if v == (consult.prix_cts, consult.prix_txt)]
-        if price:
-            self.price.StringSelection = price[0]
-        else:
-            self.price.Selection = wx.NOT_FOUND
-        markup = [l for l, v in self.markups.items() if v == (consult.majoration_cts, consult.majoration_txt)]
-        if markup:
-            self.markup.StringSelection = markup[0]
-        else:
-            self.markup.Selection = wx.NOT_FOUND
-        admin_cost = [l for l, v in self.admin_costs.items() if v == (consult.frais_admin_cts, consult.frais_admin_txt)]
-        if admin_cost:
-            self.admin_cost.StringSelection = admin_cost[0]
-        else:
-            self.admin_cost.Selection = wx.NOT_FOUND
-
-        if consult.paye_par:
-            self.payment_method.Selection = PAYMENT_METHODS.index(consult.paye_par)
-        if consult and consult.paye_le:
-            self.payment_date.LabelText = labels_text.paye_le+' '+str(consult.paye_le)
-
         if self.readonly:
             for widget in (self.illness, self.accident, self.reason, self.general_state, self.paraclinic_exams,
                            self.medical_background, self.family_history, self.thorax, self.abdomen, self.physical_exam,
                            self.head_neck, self.upper_limbs, self.lower_limbs, self.other, self.important, self.diagnostic,
-                           self.treatment, self.remarks, self.consultation_date, self.therapeute, self.payment, self.price,
-                           self.markup, self.admin_cost, self.payment_method):
+                           self.treatment, self.remarks, self.consultation_date, self.therapeute, self.payment):
                 widget.Disable()
 
-        if fixed_therapist_and_cost:
+        if fixed_therapist:
             self.therapeute.Disable()
-            self.price.Disable()
-            self.markup.Disable()
-            self.admin_cost.Disable()
-            self.payment_method.Disable()
 
         self.Bind(wx.EVT_CLOSE, self.on_close)
 
-    def load_costs(self, table, optional=True):
-        try:
-            self.cursor.execute("""SELECT description, prix_cts FROM %s ORDER BY prix_cts""" % table)
-            costs = [('Aucun(e)', (0, ''))] if optional else []
-            for description, prix_cts in self.cursor:
-                label = u'%s : %0.2f CHF' % (description, prix_cts/100.)
-                costs.append((label, (prix_cts, description)))
-        except:
-            traceback.print_exc()
-            showwarning(windows_title.db_error, errors_text.db_read)
-            costs = [(u"-- ERREUR --", None)]
-        return OrderedDict(costs)
+        if self.patient.id is not None:
+            wx.CallAfter(self.fix_patient)
 
     def set_consultation_fields(self):
         from dateutil import parse_date
         consult = self.consultation
         consult.date_consult = parse_date(self.consultation_date.Value.strip())
-        consult.heure_consult = consult.heure_consult or datetime.datetime.now().time()
         consult.MC = self.reason.Value.strip()
         consult.MC_accident = self.accident.Value
         consult.EG = self.general_state.Value.strip()
@@ -1021,88 +1137,218 @@ class ConsultationDialog(DBMixin, CancelableMixin, core.ConsultationDialog):
         consult.A_osteo = self.diagnostic.Value.strip()
         consult.traitement = self.treatment.Value.strip()
         consult.therapeute = self.therapeute.StringSelection
-        try:
-            self.cursor.execute("SELECT entete FROM therapeutes WHERE therapeute = %s", [consult.therapeute])
-        except:
-            traceback.print_exc()
-            showwarning(windows_title.db_error, errors_text.db_read)
-        else:
-            if self.cursor.rowcount != 0:
-                consult.therapeute_header, = self.cursor.fetchone()
-            else:
-                consult.therapeute_header = ''
-        consult.prix_cts, consult.prix_txt = self.prices.get(self.price.StringSelection, (0, ""))
-        consult.majoration_cts, consult.majoration_txt = self.markups.get(self.markup.StringSelection, (0, ""))
-        consult.frais_admin_cts, consult.frais_admin_txt = self.admin_costs.get(self.admin_cost.StringSelection, (0, ""))
-        consult.paye_par = self.payment_method.StringSelection
-        if not custo.PAIEMENT_SORTIE and consult.paye_le is None and consult.paye_par not in (u'BVR', u'CdM', u'Dû', u'PVPE'):
-            consult.paye_le = datetime.date.today()
-        try:
-            if consult.paye_par in (u'BVR', u'PVPE'):
-                if consult.id_consult:
-                    self.cursor.execute("SELECT prix_cts + majoration_cts + frais_admin_cts FROM consultations WHERE id_consult = %s", [consult.id_consult])
-                    old_price, = self.cursor.fetchone()
-                else:
-                    old_price = 0
-                if consult.bv_ref is None or consult.prix_cts + consult.majoration_cts + consult.frais_admin_cts != old_price:
-                    consult.bv_ref = gen_bvr_ref(self.cursor, self.patient.prenom, self.patient.nom, consult.date_consult)
-            else:
-                consult.bv_ref = None
-        except:
-            traceback.print_exc()
-            showwarning(windows_title.db_error, errors_text.db_read)
-            return
 
     def on_close(self, event):
         if self.readonly or event.EventObject == self.ok_btn or askyesno(windows_title.really_cancel, labels_text.really_cancel):
             self.EndModal(0)
 
     def on_save(self, event):
-        if not self.price.StringSelection or not self.payment_method.StringSelection:
-            showwarning(windows_title.missing_error, errors_text.missing_payment_info)
-            return
         if not self.therapeute.StringSelection:
             showwarning(windows_title.missing_error, errors_text.missing_therapeute)
             return
         self.set_consultation_fields()
+        create_bill = not self.consultation  # New consultation => create a new bill
         try:
-            if self.consultation:
-                self.cursor.execute("""SELECT paye_par FROM consultations WHERE id_consult=%s""", [self.consultation.id_consult])
-                old_paye_par, = self.cursor.fetchone()
-                generate_pdf = self.consultation.paye_par != old_paye_par
-                if old_paye_par != self.consultation.paye_par and self.consultation.paye_par in (u'BVR', u'PVPE') and self.consultation.status != STATUS_ABANDONED:
-                    self.consultation.status = STATUS_OPENED
-                    self.consultation.paye_le = None
-            else:
-                self.consultation.status = STATUS_OPENED
-                if not custo.PAIEMENT_SORTIE and self.consultation.paye_par in (u'Cash', u'Carte'):
-                    self.consultation.status = STATUS_PAYED
-                generate_pdf = self.consultation.paye_par not in (u'CdM', u'Dû')
             self.consultation.save(self.cursor)
 
             self.patient.important = self.important.Value.strip()
             self.patient.ATCD_perso = self.medical_background.Value.strip()
             self.patient.ATCD_fam = self.family_history.Value.strip()
             self.patient.save(self.cursor)
-            if generate_pdf:
-                self.on_print()
+            if create_bill:
+                wx.CallAfter(BillDialog(self.Parent, self.consultation.id_consult).ShowModal)
             self.EndModal(0)
         except:
             traceback.print_exc()
             showwarning(windows_title.db_error, errors_text.db_update)
 
-    def on_print(self, *args):
-        ts = datetime.datetime.now().strftime('%H')
-        filename = normalize_filename(u'%s_%s_%s_%s_%sh.pdf' % (self.patient.nom, self.patient.prenom, self.patient.sex, self.consultation.date_consult, ts))
-        bills.consultations(filename, self.cursor, [self.consultation])
-        cmd, cap = mailcap.findmatch(mailcap.getcaps(), 'application/pdf', 'view', filename)
-        os.system(cmd)
-        if self.consultation.paye_par == u'BVR' and askyesno(windows_title.print_completed, labels_text.ask_confirm_print_bvr):
-            self.consultation.status = STATUS_PRINTED
-            self.consultation.save(self.cursor)
+    def on_view_bill(self, *args):
+        if self.consultation.bill is None:
+            if askyesno("Aucune facture n'existe pour cette consultation", "Voulez-vous la créer maintenant ?"):
+                BillDialog(self, self.consultation.id_consult).ShowModal()
+        else:
+            BillDialog(self, self.consultation.id_consult, readonly=True).ShowModal()
 
     def on_show_all_consultations(self, event):
         AllConsultationsDialog(self, self.patient.id).ShowModal()
+
+
+class BillDialog(DBMixin, CancelableMixin, bill.BillDialog):
+    def __init__(self, parent, id_consult, readonly=False):
+        super().__init__(parent)
+        self.readonly = readonly
+        self.consultation = Consultation.load(self.cursor, id_consult)
+        try:
+            self.cursor.execute("""SELECT id FROM bills WHERE id_consult = %s""", [id_consult])
+            if self.cursor.rowcount != 0:
+                bill_id, = self.cursor.fetchone()
+                self.bill = Bill.load(self.cursor, bill_id)
+                self.readonly = True
+            else:
+                self.bill = Bill(consultation=self.consultation, patient=self.consultation.patient)
+        except:
+            traceback.print_exc()
+            showwarning(windows_title.db_error, errors_text.db_read)
+        try:
+            self.cursor.execute("""SELECT code, description, unit_price_cts FROM tarifs ORDER BY code, description""")
+            for code, description, unit_price_cts in self.cursor:
+                if description is not None:
+                    display = '{}: {}'.format(code, description[:45])
+                    if len(description) > 45:
+                        display += '...'
+                else:
+                    display = code
+                self.tarif_codes[display] = (code, description, unit_price_cts)
+        except:
+            traceback.print_exc()
+            showwarning(windows_title.db_error, errors_text.db_read)
+        if not self.bill:
+            self.initialize_bill()
+        if not self.readonly:
+            self.print_btn.Show(False)
+            self.save_and_print_btn.Show(True)
+        else:
+            self.print_btn.Show(True)
+            self.save_and_print_btn.Show(False)
+
+        bill = self.bill
+        self.document_id.LabelText = "{} {}".format(bill.id or '', bill.timestamp)
+        self.therapeute.LabelText = "{} {} RCC {}".format(bill.author_firstname, bill.author_lastname, bill.author_rcc)
+        self.lastname.Value = bill.lastname
+        self.firstname.Value = bill.firstname
+        self.sex.StringSelection = bill.sex
+        self.birthdate.Value = bill.birthdate.strftime(DATE_FMT)
+        self.street.Value = bill.street
+        self.zip.Value = bill.zip
+        self.city.Value = bill.city
+        self.canton.StringSelection = bill.canton
+        title = gen_title(bill.sex, bill.birthdate)
+        self.address.Value = '\n'.join((title, bill.firstname + ' ' + bill.lastname, bill.street, bill.zip + ' ' + bill.city))
+        self.patient_id.Value = str(bill.id_patient)
+        self.treatment_period.Value = bill.treatment_period
+        self.reason.StringSelection = bill.treatment_reason
+        self.mandant.Value = bill.mandant
+        self.diagnostic.Value = bill.diagnostic
+        self.comment.Value = bill.comment
+        self.payment_method.StringSelection = bill.payment_method or ''
+        for position in bill.positions:
+            self.add_position(position, self.readonly)
+
+        if self.readonly:
+            for widget in (self.treatment_period, self.comment, self.payment_method, self.position_adder_btn):
+                widget.Disable()
+
+        self.Bind(wx.EVT_CLOSE, self.on_close)
+
+        self.Layout()
+
+    def initialize_bill(self):
+        """Initialize a newly created bill object from the consultation"""
+        bill = self.bill
+        bill.timestamp = datetime.datetime.now()
+        therapeute = self.consultation.therapeute or self.patient.therapeute
+        try:
+            self.cursor.execute("""SELECT entete FROM therapeutes WHERE therapeute = %s""", [therapeute])
+            if self.cursor.rowcount != 0:
+                entete, = self.cursor.fetchone()
+            else:
+                entete = ""
+        except:
+            traceback.print_exc()
+            showwarning(windows_title.db_error, errors_text.db_read)
+            entete = ""
+        bill.author_firstname = bill.author_lastname = bill.author_rcc = ''
+        for i, line in enumerate(entete.splitlines()):
+            if i == 0:
+                bill.author_firstname, bill.author_lastname = line.strip().split(maxsplit=1)
+            elif line.startswith('RCC'):
+                bill.author_rcc = line.replace('RCC', '').strip()
+        consult = self.consultation
+        patient = consult.patient
+        bill.type = BILL_TYPE_CONSULTATION
+        bill.lastname = patient.nom
+        bill.firstname = patient.prenom
+        bill.sex = patient.sex if patient.sex in SEX_ALL else ''
+        bill.birthdate = patient.date_naiss
+        bill.street = patient.street or ''
+        bill.zip = patient.zip or ''
+        bill.city = patient.city or ''
+        bill.canton = patient.canton or ''
+        bill.id_patient = patient.id
+        bill.id_consult = consult.id_consult
+        bill.treatment_period = consult.date_consult.strftime(DATE_FMT)
+        bill.treatment_reason = 'Accident' if consult.MC_accident else 'Maladie'
+        bill.mandant = ''
+        bill.diagnostic = consult.A_osteo
+        bill.comment = ''
+        bill.payment_method = ''
+        bill.bv_ref = None
+        bill.payment_date = None
+        bill.status = STATUS_OPENED
+
+    def set_bill_fields(self):
+        bill = self.bill
+        bill.treatment_period = self.treatment_period.Value.strip()
+        bill.comment = self.comment.Value.strip()
+        bill.payment_method = self.payment_method.StringSelection or None
+        bill.total_cts = 0
+        bill.positions = []
+        for position_date, tarif_code, tarif_description, quantity, price_cts in self.get_positions():
+            bill.total_cts += quantity * price_cts
+            bill.positions.append(Position(position_date=position_date,
+                                           tarif_code=tarif_code,
+                                           tarif_description=tarif_description,
+                                           quantity=quantity,
+                                           price_cts=price_cts))
+        if not custo.PAIEMENT_SORTIE and bill.payment_date is None and bill.payment_method not in ('BVR', 'CdM', 'Dû', 'PVPE'):
+            bill.payment_date = datetime.date.today()
+            bill.status = STATUS_PAYED
+        try:
+            if bill.payment_method in ('BVR', 'PVPE'):
+                bill.bv_ref = gen_bvr_ref(self.cursor, bill.firstname, bill.lastname, bill.timestamp)
+            else:
+                bill.bv_ref = None
+        except:
+            traceback.print_exc()
+            showwarning(windows_title.db_error, errors_text.db_read)
+
+    def on_print(self, *args):
+        ts = datetime.datetime.now().strftime('%H')
+        filename = normalize_filename(u'%s_%s_%s_%s_%sh.pdf' % (self.bill.lastname,
+                                                                self.bill.firstname,
+                                                                self.bill.sex,
+                                                                self.bill.timestamp.date(),
+                                                                ts))
+        bills.consultations(filename, self.cursor, [self.bill])
+        cmd, cap = mailcap.findmatch(mailcap.getcaps(), 'application/pdf', 'view', filename)
+        os.system(cmd)
+        if self.bill.payment_method == 'BVR' and askyesno(windows_title.print_completed, labels_text.ask_confirm_print_bvr):
+            self.bill.status = STATUS_PRINTED
+            self.bill.save(self.cursor)
+
+    def on_save_and_print(self, event):
+        self.set_bill_fields()
+        if self.bill.payment_method is None:
+            showwarning(windows_title.missing_error, errors_text.missing_payment_info)
+            return
+        if not self.bill.positions:
+            showwarning(windows_title.missing_error, errors_text.missing_positions)
+            return
+        try:
+            self.bill.save(self.cursor)
+            for position in self.bill.positions:
+                position.id_bill = self.bill.id
+                position.save(self.cursor)
+        except:
+            traceback.print_exc()
+            showwarning(windows_title.db_error, errors_text.db_insert)
+        else:
+            self.on_print()
+            self.EndModal(0)
+
+    def on_close(self, event):
+        if self.readonly or event.EventObject == self.save_and_print_btn or askyesno(windows_title.really_cancel, labels_text.bill_really_cancel):
+            self.EndModal(0)
 
 
 class MainApp(BaseApp):

@@ -19,6 +19,9 @@
 OLD_PAYMENT_METHODS = [u'CdM']
 PAYMENT_METHODS = [u'Cash', u'Carte', u'BVR', u'Dû', u'PVPE']
 PAYMENT_STATUSES = [u'Tous', u'Comptabilisé', u'Non-comptabilisé']
+SEX_MALE = "M"
+SEX_FEMALE = "F"
+SEX_ALL = [SEX_MALE, SEX_FEMALE]
 
 BILL_STATUSES = [u'Tous', u'Ouverte', u'Imprimée', u'Envoyée', u'Payée', u'Abandonnée']
 STATUS_OPENED = u'O'
@@ -27,10 +30,18 @@ STATUS_SENT = u'E'
 STATUS_PAYED = u'P'
 STATUS_ABANDONED = u'A'
 
+BILL_TYPE_CONSULTATION = "C"
+BILL_TYPE_MANUAL = "M"
+BILL_TYPES = [BILL_TYPE_CONSULTATION, BILL_TYPE_MANUAL]
+
+CANTONS = ["AG", "AI", "AR", "BE", "BL", "BS", "FR", "GE", "GL", "GR", "JU", "LU", "NE", "NW", "OW", "SG", "SH", "SO", "SZ", "TG", "TI", "UR", "VD", "VS", "ZG", "ZH"]
+DEFAULT_CANTON = "VD"
+
 
 class Model(object):
     TABLE = None
     FIELDS = []
+    AUTO_FIELD = None
     EXTRA_FIELDS = []
 
     @classmethod
@@ -51,7 +62,7 @@ class Model(object):
     def yield_all(klass, cursor, where=None, order=None):
         where_cond = []
         where_args = []
-        if where is not None:
+        if isinstance(where, dict):
             for key, value in where.items():
                 if '__' in key:
                     field, test = key.split('__')
@@ -68,6 +79,8 @@ class Model(object):
                 where_cond.append('%s %s %%s' % (field, test))
                 where_args.append(value)
             where = 'WHERE ' + ' AND '.join(where_cond)
+        elif isinstance(where, str):
+            where = 'WHERE ' + where
         else:
             where = ''
         if order is not None:
@@ -103,16 +116,22 @@ class Model(object):
 
     def save(self, cursor):
         if not self:
-            cursor.execute("""SELECT max(%s)+1 FROM %s""" % (self.FIELDS[0], self.TABLE))
-            key, = cursor.fetchone()
-            if key is None:
-                key = 1
-            setattr(self, self.FIELDS[0], key)
+            if not self.AUTO_FIELD:
+                cursor.execute("""SELECT max(%s)+1 FROM %s""" % (self.FIELDS[0], self.TABLE))
+                key, = cursor.fetchone()
+                if key is None:
+                    key = 1
+                setattr(self, self.FIELDS[0], key)
+                fields = self.FIELDS
+            else:
+                fields = [f for f in self.FIELDS if f != self.AUTO_FIELD]
             cursor.execute("""INSERT INTO %s (%s) VALUES (%s)"""
                            % (self.TABLE,
-                              ', '.join(self.FIELDS),
-                              ', '.join(['%s'] * len(self.FIELDS))),
-                           [getattr(self, field) for field in self.FIELDS])
+                              ', '.join(fields),
+                              ', '.join(['%s'] * len(fields))),
+                           [getattr(self, field) for field in fields])
+            if self.AUTO_FIELD:
+                setattr(self, self.AUTO_FIELD, cursor.lastrowid)
         else:
             cursor.execute("""UPDATE %s SET %s WHERE %s=%%s"""
                            % (self.TABLE,
@@ -124,40 +143,116 @@ class Model(object):
 class Patient(Model):
     TABLE = 'patients'
     FIELDS = ['id', 'date_ouverture', 'therapeute', 'sex', 'nom', 'prenom',
-              'date_naiss', 'ATCD_perso', 'ATCD_fam', 'medecin',
+              'date_naiss', 'adresse', 'street', 'zip', 'city', 'canton',
+              'ATCD_perso', 'ATCD_fam', 'medecin',
               'autre_medecin', 'phone', 'portable', 'profes_phone', 'mail',
-              'adresse', 'ass_compl', 'profes', 'etat', 'envoye', 'divers',
+              'ass_compl', 'profes', 'etat', 'envoye', 'divers',
               'important']
 
 
 class Consultation(Model):
     TABLE = 'consultations'
-    FIELDS = ['id_consult', 'id', 'date_consult', 'heure_consult', 'MC', 'MC_accident', 'EG',
+    FIELDS = ['id_consult', 'id', 'date_consult', 'MC', 'MC_accident', 'EG',
               'exam_pclin', 'exam_phys', 'paye', 'divers', 'APT_thorax',
               'APT_abdomen', 'APT_tete', 'APT_MS', 'APT_MI', 'APT_system',
-              'A_osteo', 'traitement', 'therapeute', 'prix_cts', 'prix_txt',
-              'majoration_cts', 'majoration_txt', 'frais_admin_cts', 'frais_admin_txt',
-              'paye_par', 'paye_le', 'bv_ref', 'status']
-    EXTRA_FIELDS = ['patient', 'rappel_cts', 'therapeute_header']
+              'A_osteo', 'traitement', 'therapeute']
+    EXTRA_FIELDS = ['patient', 'bill']
 
     @classmethod
-    def load(klass, cursor, key):
-        instance = super(Consultation, klass).load(cursor, key)
+    def load(klass, cursor, key, bill=None):
+        instance = super().load(cursor, key)
         instance.patient = Patient.load(cursor, instance.id)
-        cursor.execute("""SELECT sum(rappel_cts) FROM rappels WHERE id_consult=%s""", [key])
-        if cursor.rowcount:
-            instance.rappel_cts, = cursor.fetchone()
-        if instance.rappel_cts is None:
-            instance.rappel_cts = 0
+        instance.bill = Bill.load_from_consultation(cursor, instance) if bill is None else bill
+        #cursor.execute("""SELECT sum(rappel_cts) FROM rappels WHERE id_consult=%s""", [key])
+        #if cursor.rowcount:
+        #    instance.rappel_cts, = cursor.fetchone()
+        #if instance.rappel_cts is None:
+        #    instance.rappel_cts = 0
         if instance.therapeute is None:
             instance.therapeute = instance.patient.therapeute
-        cursor.execute("""SELECT entete FROM therapeutes WHERE therapeute = %s""", [instance.therapeute])
-        if cursor.rowcount:
-            instance.therapeute_header, = cursor.fetchone()
-        else:
-            instance.therapeute_header = ""
         return instance
 
+    @classmethod
+    def yield_all(klass, cursor, where=None, order=None):
+        cursor2 = cursor.connection.cursor()
+        for instance in super().yield_all(cursor, where, order):
+            instance.patient = Patient.load(cursor2, instance.id)
+            instance.bill = Bill.load_from_consultation(cursor, instance)
+            yield instance
+
     def __init__(self, **kwds):
-        super(Consultation, self).__init__(**kwds)
-        self.rappel_cts = 0
+        super().__init__(**kwds)
+
+
+class Position(Model):
+    TABLE = 'positions'
+    FIELDS = ['id', 'id_bill', 'position_date', 'tarif_code', 'tarif_description',
+              'quantity', 'price_cts']
+
+
+class Reminder(Model):
+    TABLE = 'reminders'
+    FIELDS = ['id', 'id_bill', 'reminder_date', 'amount_cts', 'status']
+
+
+class Bill(Model):
+    TABLE = 'bills'
+    FIELDS = ['id', 'type', 'payment_method', 'bv_ref', 'payment_date', 'status',
+              'id_consult', 'id_patient', 'timestamp',
+              'author_lastname', 'author_firstname', 'author_rcc',
+              'sex', 'lastname', 'firstname', 'street', 'zip', 'city', 'canton',
+              'birthdate', 'treatment_period', 'treatment_reason',
+              'mandant', 'diagnostic', 'comment']
+    AUTO_FIELD = 'id'
+    EXTRA_FIELDS = ['patient', 'consultation', 'positions', 'reminders', 'copy', 'total_cts']
+
+    @classmethod
+    def load(klass, cursor, key, consultation=None):
+        instance = super().load(cursor, key)
+        instance.load_positions(cursor)
+        instance.load_reminders(cursor)
+        instance.consultation = instance.load_consultation(cursor) if consultation is None else consultation
+        return instance
+
+    def load_positions(self, cursor):
+        cursor.execute("SELECT id FROM positions WHERE id_bill = %s", [self.id])
+        position_ids = [i for i, in cursor]
+        self.positions = [Position.load(cursor, id_pos) for id_pos in position_ids]
+        self.total_cts = sum(pos.quantity * pos.price_cts for pos in self.positions)
+
+    def load_reminders(self, cursor):
+        cursor.execute("SELECT id FROM reminders WHERE id_bill = %s", [self.id])
+        reminder_ids = [i for i, in cursor]
+        self.reminders = [Reminder.load(cursor, id_reminder) for id_reminder in reminder_ids]
+
+    def load_consultation(self, cursor):
+        if self.type == BILL_TYPE_CONSULTATION:
+            self.consultation = Consultation.load(cursor, self.id_consult, bill=self)
+            self.patient = self.consultation.patient
+        else:
+            self.consultation = None
+            self.patient = None
+
+    @classmethod
+    def load_from_consultation(klass, cursor, consultation):
+        cursor.execute("SELECT id FROM bills WHERE id_consult = %s", [consultation.id_consult])
+        if cursor.rowcount != 0:
+            bill_id, = cursor.fetchone()
+            bill = Bill.load(cursor, bill_id, consultation)
+        else:
+            bill = None
+        return bill
+
+    @classmethod
+    def yield_all(klass, cursor, where=None, order=None):
+        cursor2 = cursor.connection.cursor()
+        for instance in super().yield_all(cursor, where, order):
+            instance.load_positions(cursor2)
+            instance.load_reminders(cursor2)
+            instance.load_consultation(cursor2)
+            yield instance
+
+    def __init__(self, **kwds):
+        super().__init__(**kwds)
+        self.positions = []
+        self.reminders = []
