@@ -276,7 +276,7 @@ class ManageCostsDialog(DBMixin, CancelableMixin, core.ManageCostsDialog):
         self.table = table
         self.SetTitle(getattr(windows_title, 'manage_'+self.table))
         try:
-            self.cursor.execute("""SELECT code, description, unit_price_cts FROM %s""" % self.table)
+            self.cursor.execute("""SELECT code, description, unit_price_cts FROM %s ORDER BY code, description""" % self.table)
             self.costs = list(self.cursor)
         except:
             traceback.print_exc()
@@ -359,9 +359,9 @@ class ManageCostsDialog(DBMixin, CancelableMixin, core.ManageCostsDialog):
         if values is None:
             return
         try:
-            key, _, _ = self.costs[self.index]
-            self.cursor.execute("""UPDATE %s SET code = %%s, description = %%s, unit_price_cts = %%s WHERE code = %%s""" % self.table,
-                                values + [key])
+            old_value = self.costs[self.index]
+            self.cursor.execute("""UPDATE %s SET code = %%s, description = %%s, unit_price_cts = %%s WHERE code = %%s AND description = %%s AND unit_price_cts = %%s""" % self.table,
+                                values + list(old_value))
             self.costs[self.index] = values
         except:
             traceback.print_exc()
@@ -372,8 +372,8 @@ class ManageCostsDialog(DBMixin, CancelableMixin, core.ManageCostsDialog):
         if self.index is None:
             return
         try:
-            key, _, _ = self.costs[self.index]
-            self.cursor.execute("""DELETE FROM %s WHERE code = %%s""" % self.table, [key])
+            old_value = self.costs[self.index]
+            self.cursor.execute("""DELETE FROM %s WHERE code = %%s AND description = %%s AND unit_price_cts = %%s""" % self.table, list(old_value))
             del self.costs[self.index]
         except:
             traceback.print_exc()
