@@ -704,7 +704,6 @@ class AllConsultationsDialog(DBMixin, CancelableMixin, core.AllConsultationsDial
                 """<h3>{}</h3><div>{}</div>""".format(labels_text.ttt, consult.traitement) if consult.traitement.strip() else None,
                 """<h3>{}</h3><div>{}</div>""".format(labels_text.expc, consult.exam_pclin) if consult.exam_pclin.strip() else None,
                 """<h3>{}</h3><div>{}</div>""".format(labels_text.remarques, consult.divers) if consult.divers.strip() else None,
-                """<h3>{}</h3><div>{}</div>""".format(labels_text.paye, consult.paye) if consult.paye.strip() else None,
             ])
         html.append("</body></html>")
         self.html.SetPage('\n'.join(html), "")
@@ -808,7 +807,7 @@ class FixPatientMixin:
                         self.zip.Value = self.patient.zip
                         self.city.Value = self.patient.city
                         self.canton.StringSelection = self.patient.canton
-                    self.adresse = None
+                    self.patient.adresse = None
                     changed = True
         if self.patient.sex not in SEX_ALL:
             with FixPatientSexDialog(self, self.patient) as dlg:
@@ -1102,13 +1101,12 @@ class ConsultationDialog(FixPatientMixin, DBMixin, CancelableMixin, core.Consult
         self.consultation_date.Value = consult.date_consult.strftime(DATE_FMT)
         if consult.therapeute:
             self.therapeute.StringSelection = consult.therapeute
-        self.payment.Value = consult.paye or ''
 
         if self.readonly:
             for widget in (self.illness, self.accident, self.reason, self.general_state, self.paraclinic_exams,
                            self.medical_background, self.family_history, self.thorax, self.abdomen, self.physical_exam,
                            self.head_neck, self.upper_limbs, self.lower_limbs, self.other, self.important, self.diagnostic,
-                           self.treatment, self.remarks, self.consultation_date, self.therapeute, self.payment):
+                           self.treatment, self.remarks, self.consultation_date, self.therapeute):
                 widget.Disable()
 
         if fixed_therapist:
@@ -1128,7 +1126,6 @@ class ConsultationDialog(FixPatientMixin, DBMixin, CancelableMixin, core.Consult
         consult.EG = self.general_state.Value.strip()
         consult.exam_pclin = self.paraclinic_exams.Value.strip()
         consult.exam_phys = self.physical_exam.Value.strip()
-        consult.paye = self.payment.Value.strip()
         consult.divers = self.remarks.Value.strip()
         consult.APT_thorax = self.thorax.Value.strip()
         consult.APT_abdomen = self.abdomen.Value.strip()
@@ -1259,6 +1256,7 @@ class BillDialog(DBMixin, CancelableMixin, bill.BillDialog):
             traceback.print_exc()
             showwarning(windows_title.db_error, errors_text.db_read)
             entete = ""
+        bill.author_id = therapeute
         bill.author_firstname = bill.author_lastname = bill.author_rcc = ''
         for i, line in enumerate(entete.splitlines()):
             if i == 0:

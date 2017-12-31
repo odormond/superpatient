@@ -1,7 +1,7 @@
 import wx
 import wx.html2
 
-from ..models import PAYMENT_METHODS, CANTONS
+from ..models import CANTONS
 
 
 class MainFrame(wx.Frame):
@@ -820,7 +820,6 @@ class ConsultationDialog(wx.Dialog):
         self.remarks = wx.TextCtrl(self.panel_3, wx.ID_ANY, "", style=wx.TE_MULTILINE)
         self.consultation_date = wx.TextCtrl(self.panel_3, wx.ID_ANY, "")
         self.therapeute = wx.Choice(self.panel_3, wx.ID_ANY, choices=[])
-        self.payment = wx.TextCtrl(self.panel_3, wx.ID_ANY, "", style=wx.TE_MULTILINE)
         self.save_and_bill_btn = wx.Button(self, wx.ID_ANY, "Enregistrer et facturer")  # Used for new consultation
         self.save_and_close_btn = wx.Button(self, wx.ID_ANY, "Enregistrer et fermer")  # Used when editing an old consultation
         self.view_bill_btn = wx.Button(self, wx.ID_ANY, "Voir la facture")  # Used when viewing or editing an old consultation
@@ -841,22 +840,21 @@ class ConsultationDialog(wx.Dialog):
         self.tab_traversal = [
             self.reason,
             self.general_state,
-            self.paraclinic_exams,
             self.medical_background,
             self.family_history,
             self.thorax,
             self.abdomen,
-            self.physical_exam,
             self.head_neck,
             self.upper_limbs,
             self.lower_limbs,
             self.other,
+            self.paraclinic_exams,
+            self.physical_exam,
             self.important,
             self.diagnostic,
             self.treatment,
             self.remarks,
             self.consultation_date,
-            self.payment,
         ]
         for widget in self.tab_traversal:
             self.Bind(wx.EVT_CHAR_HOOK, self.on_tab, widget)
@@ -887,7 +885,6 @@ class ConsultationDialog(wx.Dialog):
         self.diagnostic.SetMinSize((300, 70))
         self.treatment.SetMinSize((300, 70))
         self.remarks.SetMinSize((300, 70))
-        self.payment.SetMinSize((300, -1))
         self.important.SetForegroundColour(wx.Colour(255, 0, 0))
 
     def __do_layout(self):
@@ -910,7 +907,7 @@ class ConsultationDialog(wx.Dialog):
         left_sizer.Add(self.head_neck, 1, wx.EXPAND, 0)
         left_sizer.Add(wx.StaticText(self.panel_3, wx.ID_ANY, "Membres inférieurs"), 0, wx.EXPAND, 0)
         left_sizer.Add(self.lower_limbs, 1, wx.EXPAND, 0)
-        left_sizer.Add(wx.StaticText(self.panel_3, wx.ID_ANY, "Diagnostic"), 0, wx.EXPAND, 0)
+        left_sizer.Add(wx.StaticText(self.panel_3, wx.ID_ANY, "Diagnostic pour la facture"), 0, wx.EXPAND, 0)
         left_sizer.Add(self.diagnostic, 1, wx.EXPAND, 0)
         left_sizer.Add(wx.StaticText(self.panel_3, wx.ID_ANY, "Date d'ouverture"), 0, wx.EXPAND, 0)
         left_sizer.Add(self.consultation_date, 0, wx.EXPAND, 0)
@@ -946,8 +943,6 @@ class ConsultationDialog(wx.Dialog):
         right_sizer.Add(self.important, 1, wx.EXPAND, 0)
         right_sizer.Add(wx.StaticText(self.panel_3, wx.ID_ANY, "Remarques"), 0, wx.EXPAND, 0)
         right_sizer.Add(self.remarks, 1, wx.EXPAND, 0)
-        right_sizer.Add(wx.StaticText(self.panel_3, wx.ID_ANY, "Paye ?"), 0, wx.EXPAND, 0)
-        right_sizer.Add(self.payment, 1, wx.EXPAND, 0)
         column_sizer.Add(right_sizer, 1, wx.EXPAND, 0)
 
         self.panel_3.SetSizer(column_sizer)

@@ -71,7 +71,7 @@ class BillDialog(wx.Dialog):
         self.therapy.SetSelection(0)
         self.point_value.Enable(False)
         self.vat_enabled.Enable(False)
-        self.vat_enabled.SetSelection(1)
+        self.vat_enabled.SetSelection(0)
 
     def __do_layout(self):
         sizer_1 = wx.BoxSizer(wx.VERTICAL)
@@ -263,7 +263,7 @@ class BillDialog(wx.Dialog):
                                 wx.TextCtrl(self._positions_scroll, wx.ID_ANY, quantity, size=(60, -1), style=wx.ALIGN_RIGHT),  # Quantity
                                 wx.TextCtrl(self._positions_scroll, wx.ID_ANY, price, size=(50, -1), style=wx.ALIGN_RIGHT),  # Unit price
                                 wx.TextCtrl(self._positions_scroll, wx.ID_ANY, "1.0", size=(50, -1), style=wx.ALIGN_RIGHT),  # VPt
-                                wx.TextCtrl(self._positions_scroll, wx.ID_ANY, "8.0%", size=(40, -1), style=wx.ALIGN_RIGHT),  # VAT
+                                wx.TextCtrl(self._positions_scroll, wx.ID_ANY, "0.0%", size=(40, -1), style=wx.ALIGN_RIGHT),  # VAT
                                 wx.TextCtrl(self._positions_scroll, wx.ID_ANY, "", size=(55, -1), style=wx.ALIGN_RIGHT),  # Amount
                                 self._gen_remove_btn(),  # Remove button
                                 ))

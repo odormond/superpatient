@@ -34,7 +34,7 @@ BILL_TYPE_CONSULTATION = "C"
 BILL_TYPE_MANUAL = "M"
 BILL_TYPES = [BILL_TYPE_CONSULTATION, BILL_TYPE_MANUAL]
 
-CANTONS = ["AG", "AI", "AR", "BE", "BL", "BS", "FR", "GE", "GL", "GR", "JU", "LU", "NE", "NW", "OW", "SG", "SH", "SO", "SZ", "TG", "TI", "UR", "VD", "VS", "ZG", "ZH"]
+CANTONS = ["AG", "AI", "AR", "BE", "BL", "BS", "FR", "GE", "GL", "GR", "JU", "LU", "NE", "NW", "OW", "SG", "SH", "SO", "SZ", "TG", "TI", "UR", "VD", "VS", "ZG", "ZH", "N/A"]
 DEFAULT_CANTON = "VD"
 
 
@@ -153,7 +153,7 @@ class Patient(Model):
 class Consultation(Model):
     TABLE = 'consultations'
     FIELDS = ['id_consult', 'id', 'date_consult', 'MC', 'MC_accident', 'EG',
-              'exam_pclin', 'exam_phys', 'paye', 'divers', 'APT_thorax',
+              'exam_pclin', 'exam_phys', 'divers', 'APT_thorax',
               'APT_abdomen', 'APT_tete', 'APT_MS', 'APT_MI', 'APT_system',
               'A_osteo', 'traitement', 'therapeute']
     EXTRA_FIELDS = ['patient', 'bill']
@@ -199,7 +199,7 @@ class Bill(Model):
     TABLE = 'bills'
     FIELDS = ['id', 'type', 'payment_method', 'bv_ref', 'payment_date', 'status',
               'id_consult', 'id_patient', 'timestamp',
-              'author_lastname', 'author_firstname', 'author_rcc',
+              'author_id', 'author_lastname', 'author_firstname', 'author_rcc',
               'sex', 'lastname', 'firstname', 'street', 'zip', 'city', 'canton',
               'birthdate', 'treatment_period', 'treatment_reason',
               'mandant', 'diagnostic', 'comment']
@@ -224,6 +224,7 @@ class Bill(Model):
         cursor.execute("SELECT id FROM reminders WHERE id_bill = %s", [self.id])
         reminder_ids = [i for i, in cursor]
         self.reminders = [Reminder.load(cursor, id_reminder) for id_reminder in reminder_ids]
+        self.total_cts += sum(r.amount_cts for r in self.reminders)
 
     def load_consultation(self, cursor):
         if self.type == BILL_TYPE_CONSULTATION:

@@ -105,11 +105,14 @@ def comment(bill):
 
 
 def positions(bill):
-    VAT = "8.0%"
+    VAT = "0.0%"
     data = [["Date", "Tarif", "Code tarifaire", "Quan.", "Prix", "VPt", "TVA", "Montant"]]
     for position in bill.positions:
         data += [[position.position_date.strftime(DATE_FMT), 590, position.tarif_code, position.quantity, '%0.2f' % (position.price_cts / 100), 1.0, VAT, '%0.2f' % (position.quantity * position.price_cts / 100)],
                  ["", "", position.tarif_description]]
+    for reminder in bill.reminders:
+        data += [[reminder.reminder_date.strftime(DATE_FMT), 590, 999, 1, '%0.2f' % (reminder.amount_cts / 100), 1.0, VAT, '%0.2f' % (reminder.amount_cts / 100)],
+                 ["", "", "Frais de rappels"]]
     tstyle = (POSITION_TSTYLE +
               [('FONT', (0, row), (-1, row), TITLE_STYLE.fontName, 6) for row in range(2, len(data), 2)] +
               [('SPAN', (2, row), (-1, row)) for row in range(2, len(data), 2)])

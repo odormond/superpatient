@@ -31,16 +31,16 @@ import mailcap
 import wx
 
 from superpatient import BaseApp, DBMixin, HelpMenuMixin
-from superpatient import bills, normalize_filename
+from superpatient import bills as pdf_bills, normalize_filename
 import superpatient.customization as custo
-from superpatient.customization import windows_title, errors_text, labels_text, menus_text
-from superpatient.models import Consultation, PAYMENT_METHODS, OLD_PAYMENT_METHODS, BILL_STATUSES, STATUS_PRINTED, STATUS_SENT, STATUS_PAYED, STATUS_ABANDONED
+from superpatient.customization import windows_title, errors_text, menus_text
+from superpatient.models import Bill, PAYMENT_METHODS, OLD_PAYMENT_METHODS, BILL_STATUSES, STATUS_PRINTED, STATUS_SENT, STATUS_PAYED, STATUS_ABANDONED
 from superpatient.ui.common import showwarning, showerror, DatePickerDialog
 from superpatient.ui import accounting
 
 
 def sum_found(positions):
-    return sum(p[8] for p in positions) / 100.0
+    return sum(p[6] for p in positions) / 100.0
 
 
 def sum_notfound(positions):
@@ -80,98 +80,79 @@ class AccountingFrame(DBMixin, HelpMenuMixin, accounting.MainFrame):
         filter_lastname = self.filter_lastname.Value.strip()
         conditions = ['TRUE']
         args = []
-        manual_bills_conditions = ['TRUE']
-        manual_bills_args = []
         if therapeute != 'Tous':
-            conditions.append('consultations.therapeute = %s')
+            conditions.append('bills.author_id = %s')
             args.append(therapeute)
-            manual_bills_conditions.append('therapeute = %s')
-            manual_bills_args.append(therapeute)
         if payment_method != '':
-            conditions.append('paye_par = %s')
+            conditions.append('bills.payment_method = %s')
             args.append(payment_method)
         if filter_start:
-            conditions.append('date_consult >= %s')
+            conditions.append('bills.timestamp >= %s')
             args.append(filter_start)
-            manual_bills_conditions.append('date >= %s')
-            manual_bills_args.append(filter_start)
         if filter_end:
-            conditions.append('date_consult < %s')
+            conditions.append('bills.timestamp < %s')
             args.append(filter_end + datetime.timedelta(days=1))
-            manual_bills_conditions.append('date < %s')
-            manual_bills_args.append(filter_end + datetime.timedelta(days=1))
         if bill_status != 'Tous':
             bill_status = bill_status[0]
-            if bill_status == u'O':
-                conditions.append("consultations.status in ('O', 'I', 'E')")
-                manual_bills_conditions.append("status in ('O', 'I', 'E')")
+            if bill_status == 'O':
+                conditions.append("bills.status in ('O', 'I', 'E')")
             else:
-                conditions.append('consultations.status = %s')
+                conditions.append('bills.status = %s')
                 args.append(bill_status)
-                manual_bills_conditions.append('status = %s')
-                manual_bills_args.append(bill_status)
         if filter_firstname:
-            conditions.append('prenom LIKE %s')
+            conditions.append('bills.firstname LIKE %s')
             args.append(filter_firstname.replace('*', '%'))
         if filter_lastname:
-            conditions.append('nom LIKE %s')
+            conditions.append('bills.lastname LIKE %s')
             args.append(filter_lastname.replace('*', '%'))
-            manual_bills_conditions.append('destinataire LIKE %s')
-            manual_bills_args.append(filter_lastname.replace('*', '%'))
         self.payments.DeleteAllItems()
         self.payments_count.Value = ''
-        self.total_consultations.Value = ''
-        self.total_majorations.Value = ''
-        self.total_admin_costs.Value = ''
+        self.total_bills.Value = ''
         self.total_reminder_costs.Value = ''
         self.total.Value = ''
         self.data = []
         count = 0
-        total_consultations = 0
-        total_majorations = 0
-        total_admin_costs = 0
+        total_bills = 0
         total_reminder_costs = 0
         try:
-            self.cursor.execute("""SELECT consultations.id_consult, date_consult, paye_le, prix_cts, majoration_cts, frais_admin_cts, sex, nom, prenom, COALESCE(CAST(SUM(rappel_cts) AS SIGNED), 0), count(date_rappel), consultations.status
-                                    FROM consultations INNER JOIN patients ON consultations.id = patients.id
-                                    LEFT OUTER JOIN rappels ON consultations.id_consult = rappels.id_consult
+            self.cursor.execute("""SELECT bills.id,
+                                          bills.type,
+                                          bills.status,
+                                          bills.timestamp,
+                                          bills.payment_date,
+                                          bills.sex,
+                                          bills.lastname,
+                                          bills.firstname,
+                                          CAST(COALESCE((SELECT SUM(quantity * price_cts) FROM positions WHERE id_bill = bills.id), 0) AS SIGNED),
+                                          CAST(COALESCE((SELECT SUM(amount_cts) FROM reminders WHERE id_bill = bills.id), 0) AS SIGNED),
+                                          (SELECT count(*) FROM reminders WHERE id_bill = bills.id)
+                                    FROM bills
                                    WHERE %s
-                                   GROUP BY consultations.id_consult, date_consult, paye_le, prix_cts, majoration_cts, frais_admin_cts, sex, nom, prenom
-                                   ORDER BY date_consult""" % ' AND '.join(conditions), args)
+                                   ORDER BY bills.timestamp""" % ' AND '.join(conditions), args)
             data = list(self.cursor)
-            if payment_method in ('', 'BVR'):
-                self.cursor.execute("""SELECT -id, date, paye_le, montant_cts, 0, 0, '-', identifiant, '', 0, 0, status
-                                         FROM factures_manuelles
-                                        WHERE %s
-                                        ORDER BY date""" % ' AND '.join(manual_bills_conditions), manual_bills_args)
-                data += list(self.cursor)
             aux_cursor = self.connection.cursor()
-            for id_consult, date_consult, paye_le, prix_cts, majoration_cts, frais_admin_cts, sex, nom, prenom, rappel_cts, rappel_cnt, status in data:
-                if status not in (STATUS_ABANDONED, STATUS_PAYED) and rappel_cnt != 0:
-                    aux_cursor.execute("""SELECT status FROM rappels WHERE id_consult = %s ORDER BY date_rappel DESC LIMIT 1""", [id_consult])
+            for id_bill, type_, status, timestamp, payment_date, sex, lastname, firstname, amount_cts, reminders_cts, reminders_cnt in data:
+                if status not in (STATUS_ABANDONED, STATUS_PAYED) and reminders_cnt != 0:
+                    aux_cursor.execute("""SELECT status FROM reminders WHERE id_bill = %s ORDER BY reminder_date DESC LIMIT 1""", [id_bill])
                     status, = aux_cursor.fetchone()
-                index = self.payments.Append((status, sex, nom, prenom, date_consult, '%6.2f' % ((prix_cts+majoration_cts+frais_admin_cts+rappel_cts)/100.), paye_le or ''))
-                if rappel_cnt == 1:
+                index = self.payments.Append((status, sex, lastname, firstname, timestamp.date(), '%6.2f' % ((amount_cts + reminders_cts)/100.), payment_date or ''))
+                if reminders_cnt == 1:
                     self.payments.GetItem(index).SetTextColour(wx.Colour(64, 0, 0))
-                elif rappel_cnt > 1:
+                elif reminders_cnt > 1:
                     self.payments.GetItem(index).SetTextColour(wx.Colour(128, 0, 0))
-                self.data.append(id_consult)
-                total_consultations += prix_cts
-                total_majorations += majoration_cts
-                total_admin_costs += frais_admin_cts
-                total_reminder_costs += rappel_cts
+                self.data.append(id_bill)
+                total_bills += amount_cts
+                total_reminder_costs += reminders_cts
                 count += 1
         except:
             traceback.print_exc()
             showwarning(windows_title.db_error, errors_text.db_read)
         for c in range(self.payments.ColumnCount):
-            self.payments.SetColumnWidth(c, wx.LIST_AUTOSIZE)
+            self.payments.SetColumnWidth(c, wx.LIST_AUTOSIZE_USEHEADER if c == 1 else wx.LIST_AUTOSIZE)
         self.payments_count.Value = str(count)
-        self.total_consultations.Value = '%0.2f CHF' % (total_consultations/100.)
-        self.total_majorations.Value = '%0.2f CHF' % (total_majorations/100.)
-        self.total_admin_costs.Value = '%0.2f CHF' % (total_admin_costs/100.)
+        self.total_bills.Value = '%0.2f CHF' % (total_bills/100.)
         self.total_reminder_costs.Value = '%0.2f CHF' % (total_reminder_costs/100.)
-        self.total.Value = '%0.2f CHF' % ((total_consultations + total_majorations + total_admin_costs + total_reminder_costs)/100.)
+        self.total.Value = '%0.2f CHF' % ((total_bills + total_reminder_costs)/100.)
 
     def read_payments(self, filename):
         records = []
@@ -234,36 +215,27 @@ class AccountingFrame(DBMixin, HelpMenuMixin, accounting.MainFrame):
                 ignored.append((transaction_type, bvr_client_no, ref_no, amount_cts, depot_ref, depot_date, processing_date, credit_date, microfilm_no, reject_code, postal_fee_cts))
                 continue
             l = None
-            rappel_cts = 0
-            self.cursor.execute("SELECT id_consult, prix_cts, majoration_cts, frais_admin_cts, paye_le FROM consultations WHERE bv_ref = %s", [ref_no])
+            reminder_cts = 0
+            self.cursor.execute("""SELECT bills.id, SUM(positions.quantity * positions.price_cts), bills.payment_date
+                                     FROM bills
+                               INNER JOIN positions ON positions.id_bill = bills.id
+                                    WHERE bills.bv_ref = %s""",
+                                [ref_no])
             if self.cursor.rowcount != 0:
-                id_consult, prix_cts, majoration_cts, frais_admin_cts, paye_le = self.cursor.fetchone()
-                self.cursor.execute("SELECT rappel_cts FROM rappels WHERE id_consult = %s ORDER BY date_rappel", [id_consult])
-                a_payer_cts = prix_cts + majoration_cts + frais_admin_cts
+                id_bill, bill_cts, payment_date = self.cursor.fetchone()
+                self.cursor.execute("SELECT amount_cts FROM reminders WHERE id_bill = %s ORDER BY reminder_date", [id_bill])
                 for r in [0] + [r for r, in self.cursor]:
-                    rappel_cts += r
-                    if a_payer_cts + rappel_cts == amount_cts:
-                        if paye_le is None:
+                    reminder_cts += r
+                    if bill_cts + reminder_cts == amount_cts:
+                        if payment_date is None:
                             l = ok
                         else:
                             l = doubled
                         break
                 else:
                     l = ko
-            else:
-                self.cursor.execute("SELECT id, montant_cts, paye_le FROM factures_manuelles WHERE bv_ref = %s", [ref_no])
-                if self.cursor.rowcount != 0:
-                    id, montant_cts, paye_le = self.cursor.fetchone()
-                    id_consult = -id
-                    prix_cts, majoration_cts, frais_admin_cts = montant_cts, 0, 0
-                    if montant_cts != amount_cts:
-                        l = ko
-                    elif paye_le is None:
-                        l = ok
-                    else:
-                        l = doubled
             if l is not None:
-                l.append((id_consult, prix_cts, majoration_cts, frais_admin_cts, rappel_cts, transaction_type, bvr_client_no, ref_no, amount_cts, depot_ref, depot_date, processing_date, credit_date, microfilm_no, reject_code, postal_fee_cts))
+                l.append((id_bill, bill_cts, reminder_cts, transaction_type, bvr_client_no, ref_no, amount_cts, depot_ref, depot_date, processing_date, credit_date, microfilm_no, reject_code, postal_fee_cts))
             else:
                 not_found.append((transaction_type, bvr_client_no, ref_no, amount_cts, depot_ref, depot_date, processing_date, credit_date, microfilm_no, reject_code, postal_fee_cts))
 
@@ -298,50 +270,43 @@ class AccountingFrame(DBMixin, HelpMenuMixin, accounting.MainFrame):
     def on_mark_paid(self, event):
         from dateutil import parse_ISO
         payment_date = parse_ISO(self.payment_date.Value.strip())
-        consult_ids = [id for i, id in enumerate(self.data) if self.payments.IsSelected(i) and id >= 0]
-        manual_bills_ids = [-id for i, id in enumerate(self.data) if self.payments.IsSelected(i) and id < 0]
+        bill_ids = [id for i, id in enumerate(self.data) if self.payments.IsSelected(i) and id >= 0]
         try:
-            if len(consult_ids) > 1:
-                self.cursor.execute("""UPDATE consultations SET paye_le = %s, status = 'P'
-                                        WHERE paye_le IS NULL AND id_consult IN %s""",
-                                    [payment_date, tuple(consult_ids)])
-            elif len(consult_ids) == 1:
-                self.cursor.execute("""UPDATE consultations SET paye_le = %s, status = 'P' WHERE id_consult = %s""", [payment_date, consult_ids[0]])
-            if len(manual_bills_ids) > 1:
-                self.cursor.execute("""UPDATE factures_manuelles SET paye_le = %s, status = 'P'
-                                        WHERE paye_le IS NULL AND id IN %s""",
-                                    [payment_date, tuple(manual_bills_ids)])
-            elif len(manual_bills_ids) == 1:
-                self.cursor.execute("""UPDATE factures_manuelles SET paye_le = %s, status = 'P' WHERE id = %s""", [payment_date, manual_bills_ids[0]])
+            if len(bill_ids) > 1:
+                self.cursor.execute("""UPDATE bills SET payment_date = %s, status = 'P'
+                                        WHERE payment_date IS NULL AND id IN %s""",
+                                    [payment_date, tuple(bill_ids)])
+            elif len(bill_ids) == 1:
+                self.cursor.execute("""UPDATE bills SET payment_date = %s, status = 'P' WHERE id = %s""", [payment_date, bill_ids[0]])
         except:
             traceback.print_exc()
             showwarning(windows_title.db_error, errors_text.db_update)
         self.update_list()
 
     def on_print_again(self, event):
-        consult_ids = [id for i, id in enumerate(self.data) if self.payments.IsSelected(i) and id >= 0]
-        if consult_ids:
+        bill_ids = [id for i, id in enumerate(self.data) if self.payments.IsSelected(i) and id >= 0]
+        if bill_ids:
             filename_consult = normalize_filename(datetime.datetime.now().strftime('consultations_%F_%Hh%Mm%Ss.pdf'))
-            bills.consultations(filename_consult, self.cursor, [Consultation.load(self.cursor, id_consult) for id_consult in consult_ids])
+            pdf_bills.consultations(filename_consult, self.cursor, [Bill.load(self.cursor, id_bill) for id_bill in bill_ids])
             cmd, cap = mailcap.findmatch(mailcap.getcaps(), 'application/pdf', 'view', filename_consult)
             os.system(cmd + '&')
-        manual_bills_ids = [-id for i, id in enumerate(self.data) if self.payments.IsSelected(i) and id < 0]
-        if manual_bills_ids:
-            filename_manual = normalize_filename(datetime.datetime.now().strftime('fact_manuelles_%F_%Hh%Mm%Ss.pdf'))
-            self.cursor.execute("""SELECT therapeute, destinataire, motif, montant_cts, remarque, bv_ref
-                                     FROM factures_manuelles
-                                    WHERE id in %s""",
-                                [manual_bills_ids])
-            factures = []
-            cursor2 = self.connection.cursor()
-            for therapeute, destinataire, motif, montant_cts, remarque, bv_ref in self.cursor:
-                cursor2.execute("SELECT entete FROM therapeutes WHERE therapeute = %s", [therapeute])
-                entete, = cursor2.fetchone()
-                therapeuteAddress = entete + u'\n\n' + labels_text.adresse_pog
-                factures.append((therapeuteAddress, destinataire, motif, float(montant_cts)/100, remarque, bv_ref))
-            bills.manuals(filename_manual, factures)
-            cmd, cap = mailcap.findmatch(mailcap.getcaps(), 'application/pdf', 'view', filename_manual)
-            os.system(cmd + '&')
+        #manual_bills_ids = [-id for i, id in enumerate(self.data) if self.payments.IsSelected(i) and id < 0]
+        #if manual_bills_ids:
+        #    filename_manual = normalize_filename(datetime.datetime.now().strftime('fact_manuelles_%F_%Hh%Mm%Ss.pdf'))
+        #    self.cursor.execute("""SELECT therapeute, destinataire, motif, montant_cts, remarque, bv_ref
+        #                             FROM factures_manuelles
+        #                            WHERE id in %s""",
+        #                        [manual_bills_ids])
+        #    factures = []
+        #    cursor2 = self.connection.cursor()
+        #    for therapeute, destinataire, motif, montant_cts, remarque, bv_ref in self.cursor:
+        #        cursor2.execute("SELECT entete FROM therapeutes WHERE therapeute = %s", [therapeute])
+        #        entete, = cursor2.fetchone()
+        #        therapeuteAddress = entete + u'\n\n' + labels_text.adresse_pog
+        #        factures.append((therapeuteAddress, destinataire, motif, float(montant_cts)/100, remarque, bv_ref))
+        #    bills.manuals(filename_manual, factures)
+        #    cmd, cap = mailcap.findmatch(mailcap.getcaps(), 'application/pdf', 'view', filename_manual)
+        #    os.system(cmd + '&')
 
     def on_mark_printed(self, event):
         self.mark_status(STATUS_PRINTED)
@@ -353,21 +318,14 @@ class AccountingFrame(DBMixin, HelpMenuMixin, accounting.MainFrame):
         self.mark_status(STATUS_ABANDONED)
 
     def mark_status(self, status):
-        consult_ids = [id for i, id in enumerate(self.data) if self.payments.IsSelected(i) and id >= 0]
-        manual_bills_ids = [-id for i, id in enumerate(self.data) if self.payments.IsSelected(i) and id < 0]
+        bill_ids = [id for i, id in enumerate(self.data) if self.payments.IsSelected(i) and id >= 0]
         try:
-            for consult_id in consult_ids:
-                self.cursor.execute("""SELECT date_rappel FROM rappels WHERE id_consult = %s ORDER BY date_rappel DESC LIMIT 1""", [consult_id])
-                last_rappel, = self.cursor.fetchone() or (None,)
-                self.cursor.execute("""UPDATE consultations SET status = %s WHERE status != 'P' AND id_consult = %s""", [status, consult_id])
-                if last_rappel is not None:
-                    self.cursor.execute("""UPDATE rappels SET status = %s WHERE status != 'P' AND id_consult = %s AND date_rappel = %s""", [status, consult_id, last_rappel])
-            if len(manual_bills_ids) > 1:
-                self.cursor.execute("""UPDATE factures_manuelles SET status = %s
-                                        WHERE status != 'P' AND id IN %s""",
-                                    [status, tuple(manual_bills_ids)])
-            elif len(manual_bills_ids) == 1:
-                self.cursor.execute("""UPDATE factures_manuelles SET status = %s WHERE status != 'P' AND id = %s""", [status, manual_bills_ids[0]])
+            for id_bill in bill_ids:
+                self.cursor.execute("""SELECT id FROM reminders WHERE id_bill = %s ORDER BY reminder_date DESC LIMIT 1""", [id_bill])
+                last_reminder_id, = self.cursor.fetchone() or (None,)
+                self.cursor.execute("""UPDATE bills SET status = %s WHERE status != 'P' AND id = %s""", [status, id_bill])
+                if last_reminder_id is not None:
+                    self.cursor.execute("""UPDATE reminders SET status = %s WHERE status != 'P' AND id = %s""", [status, last_reminder_id])
         except:
             traceback.print_exc()
             showwarning(windows_title.db_error, errors_text.db_update)
@@ -381,7 +339,6 @@ class RemindersManagementDialog(DBMixin, accounting.RemindersManagementDialog):
         self.on_update_list()
 
     def on_update_list(self, *args):
-        print("update_list")
         from dateutil import parse_ISO
         upto = parse_ISO(self.upto.Value.strip())
         self.reminders.DeleteAllItems()
@@ -389,26 +346,38 @@ class RemindersManagementDialog(DBMixin, accounting.RemindersManagementDialog):
         self.data = []
         self.is_updating_list = True
         try:
-            self.cursor.execute("""SELECT consultations.id_consult, date_consult, prix_cts, majoration_cts, frais_admin_cts, sex, nom, prenom, COALESCE(CAST(SUM(rappel_cts) AS SIGNED), 0), count(date_rappel), max(date_rappel)
-                                     FROM consultations INNER JOIN patients ON consultations.id = patients.id
-                                     LEFT OUTER JOIN rappels ON consultations.id_consult = rappels.id_consult
-                                    WHERE paye_le IS NULL AND bv_ref IS NOT NULL AND bv_ref != '' AND date_consult <= %s AND consultations.status NOT IN ('P', 'A')
-                                    GROUP BY consultations.id_consult, date_consult, prix_cts, majoration_cts, sex, nom, prenom
-                                    ORDER BY date_consult""", [upto])
-            for id_consult, date_consult, prix_cts, majoration_cts, frais_admin_cts, sex, nom, prenom, rappel_cts, rappel_cnt, rappel_last in self.cursor:
-                if rappel_last is None:
-                    rappel_last = ''
-                elif rappel_last > upto:
+            self.cursor.execute("""SELECT bills.id,
+                                          bills.type,
+                                          bills.status,
+                                          bills.timestamp,
+                                          bills.payment_date,
+                                          bills.sex,
+                                          bills.lastname,
+                                          bills.firstname,
+                                          CAST(COALESCE((SELECT SUM(quantity * price_cts) FROM positions WHERE id_bill = bills.id), 0) AS SIGNED),
+                                          CAST(COALESCE((SELECT SUM(amount_cts) FROM reminders WHERE id_bill = bills.id), 0) AS SIGNED),
+                                          (SELECT count(*) FROM reminders WHERE id_bill = bills.id),
+                                          (SELECT max(reminders.reminder_date) FROM reminders WHERE id_bill = bills.id)
+                                    FROM bills
+                                   WHERE bills.payment_date IS NULL
+                                         AND bills.bv_ref IS NOT NULL AND bills.bv_ref != ''
+                                         AND bills.timestamp <= %s
+                                         AND bills.status NOT IN ('P', 'A')
+                                   ORDER BY bills.timestamp""", [upto])
+            for id_bill, type, status, timestamp, payment_date, sex, lastname, firstname, bill_cts, reminders_cts, reminders_cnt, reminders_last in self.cursor:
+                if reminders_last is None:
+                    reminders_last = ''
+                elif reminders_last > upto:
                     continue
-                index = self.reminders.Append((sex, nom, prenom, date_consult, '%0.2f' % ((prix_cts+majoration_cts+frais_admin_cts+rappel_cts)/100.), rappel_last, rappel_cnt))
+                index = self.reminders.Append((sex, lastname, firstname, timestamp.date(), '%0.2f' % ((bill_cts + reminders_cts)/100.), reminders_last, reminders_cnt))
                 self.reminders.Select(index)
-                if rappel_cnt == 1:
+                if reminders_cnt == 1:
                     self.reminders.SetItemTextColour(index, wx.Colour(64, 0, 0))
                     self.reminders.SetItemFont(index, self.GetFont().Italic())
-                elif rappel_cnt > 1:
+                elif reminders_cnt > 1:
                     self.reminders.SetItemTextColour(index, wx.Colour(128, 0, 0))
                     self.reminders.SetItemFont(index, self.GetFont().Bold())
-                self.data.append((id_consult, (prix_cts+majoration_cts+frais_admin_cts+rappel_cts), sex, nom, prenom, date_consult, rappel_cnt, prix_cts, majoration_cts, frais_admin_cts, rappel_cts))
+                self.data.append((id_bill, bill_cts+reminders_cts, sex, lastname, firstname, timestamp, reminders_cnt, bill_cts, reminders_cts))
         except:
             traceback.print_exc()
             showwarning(windows_title.db_error, errors_text.db_read)
@@ -440,19 +409,19 @@ class RemindersManagementDialog(DBMixin, accounting.RemindersManagementDialog):
     def on_generate(self, event):
         filename = normalize_filename(datetime.datetime.now().strftime('rappels_%F_%Hh%Mm%Ss.pdf'))
         today = datetime.date.today()
-        consultations = []
+        bills = []
         item = -1
         while True:
             item = self.reminders.GetNextSelected(item)
             if item == -1:
                 break
-            id_consult = self.data[item][0]
-            self.cursor.execute("""INSERT INTO rappels (id_consult, rappel_cts, date_rappel) VALUES (%s, %s, %s)""",
-                                [id_consult, custo.MONTANT_RAPPEL_CTS, today])
+            id_bill = self.data[item][0]
+            self.cursor.execute("""INSERT INTO reminders (id_bill, amount_cts, reminder_date) VALUES (%s, %s, %s)""",
+                                [id_bill, custo.MONTANT_RAPPEL_CTS, today])
 
-            consultations.append(Consultation.load(self.cursor, id_consult))
-        if consultations:
-            bills.consultations(filename, self.cursor, consultations)
+            bills.append(Bill.load(self.cursor, id_bill))
+        if bills:
+            pdf_bills.consultations(filename, self.cursor, bills)
             cmd, cap = mailcap.findmatch(mailcap.getcaps(), 'application/pdf', 'view', filename)
             os.system(cmd)
         self.Close()
@@ -627,21 +596,18 @@ class ImportDialog(DBMixin, accounting.ImportDialog):
     def on_validate_import(self, event):
         try:
             for payment in self.ok:
-                id_consult = payment[0]
-                rappel_cts = payment[4]
+                id_bill = payment[0]
+                reminder_cts = payment[4]
                 credit_date = payment[11]
-                if id_consult >= 0:
-                    self.cursor.execute("UPDATE consultations SET paye_le = %s WHERE id_consult = %s", [credit_date, id_consult])
-                    if rappel_cts > 0:
-                        self.cursor.execute("SELECT rappel_cts, date_rappel FROM rappels WHERE id_consult = %s ORDER BY date_rappel", [id_consult])
-                        for fact_rappel_cts, date_rappel in list(self.cursor):
-                            if rappel_cts >= fact_rappel_cts:
-                                self.cursor.execute("UPDATE rappels SET status = 'P' WHERE id_consult = %s AND date_rappel = %s", [id_consult, date_rappel])
-                            else:
-                                break
-                            rappel_cts -= fact_rappel_cts
-                else:
-                    self.cursor.execute("UPDATE factures_manuelles SET paye_le = %s WHERE id = %s", [credit_date, -id_consult])
+                self.cursor.execute("UPDATE bills SET payment_date = %s WHERE id = %s", [credit_date, id_bill])
+                if reminder_cts > 0:
+                    self.cursor.execute("SELECT id, amount_cts FROM reminders WHERE id_bill = %s ORDER BY reminder_date", [id_bill])
+                    for reminder_id, billed_reminder_cts in list(self.cursor):
+                        if reminder_cts >= billed_reminder_cts:
+                            self.cursor.execute("UPDATE reminders SET status = 'P' WHERE id = %s", [reminder_id])
+                        else:
+                            break
+                        reminder_cts -= billed_reminder_cts
             self.Close()
         except:
             traceback.print_exc()
@@ -701,23 +667,24 @@ class DetailsDialog(accounting.DetailsDialog):
         for column in columns:
             self.details.AppendColumn(column, format=wx.LIST_FORMAT_LEFT, width=-1)
         data = []
-        for id_consult, prix_cts, majoration_cts, frais_admin_cts, rappel_cts, transaction_type, bvr_client_no, ref_no, amount_cts, depot_ref, depot_date, processing_date, credit_date, microfilm_no, reject_code, postal_fee_cts in self.positions:
-            if id_consult >= 0:
-                self.cursor.execute("""SELECT sex, nom, prenom, date_naiss, date_consult, paye_le, COALESCE(CAST(SUM(rappel_cts) AS SIGNED), 0)
-                                         FROM consultations INNER JOIN patients ON patients.id = consultations.id
-                                                            LEFT OUTER JOIN rappels ON consultations.id_consult = rappels.id_consult
-                                        WHERE consultations.id_consult = %s
-                                        GROUP BY sex, nom, prenom, date_naiss, date_consult, paye_le""",
-                                    [id_consult])
-            else:
-                self.cursor.execute("SELECT '-', identifiant, '', '', date, paye_le, 0 FROM factures_manuelles WHERE id = %s", [-id_consult])
-            sex, nom, prenom, date_naiss, date_consult, paye_le, fact_rappel_cts = self.cursor.fetchone()
-            fact_rappel_cts = int(fact_rappel_cts)
-            if fact_rappel_cts == 0:
+        for id_bill, bill_cts, reminder_cts, transaction_type, bvr_client_no, ref_no, amount_cts, depot_ref, depot_date, processing_date, credit_date, microfilm_no, reject_code, postal_fee_cts in self.positions:
+            self.cursor.execute("""SELECT bills.timestamp,
+                                          bills.payment_date,
+                                          bills.sex,
+                                          bills.lastname,
+                                          bills.firstname,
+                                          bills.birthdate,
+                                          CAST(COALESCE((SELECT SUM(amount_cts) FROM reminders WHERE id_bill = bills.id), 0) AS SIGNED)
+                                    FROM bills
+                                   WHERE id = %s""",
+                                [id_bill])
+            timestamp, payment_date, sex, lastname, firstname, birthdate, billed_reminders_cts = self.cursor.fetchone()
+            billed_reminders_cts = int(billed_reminders_cts)
+            if billed_reminders_cts == 0:
                 rappel = ''
             else:
-                rappel = '%3.0f%%' % (rappel_cts * 100 / fact_rappel_cts)
-            data.append((sex, nom, prenom, date_naiss, date_consult, '%0.2f' % ((prix_cts+majoration_cts+frais_admin_cts+fact_rappel_cts)/100.), '%0.2f' % (amount_cts/100.), rappel, self.format_date(credit_date), self.format_date(paye_le), self.format_ref(ref_no)))
+                rappel = '%3.0f%%' % (reminder_cts * 100 / billed_reminders_cts)
+            data.append((sex, lastname, firstname, birthdate, timestamp, '%0.2f' % ((bill_cts+billed_reminders_cts)/100.), '%0.2f' % (amount_cts/100.), rappel, self.format_date(credit_date), self.format_date(payment_date), self.format_ref(ref_no)))
 
         for values in data:
             self.details.Append(values)

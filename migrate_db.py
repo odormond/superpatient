@@ -63,7 +63,8 @@ def migrate_consultations_to_bills(connection):
                                           status varchar(2) NOT NULL,
                                           id_consult integer DEFAULT NULL UNIQUE,
                                           id_patient integer DEFAULT NULL,
-                                          timestamp datetime DEFAULT CURRENT_TIMESTAMP,
+                                          timestamp datetime,
+                                          author_id text NOT NULL,
                                           author_lastname text NOT NULL,
                                           author_firstname text NOT NULL,
                                           author_rcc text NOT NULL,
@@ -77,6 +78,7 @@ def migrate_consultations_to_bills(connection):
                                           birthdate date NOT NULL,
                                           treatment_period text NOT NULL,
                                           treatment_reason text NOT NULL,
+                                          accident_date date DEFAULT NULL,
                                           mandant text DEFAULT NULL,
                                           diagnostic text DEfAULT NULL,
                                           comment text DEFAULT NULL
@@ -93,7 +95,7 @@ def migrate_consultations_to_bills(connection):
                                               id_bill integer NOT NULL, FOREIGN KEY (id_bill) REFERENCES bills(id) ON DELETE CASCADE,
                                               reminder_date date NOT NULL,
                                               amount_cts integer NOT NULL,
-                                              status varchar(2) NOT NULL
+                                              status varchar(2) NOT NULL DEFAULT 'O'
                                               )""")
     therapeutes = {}
     cursor.execute("""SELECT therapeute, entete FROM therapeutes""")
@@ -116,10 +118,14 @@ def migrate_consultations_to_bills(connection):
          APT_abdomen, APT_tete, APT_MS, APT_MI, APT_system, A_osteo, traitement, therapeute, prix_cts, prix_txt,
          majoration_cts, majoration_txt, frais_admin_cts, frais_admin_txt, paye_par, paye_le, bv_ref, status) in cursor:
 
+        divers = '\n'.join((divers, paye))
+        cursor2.execute("UPDATE consultations SET divers = %s WHERE id_consult = %s", [divers, id_consult])
+
         patient = models.Patient.load(cursor2, id_patient)
+        therapeute = therapeute or patient.therapeute
         # Create bill
         try:
-            t_firstname, t_lastname, t_rcc = therapeutes[therapeute or patient.therapeute]
+            t_firstname, t_lastname, t_rcc = therapeutes[therapeute]
         except KeyError:
             t_firstname = ''
             t_lastname = therapeute or patient.therapeute
@@ -132,6 +138,7 @@ def migrate_consultations_to_bills(connection):
                            id_consult=id_consult,
                            id_patient=id_patient,
                            timestamp=(date_consult + heure_consult) if heure_consult is not None else date_consult,
+                           author_id=therapeute,
                            author_lastname=t_lastname,
                            author_firstname=t_firstname,
                            author_rcc=t_rcc,
@@ -168,6 +175,7 @@ def migrate_consultations_to_bills(connection):
             models.Reminder(id_bill=bill.id, reminder_date=reminder_date, amount_cts=reminder_cost_cts,
                             status=reminder_status).save(cursor3)
     cursor.execute("""ALTER TABLE consultations DROP COLUMN heure_consult,
+                                                DROP COLUMN paye,
                                                 DROP COLUMN prix_cts,
                                                 DROP COLUMN prix_txt,
                                                 DROP COLUMN majoration_cts,
@@ -177,7 +185,8 @@ def migrate_consultations_to_bills(connection):
                                                 DROP COLUMN paye_par,
                                                 DROP COLUMN paye_le,
                                                 DROP COLUMN bv_ref,
-                                                DROP COLUMN status""")
+                                                DROP COLUMN status,
+                                                ADD COLUMN accident_date date DEFAULT NULL""")
 
 
 def replace_tarifs_and_co(connection):
