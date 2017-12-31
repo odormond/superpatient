@@ -95,7 +95,7 @@ def diagnostic(bill):
 
 
 def therapy(bill):
-    data = [["Thérapie", "Thérapie individuelle", "Valeur du point (VPt)", "1.0", "TVA", "Oui"]]
+    data = [["Thérapie", "Thérapie individuelle", "Valeur du point (VPt)", "1.0", "TVA", "Non"]]
     return Table(data, colWidths=[2*cm, '*', '*', 1*cm, 1*cm, 1.5*cm], rowHeights=[13] + [11]*(len(data)-1), style=BOXED_TSTYLE)
 
 
