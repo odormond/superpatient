@@ -433,16 +433,18 @@ class RemindersManagementDialog(DBMixin, accounting.RemindersManagementDialog):
 class StatisticsDialog(DBMixin, accounting.StatisticsDialog):
     def __init__(self, parent):
         super().__init__(parent)
-        self.cursor.execute("SELECT DISTINCT COALESCE(consultations.therapeute, patients.therapeute) AS therapeute FROM consultations RIGHT OUTER JOIN patients ON consultations.id = patients.id ORDER BY therapeute")
+        self.cursor.execute("SELECT DISTINCT author_id AS therapeute FROM bills WHERE type = 'C' ORDER BY author_id")
         self.therapeutes = [t for t, in self.cursor]
         self.stats.AppendRows(len(self.therapeutes) + 1)
         for r, therapeute in enumerate(self.therapeutes + ['Total']):
             self.stats.SetRowLabelValue(r, therapeute)
-        self.cursor.execute("SELECT DISTINCT YEAR(date_consult) AS year FROM consultations ORDER BY year")
+        self.cursor.execute("SELECT DISTINCT YEAR(timestamp) AS year FROM bills WHERE type = 'C' ORDER BY year")
         self.years = [y for y, in self.cursor]
         self.months = [u'tout', u'janvier', u'février', u'mars', u'avril', u'mai', u'juin', u'juillet', u'août', u'septembre', u'octobre', u'novembre', u'décembre']
         self.year.SetItems(['tout'] + [str(y) for y in self.years])
         self.month.SetItems(self.months)
+        self.cursor.execute("SELECT DISTINCT tarif_code FROM positions ORDER BY tarif_code")
+        self.stats_type.SetItems(["# Factures", "CHF Factures"] + ["CHF Code %s" % code for code, in self.cursor])
 
         self.update_display()
 
@@ -467,79 +469,80 @@ class StatisticsDialog(DBMixin, accounting.StatisticsDialog):
 
     def setup_full_view(self):
         sequence = [[year] for year in self.years]
-        sql = """SELECT COALESCE(consultations.therapeute, patients.therapeute) AS therapeute, count(*), CAST(SUM(prix_cts) AS SIGNED), CAST(SUM(majoration_cts) AS SIGNED), CAST(SUM(frais_admin_cts) AS SIGNED)
-                   FROM consultations INNER JOIN patients ON consultations.id = patients.id
-                  WHERE YEAR(date_consult) = %s
-                  GROUP BY therapeute
-                  ORDER BY therapeute"""
+        sql_filter = "YEAR(timestamp) = %s"
 
         def label_fn(args):
             return str(args[0])
-        self.setup_view(sequence, sql, label_fn)
+        self.setup_view(sequence, sql_filter, label_fn)
 
     def setup_year_view(self, year):
         sequence = [[year, month] for month in range(1, 13)]
-        sql = """SELECT COALESCE(consultations.therapeute, patients.therapeute) AS therapeute, count(*), CAST(SUM(prix_cts) AS SIGNED), CAST(SUM(majoration_cts) AS SIGNED), CAST(SUM(frais_admin_cts) AS SIGNED)
-                   FROM consultations INNER JOIN patients ON consultations.id = patients.id
-                  WHERE YEAR(date_consult) = %s AND MONTH(date_consult) = %s
-                  GROUP BY therapeute
-                  ORDER BY therapeute"""
+        sql_filter = "YEAR(timestamp) = %s AND MONTH(timestamp) = %s"
 
         def label_fn(args):
             return self.months[args[1]]
-        self.setup_view(sequence, sql, label_fn)
+        self.setup_view(sequence, sql_filter, label_fn)
 
     def setup_month_view(self, year, month):
         sequence = [[year, month, day] for day in range(1, calendar.mdays[month]+1)]
-        sql = """SELECT COALESCE(consultations.therapeute, patients.therapeute) AS therapeute,
-                        count(*),
-                        CAST(SUM(prix_cts) AS SIGNED),
-                        CAST(SUM(majoration_cts) AS SIGNED),
-                        CAST(SUM(frais_admin_cts) AS SIGNED)
-                   FROM consultations INNER JOIN patients ON consultations.id = patients.id
-                  WHERE YEAR(date_consult) = %s AND MONTH(date_consult) = %s AND DAY(date_consult) = %s
-                  GROUP BY therapeute
-                  ORDER BY therapeute"""
+        sql_filter = "YEAR(timestamp) = %s AND MONTH(timestamp) = %s AND DAY(timestamp) = %s"
 
         def label_fn(args):
             return str(args[2])
-        self.setup_view(sequence, sql, label_fn)
+        self.setup_view(sequence, sql_filter, label_fn)
 
-    def setup_view(self, sequence, sql, label_fn):
+    def setup_view(self, sequence, sql_filter, label_fn):
         totals = {}
         grand_total = 0
         mode = self.stats_type.StringSelection
-        format = '%d' if mode == '# Consultations' else '%0.2f'
+
+        def format(value):
+            return ('{:,d}' if mode == '# Factures' else '{:0,.2f}').format(value).replace(',', "'")
         self.stats.BeginBatch()
         self.stats.AppendCols(len(sequence) + 1)
         self.stats.SetColLabelValue(len(sequence), 'Total')
         self.stats.SetDefaultCellAlignment(wx.ALIGN_RIGHT, wx.ALIGN_CENTER)
         for c, args in enumerate(sequence):
             self.stats.SetColLabelValue(c, label_fn(args))
-            self.cursor.execute(sql, args)
+            if mode == '# Factures':
+                self.cursor.execute("""SELECT author_id, count(*)
+                                         FROM bills
+                                        WHERE type = 'C' AND %s
+                                        GROUP BY author_id
+                                        ORDER BY author_id""" % sql_filter, args)
+            elif mode == 'CHF Factures':
+                self.cursor.execute("""SELECT author_id,
+                                              sum((SELECT sum(quantity*price_cts)
+                                                 FROM positions
+                                                WHERE id_bill = bills.id)) / 100
+                                         FROM bills
+                                        WHERE type = 'C' AND %s
+                                        GROUP BY author_id
+                                        ORDER BY author_id""" % sql_filter, args)
+            else:
+                tarif_code = mode.replace('CHF Code ', '')
+                self.cursor.execute("""SELECT author_id,
+                                              sum((SELECT sum(quantity*price_cts)
+                                                 FROM positions
+                                                WHERE id_bill = bills.id AND tarif_code = %%s)) / 100
+                                         FROM bills
+                                        WHERE type = 'C' AND %s
+                                        GROUP BY author_id
+                                        ORDER BY author_id""" % sql_filter, [tarif_code] + args)
             col_total = 0
-            for therapeute, count, prix_cts, majoration_cts, frais_admin_cts in self.cursor:
-                if mode == '# Consultations':
-                    value = count
-                elif mode == 'CHF Consultations':
-                    value = prix_cts/100.
-                elif mode == 'CHF Majorations':
-                    value = majoration_cts/100.
-                elif mode == 'CHF Frais Admin':
-                    value = frais_admin_cts/100.
-                else:
-                    value = (prix_cts + majoration_cts + frais_admin_cts)/100.
+            for therapeute, value in self.cursor:
+                if value is None:
+                    continue
                 line = self.therapeutes.index(therapeute)
-                #bg = 'white' if line % 2 == 0 else '#eee'
-                self.stats.SetCellValue(line, c, format % value)
+                self.stats.SetCellValue(line, c, format(value))
                 totals[therapeute] = totals.get(therapeute, 0) + value
                 col_total += value
                 grand_total += value
-            self.stats.SetCellValue(len(self.therapeutes), c, format % col_total)
+            self.stats.SetCellValue(len(self.therapeutes), c, format(col_total))
         for therapeute, total in totals.items():
             line = self.therapeutes.index(therapeute)
-            self.stats.SetCellValue(line, len(sequence), format % total)
-        self.stats.SetCellValue(len(self.therapeutes), len(sequence), format % grand_total)
+            self.stats.SetCellValue(line, len(sequence), format(total))
+        self.stats.SetCellValue(len(self.therapeutes), len(sequence), format(grand_total))
         self.stats.EndBatch()
         self.stats.AutoSize()
         self.Layout()

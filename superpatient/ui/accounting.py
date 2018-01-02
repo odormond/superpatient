@@ -276,7 +276,7 @@ class StatisticsDialog(wx.Dialog):
         super().__init__(*args, **kwds)
         self.year = wx.Choice(self, wx.ID_ANY, choices=[])
         self.month = wx.Choice(self, wx.ID_ANY, choices=[])
-        self.stats_type = wx.Choice(self, wx.ID_ANY, choices=["# Consultations", "CHF Consultations", "CHF Majorations", "CHF Frais Admins", "CHF Total"])
+        self.stats_type = wx.Choice(self, wx.ID_ANY, choices=[])
         self.stats = wx.grid.Grid(self, wx.ID_ANY)
         self.ok = wx.Button(self, wx.ID_ANY, "OK")
 
