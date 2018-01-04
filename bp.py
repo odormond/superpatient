@@ -43,9 +43,13 @@ from superpatient.ui.common import askyesno, showinfo, showwarning
 from superpatient.ui import core, bill
 
 
+FIX_PATIENT_DELAY = 250  # milliseconds
+
+
 class MainFrame(DBMixin, HelpMenuMixin, core.MainFrame):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.SetSize((330, 220))
 
     def on_activate(self, event):
         if not event.Active:
@@ -904,7 +908,7 @@ class PatientDialog(FixPatientMixin, DBMixin, CancelableMixin, core.PatientDialo
                 widget.Disable()
 
         if self.patient.id is not None:
-            wx.CallAfter(lambda: self.fix_patient(True))
+            wx.CallLater(FIX_PATIENT_DELAY, lambda: self.fix_patient(True))
 
     def highlight_missing_fields(self):
         black = wx.Colour(0, 0, 0)
@@ -1115,7 +1119,7 @@ class ConsultationDialog(FixPatientMixin, DBMixin, CancelableMixin, core.Consult
         self.Bind(wx.EVT_CLOSE, self.on_close)
 
         if self.patient.id is not None:
-            wx.CallAfter(self.fix_patient)
+            wx.CallLater(FIX_PATIENT_DELAY, self.fix_patient)
 
     def set_consultation_fields(self):
         from dateutil import parse_date
@@ -1155,7 +1159,7 @@ class ConsultationDialog(FixPatientMixin, DBMixin, CancelableMixin, core.Consult
             self.patient.ATCD_fam = self.family_history.Value.strip()
             self.patient.save(self.cursor)
             if create_bill:
-                wx.CallAfter(BillDialog(self.Parent, self.consultation.id_consult).ShowModal)
+                BillDialog(self, self.consultation.id_consult).ShowModal()
             self.EndModal(0)
         except:
             traceback.print_exc()
