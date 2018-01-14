@@ -129,15 +129,15 @@ def consultations(filename, cursor, bills):
     bills = bills[:]
     while bills:
         bill = bills.pop()
-        story += [Paragraph("Facture", TITLE_STYLE),
-                  therapeute(bill),
-                  patient(bill),
-                  mandant(bill),
-                  diagnostic(bill),
-                  therapy(bill),
-                  comment(bill),
-                  ]
-        story += positions(bill)
+        page = [Paragraph("Facture", TITLE_STYLE),
+                therapeute(bill),
+                patient(bill),
+                mandant(bill),
+                diagnostic(bill),
+                therapy(bill),
+                comment(bill),
+                ]
+        page += positions(bill)
         if bill.payment_method in ('BVR', 'PVPE'):
             if len(' '.join((bill.firstname, bill.lastname))) < 25:
                 identite = [' '.join((bill.firstname, bill.lastname))]
@@ -151,7 +151,12 @@ def consultations(filename, cursor, bills):
                 y = flowable._frame._y
                 canvas.translate(-x, -y)
                 draw_bvr(canvas, bill.total_cts, address_patient, bill.bv_ref)
-            story += [CallerMacro(render_bvr)]
+            page += [CallerMacro(render_bvr)]
+        story += page
+        if bill.copy:
+            story.append(PageBreak())
+            story.append(Paragraph("Facture (copie)", TITLE_STYLE))
+            story += page[1:]
         if bills:
             story.append(PageBreak())
     doc.build(story)

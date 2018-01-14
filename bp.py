@@ -1292,7 +1292,7 @@ class BillDialog(DBMixin, CancelableMixin, bill.BillDialog):
 
     def set_bill_fields(self):
         bill = self.bill
-        bill.copy = self.copy.StringSelection
+        bill.copy = self.copy.StringSelection == "Oui"
         bill.treatment_reason = self.reason.StringSelection
         bill.treatment_period = self.treatment_period.Value.strip()
         bill.comment = self.comment.Value.strip()
@@ -1321,6 +1321,7 @@ class BillDialog(DBMixin, CancelableMixin, bill.BillDialog):
             showwarning(windows_title.db_error, errors_text.db_read)
 
     def on_print(self, *args):
+        self.bill.copy = self.copy.StringSelection == "Oui"
         ts = datetime.datetime.now().strftime('%H')
         filename = normalize_filename(u'%s_%s_%s_%s_%sh.pdf' % (self.bill.lastname,
                                                                 self.bill.firstname,
