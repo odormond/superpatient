@@ -823,7 +823,7 @@ class ConsultationDialog(wx.Dialog):
         self.save_and_bill_btn = wx.Button(self, wx.ID_ANY, "Enregistrer et facturer")  # Used for new consultation
         self.save_and_close_btn = wx.Button(self, wx.ID_ANY, "Enregistrer et fermer")  # Used when editing an old consultation
         self.view_bill_btn = wx.Button(self, wx.ID_ANY, "Voir la facture")  # Used when viewing an old consultation
-        self.edit_bill_btn = wx.Button(self, wx.ID_ANY, "Editer la facture")  # Used when editing an old consultation
+        self.save_and_edit_bill_btn = wx.Button(self, wx.ID_ANY, "Enregistrer et éditer la facture")  # Used when editing an old consultation
         self.cancel_btn = wx.Button(self, wx.ID_ANY, "Annuler")
         self.ok_btn = wx.Button(self, wx.ID_ANY, "OK")
         self.show_all_consultations_btn = wx.Button(self, wx.ID_ANY, "Toutes les consultations")
@@ -834,8 +834,8 @@ class ConsultationDialog(wx.Dialog):
         self.Bind(wx.EVT_BUTTON, self.on_save, self.save_and_bill_btn)
         self.Bind(wx.EVT_BUTTON, self.on_save, self.save_and_close_btn)
         self.Bind(wx.EVT_BUTTON, self.on_cancel, self.cancel_btn)
-        self.Bind(wx.EVT_BUTTON, self.on_view_or_edit_bill, self.view_bill_btn)
-        self.Bind(wx.EVT_BUTTON, self.on_view_or_edit_bill, self.edit_bill_btn)
+        self.Bind(wx.EVT_BUTTON, self.on_view_bill, self.view_bill_btn)
+        self.Bind(wx.EVT_BUTTON, self.on_save, self.save_and_edit_bill_btn)
         self.Bind(wx.EVT_BUTTON, self.on_close, self.ok_btn)
         self.Bind(wx.EVT_BUTTON, self.on_show_all_consultations, self.show_all_consultations_btn)
 
@@ -954,7 +954,7 @@ class ConsultationDialog(wx.Dialog):
         button_sizer.Add(self.save_and_bill_btn, 0, 0, 0)
         button_sizer.Add(self.save_and_close_btn, 0, 0, 0)
         button_sizer.Add(self.view_bill_btn, 0, 0, 0)
-        button_sizer.Add(self.edit_bill_btn, 0, 0, 0)
+        button_sizer.Add(self.save_and_edit_bill_btn, 0, 0, 0)
         button_sizer.Add(self.cancel_btn, 0, 0, 0)
         button_sizer.Add(self.ok_btn, 0, 0, 0)
         button_sizer.Add(self.show_all_consultations_btn, 0, 0, 0)
@@ -978,8 +978,8 @@ class ConsultationDialog(wx.Dialog):
         print("Event handler 'on_close' not implemented!")
         event.Skip()
 
-    def on_view_or_edit_bill(self, event):
-        print("Event handler 'on_view_or_edit_bill' not implemented!")
+    def on_view_bill(self, event):
+        print("Event handler 'on_view_bill' not implemented!")
         event.Skip()
 
     def on_show_all_consultations(self, event):

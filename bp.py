@@ -1048,16 +1048,16 @@ class ConsultationDialog(FixPatientMixin, DBMixin, CancelableMixin, core.Consult
             self.save_and_close_btn.Show(not self.readonly)
             if self.readonly:
                 self.view_bill_btn.Show(True)
-                self.edit_bill_btn.Show(False)
+                self.save_and_edit_bill_btn.Show(False)
             else:
                 self.view_bill_btn.Show(False)
-                self.edit_bill_btn.Show(True)
+                self.save_and_edit_bill_btn.Show(True)
         else:
             # New consultation
             self.save_and_bill_btn.Show(True)
             self.save_and_close_btn.Show(False)
             self.view_bill_btn.Show(False)
-            self.edit_bill_btn.Show(False)
+            self.save_and_edit_bill_btn.Show(False)
         self.cancel_btn.Show(not self.readonly)
         self.ok_btn.Show(self.readonly)
         self.cursor.execute("SELECT count(*) FROM consultations WHERE id = %s", [self.patient.id])
@@ -1156,7 +1156,8 @@ class ConsultationDialog(FixPatientMixin, DBMixin, CancelableMixin, core.Consult
             showwarning(windows_title.missing_error, errors_text.missing_therapeute)
             return
         self.set_consultation_fields()
-        create_bill = not self.consultation  # New consultation => create a new bill
+        # New consultation => create a new bill or user explicitely requested that with the button
+        go_to_bill = not self.consultation or event.EventObject == self.save_and_edit_bill_btn
         try:
             self.consultation.save(self.cursor)
 
@@ -1164,14 +1165,14 @@ class ConsultationDialog(FixPatientMixin, DBMixin, CancelableMixin, core.Consult
             self.patient.ATCD_perso = self.medical_background.Value.strip()
             self.patient.ATCD_fam = self.family_history.Value.strip()
             self.patient.save(self.cursor)
-            if create_bill:
+            if go_to_bill:
                 BillDialog(self, self.consultation.id_consult).ShowModal()
             self.EndModal(0)
         except:
             traceback.print_exc()
             showwarning(windows_title.db_error, errors_text.db_update)
 
-    def on_view_or_edit_bill(self, *args):
+    def on_view_bill(self, *args):
         if self.consultation.bill is None:
             if askyesno("Aucune facture n'existe pour cette consultation", "Voulez-vous la créer maintenant ?"):
                 BillDialog(self, self.consultation.id_consult).ShowModal()
@@ -1237,7 +1238,7 @@ class BillDialog(DBMixin, CancelableMixin, bill.BillDialog):
             self.add_position(position, self.readonly)
 
         if self.readonly:
-            for widget in (self.treatment_period, self.comment, self.payment_method, self.position_adder_btn):
+            for widget in (self.reason, self.treatment_period, self.comment, self.payment_method, self.position_adder_btn):
                 widget.Disable()
 
         self.Bind(wx.EVT_CLOSE, self.on_close)
@@ -1291,6 +1292,8 @@ class BillDialog(DBMixin, CancelableMixin, bill.BillDialog):
 
     def set_bill_fields(self):
         bill = self.bill
+        bill.copy = self.copy.StringSelection
+        bill.treatment_reason = self.reason.StringSelection
         bill.treatment_period = self.treatment_period.Value.strip()
         bill.comment = self.comment.Value.strip()
         bill.payment_method = self.payment_method.StringSelection or None
