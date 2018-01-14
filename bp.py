@@ -1328,7 +1328,7 @@ class BillDialog(DBMixin, CancelableMixin, bill.BillDialog):
                                                                 self.bill.sex,
                                                                 self.bill.timestamp.date(),
                                                                 ts))
-        bills.consultations(filename, self.cursor, [self.bill])
+        bills.consultations(filename, [self.bill])
         cmd, cap = mailcap.findmatch(mailcap.getcaps(), 'application/pdf', 'view', filename)
         os.system(cmd)
         if self.bill.payment_method == 'BVR' and askyesno(windows_title.print_completed, labels_text.ask_confirm_print_bvr):

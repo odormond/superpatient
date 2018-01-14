@@ -123,7 +123,7 @@ def positions(bill):
             ]
 
 
-def consultations(filename, cursor, bills):
+def consultations(filename, bills):
     doc = SimpleDocTemplate(filename, pagesize=A4, leftMargin=LEFT_MARGIN, topMargin=TOP_MARGIN, rightMargin=RIGHT_MARGIN, bottomMargin=BOTTOM_MARGIN)
     story = []
     bills = bills[:]
