@@ -1046,12 +1046,18 @@ class ConsultationDialog(FixPatientMixin, DBMixin, CancelableMixin, core.Consult
             # Existing consultation, editing or viewing it
             self.save_and_bill_btn.Show(False)
             self.save_and_close_btn.Show(not self.readonly)
-            self.view_bill_btn.Show(True)
+            if self.readonly:
+                self.view_bill_btn.Show(True)
+                self.edit_bill_btn.Show(False)
+            else:
+                self.view_bill_btn.Show(False)
+                self.edit_bill_btn.Show(True)
         else:
             # New consultation
             self.save_and_bill_btn.Show(True)
             self.save_and_close_btn.Show(False)
             self.view_bill_btn.Show(False)
+            self.edit_bill_btn.Show(False)
         self.cancel_btn.Show(not self.readonly)
         self.ok_btn.Show(self.readonly)
         self.cursor.execute("SELECT count(*) FROM consultations WHERE id = %s", [self.patient.id])
@@ -1165,12 +1171,12 @@ class ConsultationDialog(FixPatientMixin, DBMixin, CancelableMixin, core.Consult
             traceback.print_exc()
             showwarning(windows_title.db_error, errors_text.db_update)
 
-    def on_view_bill(self, *args):
+    def on_view_or_edit_bill(self, *args):
         if self.consultation.bill is None:
             if askyesno("Aucune facture n'existe pour cette consultation", "Voulez-vous la créer maintenant ?"):
                 BillDialog(self, self.consultation.id_consult).ShowModal()
         else:
-            BillDialog(self, self.consultation.id_consult, readonly=True).ShowModal()
+            BillDialog(self, self.consultation.id_consult, readonly=self.readonly).ShowModal()
 
     def on_show_all_consultations(self, event):
         AllConsultationsDialog(self, self.patient.id).ShowModal()
@@ -1186,7 +1192,6 @@ class BillDialog(DBMixin, CancelableMixin, bill.BillDialog):
             if self.cursor.rowcount != 0:
                 bill_id, = self.cursor.fetchone()
                 self.bill = Bill.load(self.cursor, bill_id)
-                self.readonly = True
             else:
                 self.bill = Bill(consultation=self.consultation, patient=self.consultation.patient)
         except:
@@ -1195,13 +1200,7 @@ class BillDialog(DBMixin, CancelableMixin, bill.BillDialog):
         try:
             self.cursor.execute("""SELECT code, description, unit_price_cts FROM tarifs ORDER BY code, description""")
             for code, description, unit_price_cts in self.cursor:
-                if description is not None:
-                    display = '{}: {}'.format(code, description[:45])
-                    if len(description) > 45:
-                        display += '...'
-                else:
-                    display = code
-                self.tarif_codes[display] = (code, description, unit_price_cts)
+                self.tarif_codes[self.tarif_display(code, description)] = (code, description, unit_price_cts)
         except:
             traceback.print_exc()
             showwarning(windows_title.db_error, errors_text.db_read)
@@ -1297,9 +1296,10 @@ class BillDialog(DBMixin, CancelableMixin, bill.BillDialog):
         bill.payment_method = self.payment_method.StringSelection or None
         bill.total_cts = 0
         bill.positions = []
-        for position_date, tarif_code, tarif_description, quantity, price_cts in self.get_positions():
+        for position_id, position_date, tarif_code, tarif_description, quantity, price_cts in self.get_positions():
             bill.total_cts += quantity * price_cts
-            bill.positions.append(Position(position_date=position_date,
+            bill.positions.append(Position(id=position_id,
+                                           position_date=position_date,
                                            tarif_code=tarif_code,
                                            tarif_description=tarif_description,
                                            quantity=quantity,
@@ -1309,7 +1309,8 @@ class BillDialog(DBMixin, CancelableMixin, bill.BillDialog):
             bill.status = STATUS_PAYED
         try:
             if bill.payment_method in ('BVR', 'PVPE'):
-                bill.bv_ref = gen_bvr_ref(self.cursor, bill.firstname, bill.lastname, bill.timestamp)
+                if bill.bv_ref is None:
+                    bill.bv_ref = gen_bvr_ref(self.cursor, bill.firstname, bill.lastname, bill.timestamp)
             else:
                 bill.bv_ref = None
         except:
@@ -1331,13 +1332,19 @@ class BillDialog(DBMixin, CancelableMixin, bill.BillDialog):
             self.bill.save(self.cursor)
 
     def on_save_and_print(self, event):
-        self.set_bill_fields()
-        if self.bill.payment_method is None:
+        if (self.payment_method.StringSelection or None) is None:
             showwarning(windows_title.missing_error, errors_text.missing_payment_info)
             return
-        if not self.bill.positions:
+        if not self.get_positions():
             showwarning(windows_title.missing_error, errors_text.missing_positions)
             return
+        if self.bill:
+            self.save_edited_bill()
+        else:
+            self.save_new_bill()
+
+    def save_new_bill(self):
+        self.set_bill_fields()
         try:
             self.bill.save(self.cursor)
             for position in self.bill.positions:
@@ -1349,6 +1356,13 @@ class BillDialog(DBMixin, CancelableMixin, bill.BillDialog):
         else:
             self.on_print()
             self.EndModal(0)
+
+    def save_edited_bill(self):
+        existing = {p.id for p in self.bill.positions}
+        edited = {i for i, *_ in self.get_positions()}
+        for removed_id in existing.difference(edited):
+            self.cursor.execute("""DELETE FROM positions WHERE id = %s""", [removed_id])
+        self.save_new_bill()
 
     def on_close(self, event):
         if self.readonly or event.EventObject == self.save_and_print_btn or askyesno(windows_title.really_cancel, labels_text.bill_really_cancel):

@@ -219,6 +219,15 @@ class BillDialog(wx.Dialog):
         scroll.SetScrollRate(1, 1)
         return scroll
 
+    def tarif_display(self, code, description):
+        if description is not None:
+            display = '{}: {}'.format(code, description[:45])
+            if len(description) > 45:
+                display += '...'
+        else:
+            display = code
+        return display
+
     def _tarif_code_choices(self):
         return list(self.tarif_codes)
 
@@ -244,20 +253,23 @@ class BillDialog(wx.Dialog):
     def add_position(self, position=None, readonly=False):
         tarif_code_widget = self._gen_tarif_code()
         if position is not None:
+            position_id = position.id
             position_date = position.position_date
             tarif_code = position.tarif_code
             tarif_description = position.tarif_description
             quantity = str(position.quantity)
             price_cts = position.price_cts
         else:
+            position_id = None
             position_date = datetime.date.today()
             tarif_code, tarif_description, price_cts = list(self.tarif_codes.values())[0]
             quantity = "1"
 
-        tarif_code_widget.Children[0].StringSelection = tarif_code or ''
+        tarif_code_widget.Children[0].StringSelection = self.tarif_display(tarif_code, tarif_description)
         tarif_code_widget.Children[1].Value = tarif_description or ''
         price = "%0.2f" % (price_cts / 100) if price_cts is not None else ''
-        self._positions.append((wx.TextCtrl(self._positions_scroll, wx.ID_ANY, position_date.strftime(DATE_FMT), size=(80, -1)),  # Date
+        self._positions.append((position_id,
+                                wx.TextCtrl(self._positions_scroll, wx.ID_ANY, position_date.strftime(DATE_FMT), size=(80, -1)),  # Date
                                 wx.StaticText(self._positions_scroll, wx.ID_ANY, "590"),  # Tarif
                                 tarif_code_widget,  # Tarif code
                                 wx.TextCtrl(self._positions_scroll, wx.ID_ANY, quantity, size=(60, -1), style=wx.ALIGN_RIGHT),  # Quantity
@@ -268,7 +280,7 @@ class BillDialog(wx.Dialog):
                                 self._gen_remove_btn(),  # Remove button
                                 ))
         tarif_code_widget.Children[1].Enable(price_cts is None)
-        quantity_widget, price_widget, vpt_widget, vat_widget, amount_widget = self._positions[-1][3:8]
+        quantity_widget, price_widget, vpt_widget, vat_widget, amount_widget = self._positions[-1][4:9]
         quantity_widget.Enable(price_cts is not None)
         price_widget.Enable(price_cts is None)
         vpt_widget.Enable(False)
@@ -277,7 +289,7 @@ class BillDialog(wx.Dialog):
         self.Bind(wx.EVT_TEXT, self.on_update_amount, quantity_widget)
         self.Bind(wx.EVT_TEXT, self.on_update_amount, price_widget)
         row = len(self._positions)
-        for col, widget in enumerate(self._positions[-1]):
+        for col, widget in enumerate(self._positions[-1][1:]):
             self._positions_grid.Add(widget, (row, col), (1, 1), wx.EXPAND if col == 2 else 0, 0)
         self._positions_grid.Layout()
         size = self._positions_grid.GetMinSize()
@@ -290,7 +302,7 @@ class BillDialog(wx.Dialog):
                 quantity_widget.SetSelection(-1, -1)
                 quantity_widget.SetFocus()
         if readonly:
-            for widget in self._positions[-1]:
+            for widget in self._positions[-1][1:]:
                 widget.Disable()
         self.update_amount(len(self._positions)-1)
 
@@ -298,13 +310,13 @@ class BillDialog(wx.Dialog):
         item = self._positions_grid.GetItem(event.EventObject)
         row = item.GetPos().Row
         pos_index = row - 1
-        for widget in self._positions[pos_index]:
+        for widget in self._positions[pos_index][1:]:
             self._positions_grid.Detach(widget)
             widget.Destroy()
         del self._positions[pos_index]
         for moved_row, positions in enumerate(self._positions[pos_index:]):
             moved_row += row
-            for col, widget in enumerate(positions):
+            for col, widget in enumerate(positions[1:]):
                 self._positions_grid.Detach(widget)
                 self._positions_grid.Add(widget, (moved_row, col), (1, 1), wx.EXPAND if col == 2 else 0, 0)
         self._positions_grid.Layout()
@@ -319,7 +331,7 @@ class BillDialog(wx.Dialog):
         description_widget.Value = description or ""
         description_widget.Enable(price_cts is None)
         position_index = self._positions_grid.GetItem(choice_widget.Parent).GetPos().GetRow() - 1
-        quantity_widget, price_widget = self._positions[position_index][3:5]
+        quantity_widget, price_widget = self._positions[position_index][4:6]
         quantity_widget.Enable(price_cts is not None)
         quantity_widget.Value = "1"
         price_widget.Enable(price_cts is None)
@@ -336,7 +348,7 @@ class BillDialog(wx.Dialog):
         self.update_amount(position_index)
 
     def update_amount(self, position_index):
-        quantity_widget, price_widget, _, _, amount_widget = self._positions[position_index][3:8]
+        quantity_widget, price_widget, _, _, amount_widget = self._positions[position_index][4:9]
         na = False
         try:
             quantity_cts = round(float(quantity_widget.Value) * 100)
@@ -363,12 +375,13 @@ class BillDialog(wx.Dialog):
 
     def get_positions(self):
         from dateutil import parse_date
-        return [(parse_date(date_wgt.Value),
+        return [(position_id,
+                 parse_date(date_wgt.Value),
                  self.tarif_codes[tarif_code_wgt.Children[0].StringSelection][0],
                  tarif_code_wgt.Children[1].Value,
                  float(quantity_wgt.Value),
                  round(float(price_wgt.Value) * 100))
-                for date_wgt, _, tarif_code_wgt, quantity_wgt, price_wgt, _, _, _, _ in self._positions]
+                for position_id, date_wgt, _, tarif_code_wgt, quantity_wgt, price_wgt, _, _, _, _ in self._positions]
 
     def on_save_and_print(self, event):
         print("Event handler 'on_save_and_print' not implemented!")
