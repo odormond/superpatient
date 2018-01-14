@@ -28,6 +28,9 @@ from .models import SEX_MALE
 from .ui.common import showerror, AboutDialog, LicenseDialog
 
 
+WIN_CORNER_SHIFT = 32
+
+
 class BaseApp(wx.App):
     def OnInit(self):
         self.init_db()
@@ -38,6 +41,7 @@ class BaseApp(wx.App):
         self.main_frame = self.MainFrameClass(None)
         self.SetTopWindow(self.main_frame)
         self.main_frame.Show()
+        self.main_frame.Position = WIN_CORNER_SHIFT, WIN_CORNER_SHIFT
         return True
 
     def init_reportlab(self):
@@ -140,6 +144,8 @@ class CancelableMixin:
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.Bind(wx.EVT_CHAR_HOOK, self.on_cancel)
+        x, y = self.Parent.Position
+        self.Position = x + WIN_CORNER_SHIFT, y + WIN_CORNER_SHIFT
 
     def on_cancel(self, event=None):
         if not isinstance(event, wx.KeyEvent) or event.KeyCode == wx.WXK_ESCAPE:
