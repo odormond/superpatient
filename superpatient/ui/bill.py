@@ -184,7 +184,7 @@ class BillDialog(wx.Dialog):
         self.total.SetFont(wx.Font(12, wx.DEFAULT, wx.NORMAL, wx.BOLD, 0, ""))
         self.positions_footer_sizer.Add(self.position_adder_btn, 0, wx.ALIGN_LEFT, 0)
         self.positions_footer_sizer.AddStretchSpacer()
-        self.positions_footer_sizer.Add(wx.StaticText(self, wx.ID_ANY, "Moyen de payement"), 0, wx.ALIGN_CENTER_VERTICAL, 0)
+        self.positions_footer_sizer.Add(wx.StaticText(self, wx.ID_ANY, "Moyen de payement"), 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 5)
         self.positions_footer_sizer.Add(self.payment_method, 0, wx.ALIGN_CENTER, 0)
         self.positions_footer_sizer.AddStretchSpacer()
         self.positions_footer_sizer.Add(self.total, 0, 0, 0)
