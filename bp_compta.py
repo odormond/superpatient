@@ -30,7 +30,7 @@ import mailcap
 
 import wx
 
-from superpatient import BaseApp, DBMixin, HelpMenuMixin
+from superpatient import BaseApp, DBMixin, CancelableMixin, HelpMenuMixin
 from superpatient import bills as pdf_bills, normalize_filename
 import superpatient.customization as custo
 from superpatient.customization import windows_title, errors_text, menus_text
@@ -219,7 +219,8 @@ class AccountingFrame(DBMixin, HelpMenuMixin, accounting.MainFrame):
             self.cursor.execute("""SELECT bills.id, SUM(positions.quantity * positions.price_cts), bills.payment_date
                                      FROM bills
                                INNER JOIN positions ON positions.id_bill = bills.id
-                                    WHERE bills.bv_ref = %s""",
+                                    WHERE bills.bv_ref = %s
+                                    GROUP BY bills.id, bills.payment_date""",
                                 [ref_no])
             if self.cursor.rowcount != 0:
                 id_bill, bill_cts, payment_date = self.cursor.fetchone()
@@ -580,6 +581,7 @@ class ImportDialog(DBMixin, accounting.ImportDialog):
 
         self.volume_ignored.LabelText = str(len(self.ignored))
         self.details_ignored.Show(bool(self.ignored))
+        self.Fit()
 
     def on_details_in_order(self, event):
         DetailsDialog(self, self.ok).ShowModal()
@@ -600,8 +602,9 @@ class ImportDialog(DBMixin, accounting.ImportDialog):
         try:
             for payment in self.ok:
                 id_bill = payment[0]
-                reminder_cts = payment[4]
-                credit_date = payment[11]
+                reminder_cts = payment[2]
+                credit_date = payment[10]
+                print("payment:", payment)
                 self.cursor.execute("UPDATE bills SET payment_date = %s WHERE id = %s", [credit_date, id_bill])
                 if reminder_cts > 0:
                     self.cursor.execute("SELECT id, amount_cts FROM reminders WHERE id_bill = %s ORDER BY reminder_date", [id_bill])
@@ -620,7 +623,7 @@ class ImportDialog(DBMixin, accounting.ImportDialog):
         self.Close()
 
 
-class DetailsDialog(accounting.DetailsDialog):
+class DetailsDialog(DBMixin, CancelableMixin, accounting.DetailsDialog):
     transaction_types = {
         '002': 'Crédit B préimp',
         '005': 'Extourne B préimp',
@@ -640,14 +643,13 @@ class DetailsDialog(accounting.DetailsDialog):
         super().__init__(parent)
         self.positions = positions
 
-        if len(self.positions[0]) == 16:
+        if len(self.positions[0]) == 14:
             self.populate_found()
         else:
             self.populate_notfound()
         for c in range(self.details.ColumnCount):
             self.details.SetColumnWidth(c, wx.LIST_AUTOSIZE)
         self.details.SetInitialSize(self.details.GetViewRect()[2:])
-        self.Layout()
         self.Fit()
 
     def format_date(self, date):
@@ -668,7 +670,7 @@ class DetailsDialog(accounting.DetailsDialog):
         self.details.DeleteAllColumns()
         columns = ["Sex", "Nom", "Prénom", "Naissance", "Consultation du", "Facturé CHF", "Payé CHF", "Rappel", "Crédité le", "Comtabilisé le", "Numéro de référence"]
         for column in columns:
-            self.details.AppendColumn(column, format=wx.LIST_FORMAT_LEFT, width=-1)
+            self.details.AppendColumn(column, format=wx.LIST_FORMAT_RIGHT if 'CHF' in column else wx.LIST_FORMAT_LEFT, width=-1)
         data = []
         for id_bill, bill_cts, reminder_cts, transaction_type, bvr_client_no, ref_no, amount_cts, depot_ref, depot_date, processing_date, credit_date, microfilm_no, reject_code, postal_fee_cts in self.positions:
             self.cursor.execute("""SELECT bills.timestamp,
@@ -697,7 +699,7 @@ class DetailsDialog(accounting.DetailsDialog):
         self.details.DeleteAllColumns()
         columns = ["Type de transaction", "Payé CHF", "Crédité le", "Numéro de référence"]
         for column in columns:
-            self.details.AppendColumn(column, format=wx.LIST_FORMAT_LEFT, width=-1)
+            self.details.AppendColumn(column, format=wx.LIST_FORMAT_RIGHT if 'CHF' in column else wx.LIST_FORMAT_LEFT, width=-1)
         data = []
         for transaction_type, bvr_client_no, ref_no, amount_cts, depot_ref, depot_date, processing_date, credit_date, microfilm_no, reject_code, postal_fee_cts in self.positions:
             data.append((self.transaction_types.get(transaction_type, transaction_type), '%0.2f' % (amount_cts/100.), self.format_date(credit_date), self.format_ref(ref_no)))
