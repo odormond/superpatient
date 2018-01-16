@@ -258,13 +258,17 @@ class BillDialog(wx.Dialog):
             tarif_description = position.tarif_description
             quantity = str(position.quantity)
             price_cts = position.price_cts
+            tarif_code_key = self.tarif_display(tarif_code, tarif_description)
+            if tarif_code_key not in self.tarif_codes:
+                tarif_code_widget.Children[0].Append(tarif_code_key)
         else:
             position_id = None
             position_date = datetime.date.today()
             tarif_code, tarif_description, price_cts = list(self.tarif_codes.values())[0]
             quantity = "1"
+            tarif_code_key = self.tarif_display(tarif_code, tarif_description)
 
-        tarif_code_widget.Children[0].StringSelection = self.tarif_display(tarif_code, tarif_description)
+        tarif_code_widget.Children[0].StringSelection = tarif_code_key
         tarif_code_widget.Children[1].Value = tarif_description or ''
         price = "%0.2f" % (price_cts / 100) if price_cts is not None else ''
         self._positions.append((position_id,
