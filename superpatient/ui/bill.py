@@ -214,7 +214,7 @@ class BillDialog(wx.Dialog):
         self._positions_grid.AddGrowableCol(2)
         self._positions = []
         scroll.SetSizer(self._positions_grid)
-        scroll.SetMinSize((850, 200))
+        scroll.SetMinSize((920, 200))
         scroll.SetScrollRate(1, 1)
         return scroll
 

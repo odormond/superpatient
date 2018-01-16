@@ -49,7 +49,7 @@ FIX_PATIENT_DELAY = 250  # milliseconds
 class MainFrame(DBMixin, HelpMenuMixin, core.MainFrame):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.SetSize((330, 220))
+        #self.SetSize((330, 220))
 
     def on_activate(self, event):
         if not event.Active:
@@ -58,6 +58,7 @@ class MainFrame(DBMixin, HelpMenuMixin, core.MainFrame):
         self.patients_count.LabelText = str(self.cursor.fetchone()[0])
         self.cursor.execute("SELECT count(*) FROM consultations")
         self.consultations_count.LabelText = str(self.cursor.fetchone()[0])
+        self.Fit()
 
     def on_manage_collaborators(self, event):
         ManageCollaboratorsDialog(self).ShowModal()
@@ -123,6 +124,7 @@ class ManualBillDialog(DBMixin, CancelableMixin, core.ManualBillDialog):
         self.Bind(wx.EVT_CHAR_HOOK, self.on_tab, self.remark)
 
     def on_activate(self, event):
+        self.Fit()
         self.reason.SetFocus()
 
     def on_tab(self, event):
@@ -747,6 +749,7 @@ class FixPatientAddressDialog(CancelableMixin, wx.Dialog):
         self.SetSizer(sizer)
         sizer.SetSizeHints(self)
         self.Layout()
+        self.Fit()
 
         self.Bind(wx.EVT_BUTTON, self.on_validate, self.ok_btn)
         self.Bind(wx.EVT_BUTTON, self.on_close, self.cancel_btn)
@@ -781,6 +784,7 @@ class FixPatientSexDialog(CancelableMixin, wx.Dialog):
         self.SetSizer(sizer)
         sizer.SetSizeHints(self)
         self.Layout()
+        self.Fit()
 
         self.Bind(wx.EVT_BUTTON, self.on_validate, self.ok_btn)
         self.Bind(wx.EVT_BUTTON, self.on_close, self.cancel_btn)
@@ -906,6 +910,8 @@ class PatientDialog(FixPatientMixin, DBMixin, CancelableMixin, core.PatientDialo
                            self.main_doctor, self.other_doctors, self.complementary_insurance,
                            self.profession, self.civil_status, self.sent_by, self.remarks):
                 widget.Disable()
+
+        self.Fit()
 
         if self.patient.id is not None:
             wx.CallLater(FIX_PATIENT_DELAY, lambda: self.fix_patient(True))
@@ -1123,6 +1129,7 @@ class ConsultationDialog(FixPatientMixin, DBMixin, CancelableMixin, core.Consult
             self.therapeute.Disable()
 
         self.Bind(wx.EVT_CLOSE, self.on_close)
+        self.Fit()
 
         if self.patient.id is not None:
             wx.CallLater(FIX_PATIENT_DELAY, self.fix_patient)
@@ -1243,7 +1250,7 @@ class BillDialog(DBMixin, CancelableMixin, bill.BillDialog):
 
         self.Bind(wx.EVT_CLOSE, self.on_close)
 
-        self.Layout()
+        self.Fit()
 
     def initialize_bill(self):
         """Initialize a newly created bill object from the consultation"""
