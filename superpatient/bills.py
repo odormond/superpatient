@@ -1,4 +1,4 @@
-#    Copyright 2006-2017 Tibor Csernay
+#    Copyright 2006-2018 Tibor Csernay
 
 #    This file is part of SuperPatient.
 
@@ -22,10 +22,4 @@ try:
 except ImportError:
     REPORTLAB_IS_MISSING = True
 else:
-    from .custom_bill import manuals  # noqa
-    from .customization import BILL_TYPE
-
-    if BILL_TYPE == '590':
-        from .type590_bill import consultations  # noqa
-    else:
-        from .custom_bill import consultations  # noqa
+    from .type590_bill import consultations, manuals  # noqa

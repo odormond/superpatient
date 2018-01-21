@@ -200,7 +200,8 @@ class Bill(Model):
     FIELDS = ['id', 'type', 'payment_method', 'bv_ref', 'payment_date', 'status',
               'id_consult', 'id_patient', 'timestamp',
               'author_id', 'author_lastname', 'author_firstname', 'author_rcc',
-              'sex', 'lastname', 'firstname', 'street', 'zip', 'city', 'canton',
+              'sex', 'title', 'lastname', 'firstname', 'complement',
+              'street', 'zip', 'city', 'canton',
               'birthdate', 'treatment_period', 'treatment_reason',
               'mandant', 'diagnostic', 'comment']
     AUTO_FIELD = 'id'

@@ -1,13 +1,17 @@
+import os
+
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, Spacer, PageBreak
 from reportlab.platypus.flowables import CallerMacro
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import cm
 from reportlab.lib import colors
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 
 from . import gen_title
 from .customization import DATE_FMT, labels_text
-from .custom_bill import draw_bvr
+from .custom_bill import draw_head, draw_bvr
 
 
 LEFT_MARGIN = 1.7*cm
@@ -145,7 +149,7 @@ def consultations(filename, bills):
                 identite = [bill.firstname, bill.lastname]
             address_patient = '\n'.join(identite + [bill.street, bill.zip + ' ' + bill.city])
 
-            def render_bvr(flowable):
+            def render_bvr(flowable, address_patient=address_patient, bill=bill):
                 canvas = flowable.canv
                 x = flowable._frame._x + flowable._frame._leftExtraIndent
                 y = flowable._frame._y
@@ -157,6 +161,87 @@ def consultations(filename, bills):
             story.append(PageBreak())
             story.append(Paragraph("Facture (copie)", TITLE_STYLE))
             story += page[1:]
+        if bills:
+            story.append(PageBreak())
+    doc.build(story)
+
+
+BASE_DIR = os.path.join(os.path.dirname(__file__), 'pdfs')
+pdfmetrics.registerFont(TTFont('EuclidBPBold', os.path.join(BASE_DIR, 'Euclid_BP_Bold.ttf')))
+
+MARGIN = 1*cm
+LOGO_WIDTH = 5.6*cm
+LOGO_HEIGHT = LOGO_WIDTH*423./1280
+FONT_SIZE = 12
+MANUAL_STYLE = ParagraphStyle('manual', fontName='EuclidBPBold', fontSize=FONT_SIZE, leading=FONT_SIZE*1.2)
+FACTURE_STYLE = ParagraphStyle('facture', fontName='EuclidBPBold', fontSize=FONT_SIZE+4)
+TSTYLE = [('FONT', (0, 0), (-1, -1), 'EuclidBPBold', FONT_SIZE), ('ALIGN', (1, 0), (1, -1), 'RIGHT')]
+
+
+def render_head(flowable):
+    canvas = flowable.canv
+    x = flowable._frame._x + flowable._frame._leftExtraIndent
+    y = flowable._frame._y
+    canvas.translate(-x, -y)
+    draw_head(canvas, FONT_SIZE)
+
+
+def ParagraphOrSpacer(text, style):
+    if text.strip():
+        return Paragraph(text, style)
+    return Spacer(0, FONT_SIZE)
+
+
+def manuals(filename, bills):
+    doc = SimpleDocTemplate(filename, pagesize=A4, leftMargin=MARGIN, topMargin=MARGIN+LOGO_HEIGHT, rightMargin=MARGIN, bottomMargin=MARGIN)
+    story = []
+    bills = bills[:]
+    while bills:
+        bill = bills.pop()
+        positions = []
+        for pos in bill.positions:
+            positions.append([Paragraph(pos.tarif_description, MANUAL_STYLE), '%0.2f' % ((pos.quantity * pos.price_cts) / 100)])
+        for reminder in bill.reminders:
+            positions.append([Paragraph("Rappel du %s" % reminder.reminder_date.strftime(DATE_FMT), MANUAL_STYLE), '%0.2f' % (reminder.amount_cts / 100)])
+        if len(positions) > 1:
+            positions.append([Paragraph("Total", MANUAL_STYLE), 'CHF %0.2f' % (bill.total_cts / 100)])
+        story += [CallerMacro(render_head)]
+
+        therapeute = '{} {}\nRCC {}\n\n{}'.format(bill.author_firstname, bill.author_lastname, bill.author_rcc, labels_text.adresse_pog)
+        address = '{}\n{} {}\n{}\n{}\n{} {}'.format(bill.title, bill.firstname, bill.lastname, bill.complement, bill.street, bill.zip, bill.city)
+        story += [Table([[[ParagraphOrSpacer(line, MANUAL_STYLE) for line in therapeute.splitlines()],
+                          [ParagraphOrSpacer(line, MANUAL_STYLE) for line in address.splitlines()]]],
+                        colWidths=['66%', '34%'],
+                        style=[('ALIGN', (0, 0), (0, 0), 'LEFT'), ('ALIGN', (1, 0), (1, 0), 'RIGHT')]),
+                  Spacer(0, MARGIN),
+                  Paragraph('', MANUAL_STYLE),
+                  Spacer(0, 1*MARGIN),
+                  Paragraph('FACTURE', FACTURE_STYLE),
+                  Spacer(0, 1*MARGIN),
+                  Table(positions, colWidths=['*', 5*cm], style=TSTYLE),
+                  ]
+        if bill.comment:
+            story.append(Spacer(0, 1*MARGIN))
+            story.append(Table([[Paragraph("Remarque:", MANUAL_STYLE), Paragraph(bill.comment, MANUAL_STYLE)]],
+                               colWidths=[3*cm, '*'],
+                               style=[('ALIGN', (0, 0), (1, 0), 'LEFT')]))
+        story += [Spacer(0, 1.5*MARGIN),
+                  Paragraph("Avec mes remerciements.", MANUAL_STYLE),
+                  ]
+
+        if len(' '.join((bill.firstname, bill.lastname))) < 25:
+            identite = [' '.join((bill.firstname, bill.lastname))]
+        else:
+            identite = [bill.firstname, bill.lastname]
+        address_patient = '\n'.join(identite + [bill.street, bill.zip + ' ' + bill.city])
+
+        def render_bvr(flowable, address_patient=address_patient, bill=bill):
+            canvas = flowable.canv
+            x = flowable._frame._x + flowable._frame._leftExtraIndent
+            y = flowable._frame._y
+            canvas.translate(-x, -y)
+            draw_bvr(canvas, bill.total_cts, address_patient, bill.bv_ref)
+        story += [CallerMacro(render_bvr)]
         if bills:
             story.append(PageBreak())
     doc.build(story)

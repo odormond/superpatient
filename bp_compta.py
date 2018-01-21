@@ -34,7 +34,7 @@ from superpatient import BaseApp, DBMixin, CancelableMixin, HelpMenuMixin
 from superpatient import bills as pdf_bills, normalize_filename
 import superpatient.customization as custo
 from superpatient.customization import windows_title, errors_text, menus_text
-from superpatient.models import Bill, PAYMENT_METHODS, OLD_PAYMENT_METHODS, BILL_STATUSES, STATUS_PRINTED, STATUS_SENT, STATUS_PAYED, STATUS_ABANDONED
+from superpatient.models import Bill, PAYMENT_METHODS, OLD_PAYMENT_METHODS, BILL_STATUSES, STATUS_PRINTED, STATUS_SENT, STATUS_PAYED, STATUS_ABANDONED, BILL_TYPE_CONSULTATION, BILL_TYPE_MANUAL
 from superpatient.ui.common import showwarning, showerror, DatePickerDialog
 from superpatient.ui import accounting
 
@@ -287,27 +287,19 @@ class AccountingFrame(DBMixin, HelpMenuMixin, accounting.MainFrame):
     def on_print_again(self, event):
         bill_ids = [id for i, id in enumerate(self.data) if self.payments.IsSelected(i) and id >= 0]
         if bill_ids:
-            filename_consult = normalize_filename(datetime.datetime.now().strftime('consultations_%F_%Hh%Mm%Ss.pdf'))
-            pdf_bills.consultations(filename_consult, self.cursor, [Bill.load(self.cursor, id_bill) for id_bill in bill_ids])
-            cmd, cap = mailcap.findmatch(mailcap.getcaps(), 'application/pdf', 'view', filename_consult)
-            os.system(cmd + '&')
-        #manual_bills_ids = [-id for i, id in enumerate(self.data) if self.payments.IsSelected(i) and id < 0]
-        #if manual_bills_ids:
-        #    filename_manual = normalize_filename(datetime.datetime.now().strftime('fact_manuelles_%F_%Hh%Mm%Ss.pdf'))
-        #    self.cursor.execute("""SELECT therapeute, destinataire, motif, montant_cts, remarque, bv_ref
-        #                             FROM factures_manuelles
-        #                            WHERE id in %s""",
-        #                        [manual_bills_ids])
-        #    factures = []
-        #    cursor2 = self.connection.cursor()
-        #    for therapeute, destinataire, motif, montant_cts, remarque, bv_ref in self.cursor:
-        #        cursor2.execute("SELECT entete FROM therapeutes WHERE therapeute = %s", [therapeute])
-        #        entete, = cursor2.fetchone()
-        #        therapeuteAddress = entete + u'\n\n' + labels_text.adresse_pog
-        #        factures.append((therapeuteAddress, destinataire, motif, float(montant_cts)/100, remarque, bv_ref))
-        #    bills.manuals(filename_manual, factures)
-        #    cmd, cap = mailcap.findmatch(mailcap.getcaps(), 'application/pdf', 'view', filename_manual)
-        #    os.system(cmd + '&')
+            bills = [Bill.load(self.cursor, id_bill) for id_bill in bill_ids]
+            consults = [b for b in bills if b.type == BILL_TYPE_CONSULTATION]
+            if consults:
+                filename_consult = normalize_filename(datetime.datetime.now().strftime('consultations_%F_%Hh%Mm%Ss.pdf'))
+                pdf_bills.consultations(filename_consult, consults)
+                cmd, cap = mailcap.findmatch(mailcap.getcaps(), 'application/pdf', 'view', filename_consult)
+                os.system(cmd + '&')
+            manuals = [b for b in bills if b.type == BILL_TYPE_MANUAL]
+            if manuals:
+                filename_manual = normalize_filename(datetime.datetime.now().strftime('fact_manuelles_%F_%Hh%Mm%Ss.pdf'))
+                pdf_bills.manuals(filename_manual, manuals)
+                cmd, cap = mailcap.findmatch(mailcap.getcaps(), 'application/pdf', 'view', filename_manual)
+                os.system(cmd + '&')
 
     def on_mark_printed(self, event):
         self.mark_status(STATUS_PRINTED)
@@ -408,7 +400,6 @@ class RemindersManagementDialog(DBMixin, accounting.RemindersManagementDialog):
         self.on_update_list()
 
     def on_generate(self, event):
-        filename = normalize_filename(datetime.datetime.now().strftime('rappels_%F_%Hh%Mm%Ss.pdf'))
         today = datetime.date.today()
         bills = []
         item = -1
@@ -421,8 +412,16 @@ class RemindersManagementDialog(DBMixin, accounting.RemindersManagementDialog):
                                 [id_bill, custo.MONTANT_RAPPEL_CTS, today])
 
             bills.append(Bill.load(self.cursor, id_bill))
-        if bills:
-            pdf_bills.consultations(filename, self.cursor, bills)
+        consults = [b for b in bills if b.type == BILL_TYPE_CONSULTATION]
+        if consults:
+            filename = normalize_filename(datetime.datetime.now().strftime('rappels_consultations_%F_%Hh%Mm%Ss.pdf'))
+            pdf_bills.consultations(filename, consults)
+            cmd, cap = mailcap.findmatch(mailcap.getcaps(), 'application/pdf', 'view', filename)
+            os.system(cmd)
+        manuals = [b for b in bills if b.type == BILL_TYPE_MANUAL]
+        if manuals:
+            filename = normalize_filename(datetime.datetime.now().strftime('rappels_factures_manuelles_%F_%Hh%Mm%Ss.pdf'))
+            pdf_bills.manuals(filename, manuals)
             cmd, cap = mailcap.findmatch(mailcap.getcaps(), 'application/pdf', 'view', filename)
             os.system(cmd)
         self.Close()
