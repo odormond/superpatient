@@ -22,13 +22,12 @@ class MainFrame(wx.Frame):
             item = admin_menu.Append(wx.ID_ANY, "Gestion des tarifs", "")
             self.Bind(wx.EVT_MENU, self.on_manage_tarifs, id=item.GetId())
             admin_menu.AppendSeparator()
-        # XXX Disabled for the time being
-        #if 'MANUAL_BILL' in ACCESS_RIGHTS:
-        #    item = admin_menu.Append(wx.ID_ANY, "Facture manuelle", "")
-        #    self.Bind(wx.EVT_MENU, self.on_manual_bill, id=item.GetId())
-        #    item = admin_menu.Append(wx.ID_ANY, "Gestion des adresses", "")
-        #    self.Bind(wx.EVT_MENU, self.on_manage_addresses, id=item.GetId())
-        #    admin_menu.AppendSeparator()
+        if 'MANUAL_BILL' in ACCESS_RIGHTS:
+            item = admin_menu.Append(wx.ID_ANY, "Facture manuelle", "")
+            self.Bind(wx.EVT_MENU, self.on_manual_bill, id=item.GetId())
+            item = admin_menu.Append(wx.ID_ANY, "Gestion des adresses", "")
+            self.Bind(wx.EVT_MENU, self.on_manage_addresses, id=item.GetId())
+            admin_menu.AppendSeparator()
         if 'MANAGE_PATIENTS' in ACCESS_RIGHTS:
             item = admin_menu.Append(wx.ID_ANY, "Supprimer des données", "")
             self.Bind(wx.EVT_MENU, self.on_delete_data, id=item.GetId())
@@ -295,7 +294,13 @@ class ManualBillDialog(wx.Dialog):
         self.therapeute = wx.Choice(self.panel_4, wx.ID_ANY, choices=[])
         self.prefilled_address = wx.Choice(self.panel_4, wx.ID_ANY, choices=["Adresse manuelle"])
         self.therapeute_address = wx.TextCtrl(self.panel_4, wx.ID_ANY, "", style=wx.TE_DONTWRAP | wx.TE_MULTILINE | wx.TE_READONLY)
-        self.address = wx.TextCtrl(self.panel_4, wx.ID_ANY, "", style=wx.TE_DONTWRAP | wx.TE_MULTILINE)
+        self.title = wx.TextCtrl(self.panel_4, wx.ID_ANY, "")
+        self.firstname = wx.TextCtrl(self.panel_4, wx.ID_ANY, "")
+        self.lastname = wx.TextCtrl(self.panel_4, wx.ID_ANY, "")
+        self.complement = wx.TextCtrl(self.panel_4, wx.ID_ANY, "", style=wx.TE_DONTWRAP | wx.TE_MULTILINE)
+        self.street = wx.TextCtrl(self.panel_4, wx.ID_ANY, "", style=wx.TE_DONTWRAP | wx.TE_MULTILINE)
+        self.zip = wx.TextCtrl(self.panel_4, wx.ID_ANY, "")
+        self.city = wx.TextCtrl(self.panel_4, wx.ID_ANY, "")
         self.reason = wx.TextCtrl(self.panel_4, wx.ID_ANY, "")
         self.amount = wx.TextCtrl(self.panel_4, wx.ID_ANY, "")
         self.remark = wx.TextCtrl(self.panel_4, wx.ID_ANY, "", style=wx.TE_DONTWRAP | wx.TE_MULTILINE)
@@ -308,11 +313,26 @@ class ManualBillDialog(wx.Dialog):
         self.Bind(wx.EVT_CHOICE, self.on_select_address, self.prefilled_address)
         self.Bind(wx.EVT_BUTTON, self.on_generate, self.button_8)
 
+        self.tab_traversal = [self.title, self.firstname, self.lastname,
+                              self.complement, self.street, self.zip, self.city,
+                              self.reason, self.amount, self.remark,
+                              ]
+        for widget in self.tab_traversal:
+            self.Bind(wx.EVT_CHAR_HOOK, self.on_tab, widget)
+
+    def on_tab(self, event):
+        if event.KeyCode == wx.WXK_TAB:
+            shift = -1 if event.ShiftDown() else 1
+            next = (self.tab_traversal.index(event.EventObject) + shift) % len(self.tab_traversal)
+            self.tab_traversal[next].SetFocus()
+        else:
+            event.Skip()
+
     def __set_properties(self):
         self.SetTitle("frame")
         self.prefilled_address.SetSelection(0)
         self.therapeute_address.SetMinSize((300, 200))
-        self.address.SetMinSize((300, 200))
+        self.zip.SetMinSize((50, -1))
 
     def __do_layout(self):
         sizer_6 = wx.BoxSizer(wx.VERTICAL)
@@ -322,7 +342,27 @@ class ManualBillDialog(wx.Dialog):
         grid_sizer_4.Add(self.therapeute, 0, wx.EXPAND, 0)
         grid_sizer_4.Add(self.prefilled_address, 0, wx.EXPAND, 0)
         grid_sizer_4.Add(self.therapeute_address, 0, wx.EXPAND, 0)
-        grid_sizer_4.Add(self.address, 0, wx.EXPAND, 0)
+        address_sizer = wx.GridBagSizer()
+        address_sizer.Add(wx.StaticText(self.panel_4, wx.ID_ANY, "Salutation"), (0, 0), (1, 1), wx.ALIGN_CENTER_VERTICAL, 0)
+        address_sizer.Add(self.title, (0, 1), (1, 2), wx.EXPAND, 0)
+        address_sizer.Add(wx.StaticText(self.panel_4, wx.ID_ANY, "Prénom / Nom"), (1, 0), (1, 1), wx.ALIGN_CENTER_VERTICAL, 0)
+        address_sizer.Add(self.firstname, (1, 1), (1, 1), wx.EXPAND, 0)
+        address_sizer.Add(self.lastname, (1, 2), (1, 1), wx.EXPAND, 0)
+        address_sizer.Add(wx.StaticText(self.panel_4, wx.ID_ANY, "Complément"), (2, 0), (1, 1), wx.ALIGN_CENTER_VERTICAL, 0)
+        address_sizer.Add(self.complement, (2, 1), (1, 2), wx.EXPAND, 0)
+        address_sizer.Add(wx.StaticText(self.panel_4, wx.ID_ANY, "Rue / n°"), (3, 0), (1, 1), wx.ALIGN_CENTER_VERTICAL, 0)
+        address_sizer.Add(self.street, (3, 1), (1, 2), wx.EXPAND, 0)
+        address_sizer.Add(wx.StaticText(self.panel_4, wx.ID_ANY, "NPA / Localité"), (4, 0), (1, 1), wx.ALIGN_CENTER_VERTICAL, 0)
+        zip_city_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        zip_city_sizer.Add(self.zip, 0, wx.EXPAND, 0)
+        zip_city_sizer.Add(self.city, 1, wx.EXPAND, 0)
+        address_sizer.Add(zip_city_sizer, (4, 1), (1, 2), wx.EXPAND, 0)
+        address_sizer.AddGrowableCol(1, 1)
+        address_sizer.AddGrowableCol(2, 1)
+        address_sizer.AddGrowableRow(2)
+        address_sizer.AddGrowableRow(3)
+        address_sizer.SetMinSize((400, -1))
+        grid_sizer_4.Add(address_sizer, 0, wx.EXPAND, 0)
         grid_sizer_4.AddGrowableRow(1)
         grid_sizer_4.AddGrowableCol(0)
         grid_sizer_4.AddGrowableCol(1)
@@ -364,7 +404,13 @@ class ManageAddressesDialog(wx.Dialog):
         super().__init__(*args, **kwds)
         self.addresses_list = wx.ListCtrl(self, wx.ID_ANY, style=wx.LC_HRULES | wx.LC_REPORT | wx.LC_VRULES | wx.LC_SINGLE_SEL)
         self.identifier = wx.TextCtrl(self, wx.ID_ANY, "")
-        self.address = wx.TextCtrl(self, wx.ID_ANY, "", style=wx.TE_DONTWRAP | wx.TE_MULTILINE)
+        self.title = wx.TextCtrl(self, wx.ID_ANY, "")
+        self.firstname = wx.TextCtrl(self, wx.ID_ANY, "")
+        self.lastname = wx.TextCtrl(self, wx.ID_ANY, "")
+        self.complement = wx.TextCtrl(self, wx.ID_ANY, "", style=wx.TE_DONTWRAP | wx.TE_MULTILINE)
+        self.street = wx.TextCtrl(self, wx.ID_ANY, "", style=wx.TE_DONTWRAP | wx.TE_MULTILINE)
+        self.zip = wx.TextCtrl(self, wx.ID_ANY, "")
+        self.city = wx.TextCtrl(self, wx.ID_ANY, "")
         self.add_btn = wx.Button(self, wx.ID_ANY, "Ajouter")
         self.change_btn = wx.Button(self, wx.ID_ANY, "Modifier")
         self.remove_btn = wx.Button(self, wx.ID_ANY, "Supprimer")
@@ -378,26 +424,62 @@ class ManageAddressesDialog(wx.Dialog):
         self.Bind(wx.EVT_BUTTON, self.on_change_address, self.change_btn)
         self.Bind(wx.EVT_BUTTON, self.on_remove_address, self.remove_btn)
 
+        self.tab_traversal = [self.identifier, self.title,
+                              self.firstname, self.lastname,
+                              self.complement, self.street, self.zip, self.city,
+                              ]
+        for widget in self.tab_traversal:
+            self.Bind(wx.EVT_CHAR_HOOK, self.on_tab, widget)
+
+    def on_tab(self, event):
+        if event.KeyCode == wx.WXK_TAB:
+            shift = -1 if event.ShiftDown() else 1
+            next = (self.tab_traversal.index(event.EventObject) + shift) % len(self.tab_traversal)
+            self.tab_traversal[next].SetFocus()
+        else:
+            event.Skip()
+
     def __set_properties(self):
         self.SetTitle("Gérer les adresses")
         self.addresses_list.AppendColumn("Identifiant", format=wx.LIST_FORMAT_LEFT, width=-1)
-        self.addresses_list.AppendColumn("Adresse", format=wx.LIST_FORMAT_LEFT, width=-1)
-        self.address.SetMinSize((300, 200))
+        self.addresses_list.AppendColumn("Salutation", format=wx.LIST_FORMAT_LEFT, width=-1)
+        self.addresses_list.AppendColumn("Prénom", format=wx.LIST_FORMAT_LEFT, width=-1)
+        self.addresses_list.AppendColumn("Nom", format=wx.LIST_FORMAT_LEFT, width=-1)
+        self.addresses_list.AppendColumn("Complément", format=wx.LIST_FORMAT_LEFT, width=-1)
+        self.addresses_list.AppendColumn("Rue / n°", format=wx.LIST_FORMAT_LEFT, width=-1)
+        self.addresses_list.AppendColumn("NPA", format=wx.LIST_FORMAT_LEFT, width=-1)
+        self.addresses_list.AppendColumn("Localité", format=wx.LIST_FORMAT_LEFT, width=-1)
+        self.zip.SetMinSize((50, -1))
 
     def __do_layout(self):
         sizer_7 = wx.BoxSizer(wx.VERTICAL)
         sizer_8 = wx.BoxSizer(wx.HORIZONTAL)
-        grid_sizer_5 = wx.FlexGridSizer(2, 2, 0, 5)
         sizer_7.Add(self.addresses_list, 1, wx.EXPAND, 0)
-        label_9 = wx.StaticText(self, wx.ID_ANY, "Identifiant")
-        grid_sizer_5.Add(label_9, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_RIGHT, 0)
-        grid_sizer_5.Add(self.identifier, 0, wx.EXPAND, 0)
-        label_10 = wx.StaticText(self, wx.ID_ANY, "Adresse")
-        grid_sizer_5.Add(label_10, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_RIGHT, 0)
-        grid_sizer_5.Add(self.address, 0, wx.EXPAND, 0)
-        grid_sizer_5.AddGrowableRow(1)
-        grid_sizer_5.AddGrowableCol(1)
-        sizer_7.Add(grid_sizer_5, 1, wx.EXPAND | wx.LEFT, 5)
+
+        address_sizer = wx.GridBagSizer()
+        address_sizer.Add(wx.StaticText(self, wx.ID_ANY, "Identifiant"), (0, 0), (1, 1), wx.ALIGN_CENTER_VERTICAL, 0)
+        address_sizer.Add(self.identifier, (0, 1), (1, 2), wx.EXPAND, 0)
+        address_sizer.Add(wx.StaticText(self, wx.ID_ANY, "Salutation"), (1, 0), (1, 1), wx.ALIGN_CENTER_VERTICAL, 0)
+        address_sizer.Add(self.title, (1, 1), (1, 2), wx.EXPAND, 0)
+        address_sizer.Add(wx.StaticText(self, wx.ID_ANY, "Prénom / Nom"), (2, 0), (1, 1), wx.ALIGN_CENTER_VERTICAL, 0)
+        address_sizer.Add(self.firstname, (2, 1), (1, 1), wx.EXPAND, 0)
+        address_sizer.Add(self.lastname, (2, 2), (1, 1), wx.EXPAND, 0)
+        address_sizer.Add(wx.StaticText(self, wx.ID_ANY, "Complément"), (3, 0), (1, 1), wx.ALIGN_CENTER_VERTICAL, 0)
+        address_sizer.Add(self.complement, (3, 1), (1, 2), wx.EXPAND, 0)
+        address_sizer.Add(wx.StaticText(self, wx.ID_ANY, "Rue / n°"), (4, 0), (1, 1), wx.ALIGN_CENTER_VERTICAL, 0)
+        address_sizer.Add(self.street, (4, 1), (1, 2), wx.EXPAND, 0)
+        address_sizer.Add(wx.StaticText(self, wx.ID_ANY, "NPA / Localité"), (5, 0), (1, 1), wx.ALIGN_CENTER_VERTICAL, 0)
+        zip_city_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        zip_city_sizer.Add(self.zip, 0, wx.EXPAND, 0)
+        zip_city_sizer.Add(self.city, 1, wx.EXPAND, 0)
+        address_sizer.Add(zip_city_sizer, (5, 1), (1, 2), wx.EXPAND, 0)
+        address_sizer.AddGrowableCol(1, 1)
+        address_sizer.AddGrowableCol(2, 1)
+        address_sizer.AddGrowableRow(3)
+        address_sizer.AddGrowableRow(4)
+        address_sizer.SetMinSize((400, 180))
+        sizer_7.Add(address_sizer, 0, wx.EXPAND | wx.LEFT, 5)
+
         sizer_8.Add(self.add_btn, 1, wx.ALIGN_RIGHT, 0)
         sizer_8.Add(self.change_btn, 0, 0, 0)
         sizer_8.Add(self.remove_btn, 1, 0, 0)

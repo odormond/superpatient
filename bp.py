@@ -37,7 +37,7 @@ from superpatient.customization import windows_title, errors_text, labels_text, 
 from superpatient.models import (Patient, Consultation, Bill, Position,
                                  STATUS_OPENED, STATUS_PAYED, STATUS_PRINTED,
                                  SEX_ALL, SEX_FEMALE, SEX_MALE,
-                                 BILL_TYPE_CONSULTATION,
+                                 BILL_TYPE_CONSULTATION, BILL_TYPE_MANUAL,
                                  DEFAULT_CANTON, CANTONS)
 from superpatient.ui.common import askyesno, showinfo, showwarning
 from superpatient.ui import core, bill
@@ -107,49 +107,67 @@ class ManualBillDialog(DBMixin, CancelableMixin, core.ManualBillDialog):
         self.therapeutes = {}
         self.cursor.execute("SELECT therapeute, login, entete FROM therapeutes")
         for therapeute, login, entete in self.cursor:
-            self.therapeutes[therapeute] = entete + u'\n\n' + labels_text.adresse_pog
+            if not entete.strip():
+                continue
+            if 'RCC' in entete:
+                name, rcc = [line for i, line in enumerate(entete.splitlines()) if i == 0 or line.startswith('RCC')]
+                rcc = rcc.replace('RCC', '').strip()
+            else:
+                name = entete
+                rcc = ''
+            firstname, lastname = name.split(' ', 1)
+            self.therapeutes[therapeute] = firstname, lastname, rcc
             if login == LOGIN:
                 default_therapeute = therapeute
         self.therapeute.Set(sorted(self.therapeutes.keys()))
         self.therapeute.StringSelection = default_therapeute
         self.on_select_therapeute(None)
         self.addresses = OrderedDict({self.MANUAL_ADDRESS: None})
-        self.cursor.execute("SELECT id, adresse FROM adresses ORDER BY id")
-        for id, address in self.cursor:
+        self.cursor.execute("SELECT id, title, firstname, lastname, complement, street, zip, city FROM addresses ORDER BY id")
+        for id, *address in self.cursor:
             self.addresses[id] = address
         self.prefilled_address.Set(list(self.addresses.keys()))
 
         self.Bind(wx.EVT_ACTIVATE, self.on_activate, self)
-        self.Bind(wx.EVT_CHAR_HOOK, self.on_tab, self.address)
         self.Bind(wx.EVT_CHAR_HOOK, self.on_tab, self.remark)
 
     def on_activate(self, event):
         self.Fit()
-        self.reason.SetFocus()
-
-    def on_tab(self, event):
-        if event.KeyCode == wx.WXK_TAB:
-            if event.EventObject == self.address:
-                self.reason.SetFocus()
-            else:
-                self.address.SetFocus()
-        else:
-            event.Skip()
+        self.title.SetFocus()
 
     def on_select_therapeute(self, event):
-        self.therapeute_address.Value = self.therapeutes[self.therapeute.StringSelection]
+        firstname, lastname, rcc = self.therapeutes[self.therapeute.StringSelection]
+        if rcc:
+            rcc = 'RCC ' + rcc
+        self.therapeute_address.Value = '{} {}\n{}\n\n{}'.format(firstname, lastname, rcc, labels_text.adresse_pog)
 
     def on_select_address(self, event):
         if self.prefilled_address.StringSelection != self.MANUAL_ADDRESS:
-            self.address.Value = self.addresses[self.prefilled_address.StringSelection]
+            title, firstname, lastname, complement, street, zip, city = self.addresses[self.prefilled_address.StringSelection]
+            self.title.Value = title or ''
+            self.firstname.Value = firstname
+            self.lastname.Value = lastname
+            self.complement.Value = complement or ''
+            self.street.Value = street
+            self.zip.Value = zip
+            self.city.Value = city
 
     def on_generate(self, event):
         therapeute = self.therapeute.StringSelection
-        therapeuteAddress = self.therapeutes[therapeute].strip()
-        address = self.address.Value.strip()
+        t_firstname, t_lastname, t_rcc = self.therapeutes[therapeute]
+        title = self.title.Value.strip()
+        firstname = self.firstname.Value.strip()
+        lastname = self.lastname.Value.strip()
+        complement = self.complement.Value.strip()
+        street = self.street.Value.strip()
+        zip = self.zip.Value.strip()
+        city = self.city.Value.strip()
         identifier = self.prefilled_address.StringSelection
         if identifier == self.MANUAL_ADDRESS:
-            identifier = address.splitlines()[0].strip()
+            name = [firstname]
+            if lastname:
+                name.append(lastname)
+            identifier = '_'.join(name)
         now = datetime.datetime.now()
         ts = now.strftime('%Y-%m-%d_%H')
         filename = normalize_filename(u'%s_%sh.pdf' % (identifier.replace(' ', '_'), ts))
@@ -162,20 +180,41 @@ class ManualBillDialog(DBMixin, CancelableMixin, core.ManualBillDialog):
         remark = self.remark.Value.strip()
         try:
             bv_ref = gen_bvr_ref(self.cursor, identifier[0], identifier[1], now)
-            self.cursor.execute("""INSERT INTO factures_manuelles
-                                          (identifiant, therapeute, destinataire, motif, montant_cts, remarque, date, bv_ref)
-                                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s)""",
-                                [identifier, therapeute, address, reason, int(amount * 100), remark, now.date(), bv_ref])
-            facture_id = self.cursor.lastrowid
+            bill = Bill(type=BILL_TYPE_MANUAL,
+                        bv_ref=bv_ref,
+                        payment_method='BVR',
+                        status=STATUS_OPENED,
+                        timestamp=datetime.datetime.now(),
+                        author_id=therapeute,
+                        author_lastname=t_lastname,
+                        author_firstname=t_firstname,
+                        author_rcc=t_rcc,
+                        title=title,
+                        lastname=lastname,
+                        firstname=firstname,
+                        complement=complement,
+                        street=street,
+                        zip=zip,
+                        city=city,
+                        comment=remark)
+            bill.save(self.cursor)
+            # and positions
+            pos = Position(id_bill=bill.id, position_date=bill.timestamp.date(),
+                           tarif_code='999', tarif_description=reason,
+                           quantity=1, price_cts=int(amount * 100))
+            pos.save(self.cursor)
+            bill.positions.append(pos)
+            bill.total_cts = pos.price_cts
         except:
             traceback.print_exc()
             showwarning(windows_title.db_error, errors_text.db_update)
             return
-        bills.manuals(filename, [(therapeuteAddress, address, reason, amount, remark, bv_ref)])
+        bills.manuals(filename, [bill])
         cmd, cap = mailcap.findmatch(mailcap.getcaps(), 'application/pdf', 'view', filename)
         os.system(cmd)
         if askyesno(windows_title.print_completed, labels_text.ask_confirm_print_bvr):
-            self.cursor.execute("UPDATE factures_manuelles SET status = 'I' WHERE id = %s", [facture_id])
+            bill.status = STATUS_PRINTED
+            bill.save(self.cursor)
 
 
 class ManageCollaboratorsDialog(DBMixin, CancelableMixin, core.ManageCollaboratorsDialog):
@@ -392,7 +431,9 @@ class ManageAddressesDialog(DBMixin, CancelableMixin, core.ManageAddressesDialog
         super().__init__(*args, **kwargs)
         self.SetTitle(windows_title.manage_addresses)
         try:
-            self.cursor.execute("SELECT id, adresse FROM adresses ORDER BY id")
+            self.cursor.execute("""SELECT id, title, firstname, lastname,
+                                          complement, street, zip, city
+                                     FROM addresses ORDER BY id""")
             self.addresses = list(self.cursor)
         except:
             traceback.print_exc()
@@ -404,10 +445,15 @@ class ManageAddressesDialog(DBMixin, CancelableMixin, core.ManageAddressesDialog
 
     def populate(self):
         self.addresses_list.DeleteAllItems()
-        for identifier, address in self.addresses:
-            self.addresses_list.Append((identifier, address.replace('\n', ', ')))
+        for identifier, title, firstname, lastname, complement, street, zip, city in self.addresses:
+            self.addresses_list.Append((identifier, title or '', firstname, lastname,
+                                        (complement or '').replace('\n', ', '),
+                                        (street or '').replace('\n', ', '),
+                                        zip, city
+                                        ))
+        size_key = wx.LIST_AUTOSIZE if self.addresses else wx.LIST_AUTOSIZE_USEHEADER
         for c in range(self.addresses_list.ColumnCount):
-            self.addresses_list.SetColumnWidth(c, wx.LIST_AUTOSIZE)
+            self.addresses_list.SetColumnWidth(c, size_key)
         self.on_deselect_address(None)
         self.Layout()
         self.Fit()
@@ -415,22 +461,46 @@ class ManageAddressesDialog(DBMixin, CancelableMixin, core.ManageAddressesDialog
     def on_deselect_address(self, event):
         self.prev_index = self.index
         self.index = None
-        self.identifier.Value = ''
-        self.address.Value = ''
+        self.reset_fields()
         self.add_btn.Show()
         self.change_btn.Hide()
         self.remove_btn.Disable()
         self.Layout()
 
+    def reset_fields(self):
+        self.identifier.Value = ''
+        self.title.Value = ''
+        self.firstname.Value = ''
+        self.lastname.Value = ''
+        self.complement.Value = ''
+        self.street.Value = ''
+        self.zip.Value = ''
+        self.city.Value = ''
+
+    def parse_fields(self):
+        return (self.identifier.Value.strip(),
+               self.title.Value.strip() or None,
+               self.firstname.Value.strip(),
+               self.lastname.Value.strip(),
+               self.complement.Value.strip() or None,
+               self.street.Value.strip(),
+               self.zip.Value.strip(),
+               self.city.Value.strip())
+
     def on_select_address(self, event):
         selected = self.addresses_list.GetFirstSelected()
-        self.identifier.Value = ''
-        self.address.Value = ''
+        self.reset_fields()
         if selected != self.prev_index:
             self.index = selected
-            identifier, address = self.addresses[self.index]
+            identifier, title, firstname, lastname, complement, street, zip, city = self.addresses[self.index]
             self.identifier.Value = identifier
-            self.address.Value = address
+            self.title.Value = title or ''
+            self.firstname.Value = firstname
+            self.lastname.Value = lastname
+            self.complement.Value = complement or ''
+            self.street.Value = street
+            self.zip.Value = zip
+            self.city.Value = city
             self.add_btn.Hide()
             self.change_btn.Show()
             self.remove_btn.Enable()
@@ -441,12 +511,13 @@ class ManageAddressesDialog(DBMixin, CancelableMixin, core.ManageAddressesDialog
     def on_add_address(self, event):
         if self.index is not None:
             return
-        identifier = self.identifier.Value.strip()
-        address = self.address.Value.strip()
+        fields = self.parse_fields()
         try:
-            self.cursor.execute("""INSERT INTO adresses (id, adresse) VALUES (%s, %s)""",
-                                [identifier, address])
-            self.addresses.append((identifier, address))
+            self.cursor.execute("""INSERT INTO addresses
+                                               (id, title, firstname, lastname, complement, street, zip, city)
+                                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)""",
+                                [*fields])
+            self.addresses.append(fields)
         except:
             traceback.print_exc()
             showwarning(windows_title.db_error, errors_text.db_update)
@@ -455,13 +526,17 @@ class ManageAddressesDialog(DBMixin, CancelableMixin, core.ManageAddressesDialog
     def on_change_address(self, event):
         if self.index is None:
             return
-        identifier = self.identifier.Value.strip()
-        address = self.address.Value.strip()
+        fields = self.parse_fields()
         try:
-            key, _ = self.addresses[self.index]
-            self.cursor.execute("""UPDATE adresses SET id = %s, adresse = %s WHERE id = %s""",
-                                [identifier, address, key])
-            self.addresses[self.index] = (identifier, address)
+            key, *_ = self.addresses[self.index]
+            self.cursor.execute("""UPDATE addresses
+                                      SET id = %s, title = %s,
+                                          firstname = %s, lastname = %s,
+                                          complement = %s, street = %s,
+                                          zip = %s, city = %s
+                                    WHERE id = %s""",
+                                [*fields, key])
+            self.addresses[self.index] = fields
         except:
             traceback.print_exc()
             showwarning(windows_title.db_error, errors_text.db_update)
@@ -471,8 +546,8 @@ class ManageAddressesDialog(DBMixin, CancelableMixin, core.ManageAddressesDialog
         if self.index is None:
             return
         try:
-            key, _ = self.addresses[self.index]
-            self.cursor.execute("""DELETE FROM adresses WHERE id = %s""", [key])
+            key, *_ = self.addresses[self.index]
+            self.cursor.execute("""DELETE FROM addresses WHERE id = %s""", [key])
             del self.addresses[self.index]
         except:
             traceback.print_exc()

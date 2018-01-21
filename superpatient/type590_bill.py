@@ -207,7 +207,11 @@ def manuals(filename, bills):
             positions.append([Paragraph("Total", MANUAL_STYLE), 'CHF %0.2f' % (bill.total_cts / 100)])
         story += [CallerMacro(render_head)]
 
-        therapeute = '{} {}\nRCC {}\n\n{}'.format(bill.author_firstname, bill.author_lastname, bill.author_rcc, labels_text.adresse_pog)
+        if bill.author_rcc:
+            rcc = 'RCC ' + bill.author_rcc
+        else:
+            rcc = bill.author_rcc
+        therapeute = '{} {}\n{}\n\n{}'.format(bill.author_firstname, bill.author_lastname, rcc, labels_text.adresse_pog)
         address = '{}\n{} {}\n{}\n{}\n{} {}'.format(bill.title, bill.firstname, bill.lastname, bill.complement, bill.street, bill.zip, bill.city)
         story += [Table([[[ParagraphOrSpacer(line, MANUAL_STYLE) for line in therapeute.splitlines()],
                           [ParagraphOrSpacer(line, MANUAL_STYLE) for line in address.splitlines()]]],

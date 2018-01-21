@@ -64,12 +64,33 @@ def migrate_manual_bills(connection):
                            comment=remarque)
         bill.save(cursor2)
         # and positions
-        models.Position(id_bill=bill.id, position_date=bill.timestamp,
+        models.Position(id_bill=bill.id, position_date=bill.timestamp.date(),
                         tarif_code='999', tarif_description=motif,
                         quantity=1, price_cts=montant_cts).save(cursor2)
     cursor.execute("""DROP TABLE factures_manuelles""")
     cursor.execute("""DROP TABLE rappels""")
 
 
+def migrate_addresses(connection):
+    cursor = connection.cursor()
+    cursor2 = connection.cursor()
+    cursor.execute("""CREATE TABLE addresses (id varchar(50) NOT NULL UNIQUE, PRIMARY KEY (id),
+                                              title text DEFAULT NULL,
+                                              firstname text NOT NULL,
+                                              lastname text NOT NULL,
+                                              complement text DEFAULT NULL,
+                                              street text NOT NULL,
+                                              zip text NOT NULL,
+                                              city text NOT NULL)""")
+    cursor.execute("""SELECT id, adresse FROM adresses""")
+    for id, address in cursor:
+        address = ADDRESS_RE.match(address)
+        title, firstname, lastname, complement, street, zip, city = address.groups()
+        cursor2.execute("""INSERT INTO addresses VALUES (%s, %s, %s, %s, %s, %s, %s, %s)""",
+                        [id, title, firstname or '', lastname or '', complement, street or '', zip or '', city or ''])
+    cursor.execute("""DROP TABLE adresses""")
+
+
 connection = MySQLdb.connect(host=db.SERVER, user=db.USERNAME, passwd=db.PASSWORD, db=db.DATABASE, charset='latin1')
 migrate_manual_bills(connection)
+migrate_addresses(connection)
