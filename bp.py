@@ -654,7 +654,8 @@ class ManageConsultationsDialog(DBMixin, CancelableMixin, core.ManageConsultatio
         self.id_patient = id_patient
         self.mode = mode
         assert self.mode in ('delete', 'consultation')
-        self.delete_btn.Show(self.mode == 'delete')
+        self.delete_consult_btn.Show(self.mode == 'delete')
+        self.delete_bill_btn.Show(self.mode == 'delete')
         self.show_btn.Show(self.mode == 'consultation')
         self.modify_btn.Show(self.mode == 'consultation')
         self.show_all_btn.Show(self.mode == 'consultation')
@@ -713,10 +714,21 @@ class ManageConsultationsDialog(DBMixin, CancelableMixin, core.ManageConsultatio
         if id_consult is not None:
             if askyesno(windows_title.delete, labels_text.sup_def_c):
                 try:
-                    self.cursor.execute("DELETE FROM rappels WHERE id_consult=%s", [id_consult])
                     self.cursor.execute("DELETE FROM bills WHERE id_consult = %s", [id_consult])
                     self.cursor.execute("DELETE FROM consultations WHERE id_consult=%s", [id_consult])
                     showinfo(windows_title.done, labels_text.cons_sup)
+                except:
+                    traceback.print_exc()
+                    showwarning(windows_title.db_error, errors_text.db_delete)
+        self.update_list()
+
+    def on_delete_bill(self, event):
+        id_consult = self.get_selected_consult_id()
+        if id_consult is not None:
+            if askyesno(windows_title.delete, labels_text.sup_def_b):
+                try:
+                    self.cursor.execute("DELETE FROM bills WHERE id_consult = %s", [id_consult])
+                    showinfo(windows_title.done, labels_text.bill_sup)
                 except:
                     traceback.print_exc()
                     showwarning(windows_title.db_error, errors_text.db_delete)

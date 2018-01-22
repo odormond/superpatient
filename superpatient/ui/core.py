@@ -516,7 +516,8 @@ class ManageConsultationsDialog(wx.Dialog):
         super().__init__(*args, **kwds)
         self.patient = wx.StaticText(self, wx.ID_ANY, "Sexe Prénom Nom\nNaissance: DD.MM.YYYY\nThérapeute: ???")
         self.consultations = wx.ListCtrl(self, wx.ID_ANY, style=wx.LC_HRULES | wx.LC_REPORT | wx.LC_VRULES)
-        self.delete_btn = wx.Button(self, wx.ID_ANY, "Supprimer cette consultation")
+        self.delete_consult_btn = wx.Button(self, wx.ID_ANY, "Supprimer cette consultation")
+        self.delete_bill_btn = wx.Button(self, wx.ID_ANY, "Supprimer la facture de cette consultation")
         self.show_btn = wx.Button(self, wx.ID_ANY, "Afficher la consultation")
         self.modify_btn = wx.Button(self, wx.ID_ANY, "Modifier la consultation")
         self.show_all_btn = wx.Button(self, wx.ID_ANY, "Afficher toutes les consultations")
@@ -525,7 +526,8 @@ class ManageConsultationsDialog(wx.Dialog):
         self.__set_properties()
         self.__do_layout()
 
-        self.Bind(wx.EVT_BUTTON, self.on_delete_consultation, self.delete_btn)
+        self.Bind(wx.EVT_BUTTON, self.on_delete_consultation, self.delete_consult_btn)
+        self.Bind(wx.EVT_BUTTON, self.on_delete_bill, self.delete_bill_btn)
         self.Bind(wx.EVT_BUTTON, self.on_show_consultation, self.show_btn)
         self.Bind(wx.EVT_BUTTON, self.on_modify_consultation, self.modify_btn)
         self.Bind(wx.EVT_BUTTON, self.on_show_all_consultations, self.show_all_btn)
@@ -542,7 +544,8 @@ class ManageConsultationsDialog(wx.Dialog):
         sizer_12 = wx.BoxSizer(wx.HORIZONTAL)
         sizer_11.Add(self.patient, 0, wx.ALL | wx.EXPAND, 5)
         sizer_11.Add(self.consultations, 1, wx.EXPAND, 0)
-        sizer_12.Add(self.delete_btn, 0, 0, 0)
+        sizer_12.Add(self.delete_consult_btn, 0, 0, 0)
+        sizer_12.Add(self.delete_bill_btn, 0, 0, 0)
         sizer_12.Add(self.show_btn, 0, 0, 0)
         sizer_12.Add(self.modify_btn, 0, 0, 0)
         sizer_12.Add(self.show_all_btn, 0, 0, 0)
@@ -554,6 +557,10 @@ class ManageConsultationsDialog(wx.Dialog):
 
     def on_delete_consultation(self, event):
         print("Event handler 'on_delete_consultation' not implemented!")
+        event.Skip()
+
+    def on_delete_bill(self, event):
+        print("Event handler 'on_delete_bill' not implemented!")
         event.Skip()
 
     def on_show_consultation(self, event):
