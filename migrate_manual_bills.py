@@ -64,7 +64,7 @@ def migrate_manual_bills(connection):
                            comment=remarque)
         bill.save(cursor2)
         # and positions
-        models.Position(id_bill=bill.id, position_date=bill.timestamp.date(),
+        models.Position(id_bill=bill.id, position_date=bill.timestamp,
                         tarif_code='999', tarif_description=motif,
                         quantity=1, price_cts=montant_cts).save(cursor2)
     cursor.execute("""DROP TABLE factures_manuelles""")
