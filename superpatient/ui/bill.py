@@ -325,6 +325,7 @@ class BillDialog(wx.Dialog):
         self._positions_grid.Layout()
         size = self._positions_grid.GetMinSize()
         self._positions_scroll.SetVirtualSize(size)
+        self.update_total()
 
     def on_select_tarif_code(self, event):
         choice_widget = event.EventObject
@@ -365,6 +366,9 @@ class BillDialog(wx.Dialog):
             amount_widget.Value = '%0.2f' % (quantity_cts * price_cts / 100 / 100)
         else:
             amount_widget.Value = 'n/a'
+        self.update_total()
+
+    def update_total(self):
         total_cts = 0
         try:
             for position in self._positions:
