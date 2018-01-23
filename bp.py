@@ -49,7 +49,6 @@ FIX_PATIENT_DELAY = 250  # milliseconds
 class MainFrame(DBMixin, HelpMenuMixin, core.MainFrame):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        #self.SetSize((330, 220))
 
     def on_activate(self, event):
         if not event.Active:
@@ -124,8 +123,8 @@ class ManualBillDialog(DBMixin, CancelableMixin, core.ManualBillDialog):
         self.on_select_therapeute(None)
         self.addresses = OrderedDict({self.MANUAL_ADDRESS: None})
         self.cursor.execute("SELECT id, title, firstname, lastname, complement, street, zip, city FROM addresses ORDER BY id")
-        for id, *address in self.cursor:
-            self.addresses[id] = address
+        for row in self.cursor:
+            self.addresses[row[0]] = row[1:]
         self.prefilled_address.Set(list(self.addresses.keys()))
 
         self.Bind(wx.EVT_ACTIVATE, self.on_activate, self)
@@ -479,13 +478,13 @@ class ManageAddressesDialog(DBMixin, CancelableMixin, core.ManageAddressesDialog
 
     def parse_fields(self):
         return (self.identifier.Value.strip(),
-               self.title.Value.strip() or None,
-               self.firstname.Value.strip(),
-               self.lastname.Value.strip(),
-               self.complement.Value.strip() or None,
-               self.street.Value.strip(),
-               self.zip.Value.strip(),
-               self.city.Value.strip())
+                self.title.Value.strip() or None,
+                self.firstname.Value.strip(),
+                self.lastname.Value.strip(),
+                self.complement.Value.strip() or None,
+                self.street.Value.strip(),
+                self.zip.Value.strip(),
+                self.city.Value.strip())
 
     def on_select_address(self, event):
         selected = self.addresses_list.GetFirstSelected()
@@ -516,7 +515,7 @@ class ManageAddressesDialog(DBMixin, CancelableMixin, core.ManageAddressesDialog
             self.cursor.execute("""INSERT INTO addresses
                                                (id, title, firstname, lastname, complement, street, zip, city)
                                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s)""",
-                                [*fields])
+                                list(fields))
             self.addresses.append(fields)
         except:
             traceback.print_exc()
@@ -528,14 +527,14 @@ class ManageAddressesDialog(DBMixin, CancelableMixin, core.ManageAddressesDialog
             return
         fields = self.parse_fields()
         try:
-            key, *_ = self.addresses[self.index]
+            key = self.addresses[self.index][0]
             self.cursor.execute("""UPDATE addresses
                                       SET id = %s, title = %s,
                                           firstname = %s, lastname = %s,
                                           complement = %s, street = %s,
                                           zip = %s, city = %s
                                     WHERE id = %s""",
-                                [*fields, key])
+                                list(fields) + [key])
             self.addresses[self.index] = fields
         except:
             traceback.print_exc()
@@ -546,7 +545,7 @@ class ManageAddressesDialog(DBMixin, CancelableMixin, core.ManageAddressesDialog
         if self.index is None:
             return
         try:
-            key, *_ = self.addresses[self.index]
+            key = self.addresses[self.index][0]
             self.cursor.execute("""DELETE FROM addresses WHERE id = %s""", [key])
             del self.addresses[self.index]
         except:
@@ -1457,7 +1456,7 @@ class BillDialog(DBMixin, CancelableMixin, bill.BillDialog):
 
     def save_edited_bill(self):
         existing = {p.id for p in self.bill.positions}
-        edited = {i for i, *_ in self.get_positions()}
+        edited = {pos[0] for pos in self.get_positions()}
         for removed_id in existing.difference(edited):
             self.cursor.execute("""DELETE FROM positions WHERE id = %s""", [removed_id])
         self.save_new_bill()
