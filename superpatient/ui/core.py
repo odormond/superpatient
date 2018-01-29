@@ -797,8 +797,8 @@ class ManagePatientsDialog(wx.Dialog):
         self.modify_patient_btn = wx.Button(self.panel_2, wx.ID_ANY, "Modifier la fiche patient")
         self.new_consultation_btn = wx.Button(self.panel_2, wx.ID_ANY, "Nouvelle consultation pour ce patient")
         self.show_consultations_btn = wx.Button(self.panel_2, wx.ID_ANY, "Afficher toutes les consultations")
-        self.delete_patient_btn = wx.Button(self, wx.ID_ANY, "Supprimer le patient et toutes ses consultations")
-        self.display_consultations_btn = wx.Button(self, wx.ID_ANY, "Afficher les consultations du patient")
+        self.delete_patient_btn = wx.Button(self.panel_2, wx.ID_ANY, "Supprimer le patient et toutes ses consultations")
+        self.display_consultations_btn = wx.Button(self.panel_2, wx.ID_ANY, "Afficher les consultations du patient")
         self.button_14 = wx.Button(self.panel_2, wx.ID_ANY, "Annuler")
 
         self.__set_properties()
