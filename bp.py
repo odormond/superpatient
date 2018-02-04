@@ -631,7 +631,6 @@ class ManagePatientsDialog(DBMixin, CancelableMixin, core.ManagePatientsDialog):
                 return
             if askyesno(windows_title.delete, labels_text.suppr_def_1+u'\n'+str(sex+u" "+prenom+u" "+nom)+labels_text.suppr_def_2+date_naiss.strftime(DATE_FMT)+u'\n'+labels_text.suppr_def_3):
                 try:
-                    self.cursor.execute("DELETE FROM rappels WHERE id_consult IN (SELECT id_consult FROM consultations WHERE id = %s)", [id_patient])
                     self.cursor.execute("DELETE FROM bills WHERE id_patient = %s", [id_patient])
                     self.cursor.execute("DELETE FROM consultations WHERE id = %s", [id_patient])
                     self.cursor.execute("DELETE FROM patients WHERE id = %s", [id_patient])
