@@ -21,7 +21,7 @@
 from pathlib import Path
 PDF_DIR = str(Path(__file__).parents[1] / 'factures')
 
-VERSION = '4.22'
+VERSION = '4.23'
 SITE = 'Lausanne'
 
 BILL_TYPE = '590'
