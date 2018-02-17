@@ -121,7 +121,14 @@ def positions(bill):
     tstyle = (POSITION_TSTYLE +
               [('FONT', (0, row), (-1, row), TITLE_STYLE.fontName, 6) for row in range(2, len(data), 2)] +
               [('SPAN', (2, row), (-1, row)) for row in range(2, len(data), 2)])
-    total = [["", "", "", "", "Montant dû", "", "", '%0.2f' % (bill.total_cts / 100)]]
+    amount_label = {
+        'Cash': 'Payement cash',
+        'Carte': 'Payement par carte',
+        'BVR': 'Payement par BVR',
+        'Dû': 'Payement dû',
+        'PVPE': 'Payement par BVR'
+    }[bill.payment_method]
+    total = [["", "", "", "", amount_label, "", "", '%0.2f' % (bill.total_cts / 100)]]
     return [Table(data, colWidths=[2*cm, 1*cm, '*', 1*cm, 1*cm, 1*cm, 1*cm, 1.5*cm], style=tstyle),
             Spacer(0, 1*cm),
             Table(total, colWidths=[2*cm, 1*cm, '*', 1*cm, 1*cm, 1*cm, 1*cm, 1.5*cm], style=TOTAL_TSTYLE),
