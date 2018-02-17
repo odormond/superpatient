@@ -288,7 +288,7 @@ Pour tout autre renseignement, veuillez écrire à
 
 Tibor Csernay
 csernay@pog.swiss"""
-    licence_description = """POG Sàrl - Copyright 2006-2017 - www.pog.swiss
+    licence_description = """POG Sàrl - Copyright 2006-2018 - www.pog.swiss
 
 SuperPatient is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
