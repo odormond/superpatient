@@ -21,6 +21,9 @@
 from pathlib import Path
 PDF_DIR = str(Path(__file__).parents[1] / 'factures')
 
+VERSION = '4.22'
+SITE = 'Lausanne'
+
 BILL_TYPE = '590'
 DATE_FMT = "%d.%m.%Y"
 
@@ -273,7 +276,7 @@ class LabelsText(Config):
     ask_confirm_print_bvr = "Avez-vous imprimé le BVR ?"
     ask_confirm_payment_method_change_to_BVR = "Voulez-vous vraiment changer la méthode de paiement vers BVR ?"
     # Info sur l'application
-    apropos_description = """SuperPatient ver. 3.0 est un gestionnaire de patients,
+    apropos_description = f"""SuperPatient ver. {VERSION} est un gestionnaire de patients,
 de consultations, et de facturation.
 
 Il a été créé en 2006 pour satisfaire aux besoins

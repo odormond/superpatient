@@ -2,6 +2,7 @@ import wx
 import wx.html2
 
 from ..models import CANTONS
+from ..customization import VERSION, SITE
 
 
 class MainFrame(wx.Frame):
@@ -57,7 +58,7 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_ACTIVATE, self.on_activate, self)
 
     def __set_properties(self):
-        self.SetTitle("SuperPatient")
+        self.SetTitle(f"SuperPatient {VERSION} {SITE}")
 
     def __do_layout(self):
         sizer_1 = wx.BoxSizer(wx.VERTICAL)
