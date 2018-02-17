@@ -23,7 +23,7 @@ from reportlab.lib.units import mm, cm, inch
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 
-from .customization import bvr
+from .customization import bvr, SITE
 from .bvr import bvr_checksum
 
 BASE_DIR = os.path.join(os.path.dirname(__file__), 'pdfs')
@@ -58,7 +58,7 @@ def draw_head(canvas, font_size):
     canvas.saveState()
     canvas.drawImage(os.path.join(BASE_DIR, "logo_pog.jpg"), MARGIN, canvas._pagesize[1]-MARGIN-LOGO_HEIGHT, LOGO_WIDTH, LOGO_HEIGHT)
     canvas.setFont('EuclidBPBold', font_size)
-    canvas.drawRightString(canvas._pagesize[0]-MARGIN, canvas._pagesize[1]-MARGIN-font_size, u"Lausanne, le "+datetime.date.today().strftime(u'%d.%m.%y'))
+    canvas.drawRightString(canvas._pagesize[0]-MARGIN, canvas._pagesize[1]-MARGIN-font_size, f"{SITE}, le "+datetime.date.today().strftime(u'%d.%m.%y'))
     canvas.restoreState()
 
 

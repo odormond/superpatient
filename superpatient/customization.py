@@ -312,7 +312,7 @@ www.pog.swiss
 Les données de cette consultation ne seront pas enregistrées."""
     bill_really_cancel = """Voulez-vous vraiment annuler ?
 Aucune facture ne sera émise !"""
-    bill_role_locality = "Ostéopathie / Lausanne"
+    bill_role_locality = f"Ostéopathie / {SITE}"
 
 
 labels_text = LabelsText()
