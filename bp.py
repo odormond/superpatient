@@ -43,7 +43,7 @@ from superpatient.ui.common import askyesno, showinfo, showwarning
 from superpatient.ui import core, bill
 
 
-FIX_PATIENT_DELAY = 250  # milliseconds
+FIX_PATIENT_DELAY = 500  # milliseconds
 
 
 class MainFrame(DBMixin, HelpMenuMixin, core.MainFrame):
