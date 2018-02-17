@@ -58,7 +58,7 @@ class BVR(Config):
     CCP = u'01-145-6'
     prefix = 272335
     versement_pour = "UBS Switzerland\n8098 Zurich"
-    en_faveur_de = "Permanence ostéopathique\nde la Gare (POG) Sàrl\nPl. de la Gare 10\n1003 Lausanne"
+    en_faveur_de = "Permanence Ostéopathique\nde la Gare (POG) Sàrl\nPl. de la Gare 10\n1003 Lausanne"
 
 
 bvr = BVR()
@@ -301,7 +301,7 @@ You should have received a copy of the GNU General Public License
 along with SuperPatient; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA"""
     adresse_pog = """Permanence Ostéopathique de la Gare
-Pl. de la gare 10
+Pl. de la Gare 10
 1003 Lausanne
 www.pog.swiss
 021 510 50 50"""

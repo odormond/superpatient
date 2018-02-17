@@ -39,8 +39,8 @@ class MainFrame(wx.Frame):
         self.total = wx.TextCtrl(self.panel_1, wx.ID_ANY, "", style=wx.TE_READONLY | wx.TE_RIGHT)
         self.payment_date = wx.TextCtrl(self.panel_1, wx.ID_ANY, "")
         self.button_1 = wx.Button(self.panel_1, wx.ID_ANY, "Marquer payé")
-        self.button_2 = wx.Button(self.panel_1, wx.ID_ANY, "Réimprimmer")
-        self.button_3 = wx.Button(self.panel_1, wx.ID_ANY, "Marquer imprimmé")
+        self.button_2 = wx.Button(self.panel_1, wx.ID_ANY, "Réimprimer")
+        self.button_3 = wx.Button(self.panel_1, wx.ID_ANY, "Marquer imprimé")
         self.button_4 = wx.Button(self.panel_1, wx.ID_ANY, "Marquer envoyé")
         self.button_5 = wx.Button(self.panel_1, wx.ID_ANY, "Marquer abandonné")
 

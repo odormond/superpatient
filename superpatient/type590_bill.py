@@ -81,7 +81,7 @@ def patient(bill):
         ["", "Type de remb.", "TG", "Date/N° de facture"],
         ["", "N° contrat", "", "Date/N° de rappel"],
         ["", "Traitement", bill.treatment_period, "Motif traitement", bill.treatment_reason],
-        ["", "N°/Nom entreprise", "Permanence ostéopathique de la Gare (POG) Sàrl"],
+        ["", "N°/Nom entreprise", "Permanence Ostéopathique de la Gare (POG) Sàrl"],
         ["", "Rôle/Localité", labels_text.bill_role_locality],
     ]
     return Table(data, colWidths=[2*cm, 2.5*cm, 6.5*cm, '*'], rowHeights=[13] + [11]*(len(data)-1), style=PATIENT_TSTYLE)
