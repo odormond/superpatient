@@ -69,7 +69,7 @@ class BaseApp(wx.App):
                         raise
 
         try:
-            self.connection = MySQLdb.connect(host=db.SERVER, user=db.USERNAME, passwd=db.PASSWORD, db=db.DATABASE, charset='latin1', cursorclass=ResilientCursor)
+            self.connection = MySQLdb.connect(host=db.SERVER, user=db.USERNAME, passwd=db.PASSWORD, db=db.DATABASE, charset='utf8', cursorclass=ResilientCursor)
         except:
             showerror("MySQL", "Cannot connect to database")
             sys.exit(1)
