@@ -203,6 +203,7 @@ class Bill(Model):
               'sex', 'title', 'lastname', 'firstname', 'complement',
               'street', 'zip', 'city', 'canton',
               'birthdate', 'treatment_period', 'treatment_reason',
+              'accident_date', 'accident_no',
               'mandant', 'diagnostic', 'comment']
     AUTO_FIELD = 'id'
     EXTRA_FIELDS = ['patient', 'consultation', 'positions', 'reminders', 'copy', 'total_cts']

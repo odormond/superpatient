@@ -1374,6 +1374,8 @@ class BillDialog(DBMixin, CancelableMixin, bill.BillDialog):
         bill.id_consult = consult.id_consult
         bill.treatment_period = consult.date_consult.strftime(DATE_FMT)
         bill.treatment_reason = 'Accident' if consult.MC_accident else 'Maladie'
+        bill.accident_date = None
+        bill.accident_no = None
         bill.mandant = ''
         bill.diagnostic = consult.A_osteo
         bill.comment = ''
@@ -1383,10 +1385,13 @@ class BillDialog(DBMixin, CancelableMixin, bill.BillDialog):
         bill.status = STATUS_OPENED
 
     def set_bill_fields(self):
+        from dateutil import parse_date
         bill = self.bill
         bill.copy = self.copy.StringSelection == "Oui"
         bill.treatment_reason = self.reason.StringSelection
         bill.treatment_period = self.treatment_period.Value.strip()
+        bill.accident_date = parse_date(self.accident_date.Value.strip())
+        bill.accident_no = self.accident_no.Value.strip()
         bill.comment = self.comment.Value.strip()
         bill.payment_method = self.payment_method.StringSelection or None
         bill.total_cts = 0
