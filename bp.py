@@ -1299,6 +1299,12 @@ class BillDialog(DBMixin, CancelableMixin, bill.BillDialog):
             showwarning(windows_title.db_error, errors_text.db_read)
         if not self.bill:
             self.initialize_bill()
+        else:
+            for pos in self.bill.positions:
+                # Ensure any code used is available as such but don't overwrite the entries comming from the DB
+                tarif_code = (code, description, unit_price_cts) = (pos.tarif_code, pos.tarif_description, pos.price_cts)
+                display = self.tarif_display(code, description)
+                self.tarif_codes.setdefault(display, tarif_code)
         if not self.readonly:
             self.print_btn.Show(False)
             self.save_and_print_btn.Show(True)
