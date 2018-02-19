@@ -38,10 +38,11 @@ class BaseApp(wx.App):
         self.init_dateutil()
 
         super().OnInit()
+        wx.Dialog.EnableLayoutAdaptation(True)
         self.main_frame = self.MainFrameClass(None)
         self.SetTopWindow(self.main_frame)
         self.main_frame.Show()
-        self.main_frame.Position = WIN_CORNER_SHIFT, WIN_CORNER_SHIFT
+        self.main_frame.Position = 0, 0
         return True
 
     def init_reportlab(self):
@@ -145,7 +146,7 @@ class CancelableMixin:
         super().__init__(*args, **kwargs)
         self.Bind(wx.EVT_CHAR_HOOK, self.on_cancel)
         x, y = self.Parent.Position
-        self.Position = x + WIN_CORNER_SHIFT, y + WIN_CORNER_SHIFT
+        self.Position = x + WIN_CORNER_SHIFT, y
 
     def on_cancel(self, event=None):
         if not isinstance(event, wx.KeyEvent) or event.KeyCode == wx.WXK_ESCAPE:
