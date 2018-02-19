@@ -58,7 +58,7 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_ACTIVATE, self.on_activate, self)
 
     def __set_properties(self):
-        self.SetTitle(f"SuperPatient {VERSION} {SITE}")
+        self.SetTitle("SuperPatient {VERSION} {SITE}".format(VERSION=VERSION, SITE=SITE))
 
     def __do_layout(self):
         sizer_1 = wx.BoxSizer(wx.VERTICAL)

@@ -276,7 +276,7 @@ class LabelsText(Config):
     ask_confirm_print_bvr = "Avez-vous imprimé le BVR ?"
     ask_confirm_payment_method_change_to_BVR = "Voulez-vous vraiment changer la méthode de paiement vers BVR ?"
     # Info sur l'application
-    apropos_description = f"""SuperPatient ver. {VERSION} est un gestionnaire de patients,
+    apropos_description = """SuperPatient ver. {VERSION} est un gestionnaire de patients,
 de consultations, et de facturation.
 
 Il a été créé en 2006 pour satisfaire aux besoins
@@ -287,7 +287,7 @@ Superpatient est sous licence GPL.
 Pour tout autre renseignement, veuillez écrire à
 
 Tibor Csernay
-csernay@pog.swiss"""
+csernay@pog.swiss""".format(VERSION=VERSION)
     licence_description = """POG Sàrl - Copyright 2006-2018 - www.pog.swiss
 
 SuperPatient is free software; you can redistribute it and/or modify
@@ -312,7 +312,7 @@ www.pog.swiss
 Les données de cette consultation ne seront pas enregistrées."""
     bill_really_cancel = """Voulez-vous vraiment annuler ?
 Aucune facture ne sera émise !"""
-    bill_role_locality = f"Ostéopathie / {SITE}"
+    bill_role_locality = "Ostéopathie / {SITE}".format(SITE=SITE)
 
 
 labels_text = LabelsText()
