@@ -1,10 +1,11 @@
 import os
 
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, Spacer, PageBreak
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, Spacer, PageBreak, Flowable
 from reportlab.platypus.flowables import CallerMacro
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import cm
+from reportlab.lib.utils import ImageReader
 from reportlab.lib import colors
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
@@ -12,6 +13,7 @@ from reportlab.pdfbase.ttfonts import TTFont
 from . import gen_title
 from .customization import DATE_FMT, labels_text
 from .custom_bill import draw_head, draw_bvr
+from .signature import datamatrix
 
 
 LEFT_MARGIN = 1.7*cm
@@ -44,7 +46,20 @@ POSITION_TSTYLE = BASE_TSTYLE + [('FONT', (0, 0), (-1, 0), DEFAULT_STYLE.fontNam
                                  ]
 TOTAL_TSTYLE = POSITION_TSTYLE + [('FONT', (0, -1), (-1, -1), TITLE_STYLE.fontName, 8, 12),
                                   ('SPAN', (4, -1), (6, -1)),
+                                  ('VALIGN', (0, 0), (-1, -1), 'TOP'),
                                   ]
+
+
+class Signature(Flowable):
+    def __init__(self, pil_image):
+        super().__init__()
+        self.image = pil_image
+        width, height = self.image.size
+        self.width = width / 1.8
+        self.height = height / 1.8
+
+    def draw(self):
+        self.canv.drawImage(ImageReader(self.image), 0, 0, self.width, self.height)
 
 
 def therapeute(bill):
@@ -128,7 +143,17 @@ def positions(bill):
         'Dû': 'Payement dû',
         'PVPE': 'Payement par BVR'
     }.get(bill.payment_method, "Total")
-    total = [["", "", "", "", amount_label, "", "", '%0.2f' % (bill.total_cts / 100)]]
+
+    if bill.signature:
+        def render_sig(flowable, signature=datamatrix(bill.signature)):
+            flowable.canv.drawImage(ImageReader(signature), 0, 0)
+        signature = CallerMacro(render_sig)
+        signature = Signature(datamatrix(bill.signature))
+    else:
+        signature = ""
+
+    total = [[signature, "", "", "", amount_label, "", "", '%0.2f' % (bill.total_cts / 100)]]
+
     return [Table(data, colWidths=[2*cm, 1*cm, '*', 1*cm, 1*cm, 1*cm, 1*cm, 1.5*cm], style=tstyle),
             Spacer(0, 1*cm),
             Table(total, colWidths=[2*cm, 1*cm, '*', 1*cm, 1*cm, 1*cm, 1*cm, 1.5*cm], style=TOTAL_TSTYLE),

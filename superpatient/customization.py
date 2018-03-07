@@ -21,7 +21,7 @@
 from pathlib import Path
 PDF_DIR = str(Path(__file__).parents[1] / 'factures')
 
-VERSION = '4.23'
+VERSION = '4.24'
 SITE = 'Lausanne'
 
 BILL_TYPE = '590'
@@ -42,6 +42,8 @@ LISTBOX_DEFAULT = (FIXED_FONT_NAME, FIXED_FONT_SIZE)
 MONTANT_RAPPEL_CTS = 500
 
 PAIEMENT_SORTIE = True
+
+SIGNATURE_URL = 'https://api.osteosoft.ch/api/v1/billing/datamatrix'  # Set to None to disable the feature
 
 
 class Config(object):

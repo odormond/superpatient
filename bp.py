@@ -41,6 +41,7 @@ from superpatient.models import (Patient, Consultation, Bill, Position,
                                  DEFAULT_CANTON, CANTONS)
 from superpatient.ui.common import askyesno, showinfo, showwarning
 from superpatient.ui import core, bill
+from superpatient.signature import sign
 
 
 FIX_PATIENT_DELAY = 500  # milliseconds
@@ -1422,9 +1423,14 @@ class BillDialog(DBMixin, CancelableMixin, bill.BillDialog):
         except:
             traceback.print_exc()
             showwarning(windows_title.db_error, errors_text.db_read)
+        bill.signature = sign(bill.author_rcc, bill.birthdate, bill.zip, bill.total_cts, bill.timestamp)
 
     def on_print(self, *args):
         self.bill.copy = self.copy.StringSelection == "Oui"
+        if self.bill.signature is None:
+            # Recover a signature for old unsigned bills.
+            self.bill.signature = sign(self.bill.author_rcc, self.bill.birthdate, self.bill.zip, self.bill.total_cts, self.bill.timestamp)
+            self.bill.save(self.cursor)
         ts = datetime.datetime.now().strftime('%H')
         filename = normalize_filename(u'%s_%s_%s_%s_%sh.pdf' % (self.bill.lastname,
                                                                 self.bill.firstname,
