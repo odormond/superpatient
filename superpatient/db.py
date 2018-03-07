@@ -20,5 +20,3 @@
 
 SERVER = 'localhost'
 DATABASE = 'superpatient'
-USERNAME = 'bpuser'
-PASSWORD = 'bppass'

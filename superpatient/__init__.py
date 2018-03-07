@@ -22,7 +22,7 @@ import sys
 
 import wx
 
-from . import db
+from . import credentials, db
 from .customization import PDF_DIR
 from .models import SEX_MALE
 from .ui.common import showerror, AboutDialog, LicenseDialog
@@ -70,7 +70,7 @@ class BaseApp(wx.App):
                         raise
 
         try:
-            self.connection = MySQLdb.connect(host=db.SERVER, user=db.USERNAME, passwd=db.PASSWORD, db=db.DATABASE, charset='utf8', cursorclass=ResilientCursor)
+            self.connection = MySQLdb.connect(host=db.SERVER, user=credentials.DB_USER, passwd=credentials.DB_PASS, db=db.DATABASE, charset='utf8', cursorclass=ResilientCursor)
         except:
             showerror("MySQL", "Cannot connect to database")
             sys.exit(1)

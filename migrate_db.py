@@ -4,7 +4,7 @@ import re
 
 import MySQLdb
 
-from superpatient import db, models
+from superpatient import credentials, db, models
 from superpatient.customization import DATE_FMT
 
 
@@ -206,7 +206,7 @@ def replace_tarifs_and_co(connection):
     connection.commit()
 
 
-connection = MySQLdb.connect(host=db.SERVER, user=db.USERNAME, passwd=db.PASSWORD, db=db.DATABASE, charset='latin1')
+connection = MySQLdb.connect(host=db.SERVER, user=credentials.DB_USER, passwd=credentials.DB_PASS, db=db.DATABASE, charset='latin1')
 migrate_patients(connection)
 migrate_consultations_to_bills(connection)
 replace_tarifs_and_co(connection)

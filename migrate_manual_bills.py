@@ -4,7 +4,7 @@ import re
 
 import MySQLdb
 
-from superpatient import db, models
+from superpatient import credentials, db, models
 
 
 ADDRESS_RE = re.compile(r'(?:(Madame|Monsieur)\n)?([^ \n]+)(?: +([^\n]+))?\n(?:([^\n]+)\n)?(.*)\n(\d{4}) +([^\n]*)', re.IGNORECASE | re.DOTALL)
@@ -91,6 +91,6 @@ def migrate_addresses(connection):
     cursor.execute("""DROP TABLE adresses""")
 
 
-connection = MySQLdb.connect(host=db.SERVER, user=db.USERNAME, passwd=db.PASSWORD, db=db.DATABASE, charset='latin1')
+connection = MySQLdb.connect(host=db.SERVER, user=credentials.DB_USER, passwd=credentials.DB_PASS, db=db.DATABASE, charset='latin1')
 migrate_manual_bills(connection)
 migrate_addresses(connection)
