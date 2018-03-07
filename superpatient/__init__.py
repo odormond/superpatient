@@ -42,7 +42,7 @@ class BaseApp(wx.App):
         self.main_frame = self.MainFrameClass(None)
         self.SetTopWindow(self.main_frame)
         self.main_frame.Show()
-        self.main_frame.Position = 0, 0
+        self.main_frame.Position = (0, WIN_CORNER_SHIFT) if sys.platform == 'darwin' else (0, 0)
         return True
 
     def init_reportlab(self):
