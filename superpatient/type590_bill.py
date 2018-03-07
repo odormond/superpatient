@@ -127,7 +127,7 @@ def positions(bill):
         'BVR': 'Payement par BVR',
         'Dû': 'Payement dû',
         'PVPE': 'Payement par BVR'
-    }[bill.payment_method]
+    }.get(bill.payment_method, "Total")
     total = [["", "", "", "", amount_label, "", "", '%0.2f' % (bill.total_cts / 100)]]
     return [Table(data, colWidths=[2*cm, 1*cm, '*', 1*cm, 1*cm, 1*cm, 1*cm, 1.5*cm], style=tstyle),
             Spacer(0, 1*cm),
