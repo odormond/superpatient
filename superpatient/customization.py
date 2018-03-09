@@ -157,30 +157,6 @@ class ButtonsText(Config):
 buttons_text = ButtonsText()
 
 
-class MenusText(Config):
-    manage_colleagues = "Gestion des collaborateurs"
-    manage_tarifs = "Gestion des tarifs"
-    manage_majorations = "Gestion des majorations"
-    manage_frais_admins = "Gestion des frais administratifs"
-    manage_addresses = "Gestion des adresses"
-    manual_bill = "Facture manuelle"
-    delete_data = "Supprimer des données"
-    save_db = "Sauvegarder la base de données"
-    restore_db = "Restaurer la base de données"
-    about = "À propos"
-    licence = "Conditions d'utilisation"
-    admin = "Administration"
-    help = "Aide"
-    bvr = "BVRs"
-    payments = "Paiements"
-    import_bvr = "Importer les paiements"
-    manage_reminders = "Gestion des rappels"
-    show_stats = "Statistiques"
-
-
-menus_text = MenusText()
-
-
 class LabelsText(Config):
     # Données concernant la fiche du patient
     id = "ID patient"

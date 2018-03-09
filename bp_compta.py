@@ -33,7 +33,7 @@ import wx
 from superpatient import BaseApp, DBMixin, CancelableMixin, HelpMenuMixin
 from superpatient import bills as pdf_bills, normalize_filename
 import superpatient.customization as custo
-from superpatient.customization import windows_title, errors_text, menus_text
+from superpatient.customization import windows_title, errors_text
 from superpatient.models import Bill, PAYMENT_METHODS, OLD_PAYMENT_METHODS, BILL_STATUSES, STATUS_PRINTED, STATUS_SENT, STATUS_PAYED, STATUS_ABANDONED, BILL_TYPE_CONSULTATION, BILL_TYPE_MANUAL
 from superpatient.ui.common import showwarning, showerror, DatePickerDialog
 from superpatient.ui import accounting
@@ -198,7 +198,7 @@ class AccountingFrame(DBMixin, HelpMenuMixin, accounting.MainFrame):
         return records
 
     def on_import_payments(self, event):
-        with wx.FileDialog(self, menus_text.import_bvr, wildcard="Relevers de payement (*.v11)|*.v11", style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST) as dlg:
+        with wx.FileDialog(self, "Importer les paiements", wildcard="Relevers de payement (*.v11)|*.v11", style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST) as dlg:
             if dlg.ShowModal() == wx.ID_CANCEL:
                 return
             filename = dlg.GetPath()
