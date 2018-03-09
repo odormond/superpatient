@@ -33,12 +33,12 @@ from superpatient import BaseApp, DBMixin, HelpMenuMixin, CancelableMixin
 from superpatient import bills, normalize_filename, gen_title
 from superpatient.bvr import gen_bvr_ref
 import superpatient.customization as custo
-from superpatient.customization import windows_title, errors_text, labels_text, DATE_FMT
+from superpatient.customization import windows_title, errors_text, labels_text, DATE_FMT, DEFAULT_CANTON
 from superpatient.models import (Patient, Consultation, Bill, Position,
                                  STATUS_OPENED, STATUS_PAYED, STATUS_PRINTED,
                                  SEX_ALL, SEX_FEMALE, SEX_MALE,
                                  BILL_TYPE_CONSULTATION, BILL_TYPE_MANUAL,
-                                 DEFAULT_CANTON, CANTONS)
+                                 CANTONS)
 from superpatient.ui.common import askyesno, showinfo, showwarning
 from superpatient.ui import core, bill
 from superpatient.signature import sign

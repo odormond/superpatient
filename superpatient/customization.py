@@ -23,6 +23,7 @@ PDF_DIR = str(Path(__file__).parents[1] / 'factures')
 
 VERSION = '4.24'
 SITE = 'Lausanne'
+DEFAULT_CANTON = "VD"
 
 BILL_TYPE = '590'
 DATE_FMT = "%d.%m.%Y"

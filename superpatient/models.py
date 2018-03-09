@@ -35,7 +35,6 @@ BILL_TYPE_MANUAL = "M"
 BILL_TYPES = [BILL_TYPE_CONSULTATION, BILL_TYPE_MANUAL]
 
 CANTONS = ["AG", "AI", "AR", "BE", "BL", "BS", "FR", "GE", "GL", "GR", "JU", "LU", "NE", "NW", "OW", "SG", "SH", "SO", "SZ", "TG", "TI", "UR", "VD", "VS", "ZG", "ZH", "N/A"]
-DEFAULT_CANTON = "VD"
 
 
 class Model(object):
