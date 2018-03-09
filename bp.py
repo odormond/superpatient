@@ -379,7 +379,7 @@ class ManageCostsDialog(DBMixin, CancelableMixin, core.ManageCostsDialog):
                 unit_price_cts = int(float(unit_price_cts) * 100)
             except:
                 traceback.print_exc()
-                showwarning(windows_title.invalid_error, errors_text.invalid_cost)
+                showwarning(windows_title.invalid_error, errors_text.invalid_amount)
                 return None
         return [code, description, unit_price_cts]
 
