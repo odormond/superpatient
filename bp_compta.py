@@ -603,7 +603,6 @@ class ImportDialog(DBMixin, accounting.ImportDialog):
                 id_bill = payment[0]
                 reminder_cts = payment[2]
                 credit_date = payment[10]
-                print("payment:", payment)
                 self.cursor.execute("UPDATE bills SET payment_date = %s WHERE id = %s", [credit_date, id_bill])
                 if reminder_cts > 0:
                     self.cursor.execute("SELECT id, amount_cts FROM reminders WHERE id_bill = %s ORDER BY reminder_date", [id_bill])
