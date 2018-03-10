@@ -56,7 +56,7 @@ class CashRegisterFrame(DBMixin, HelpMenuMixin, cash_register.MainFrame):
             bill = self.data[self.selected_idx]
             if bill.status == STATUS_OPENED:
                 filename_consult = normalize_filename(datetime.datetime.now().strftime('consultation_%F_%Hh%Mm%Ss.pdf'))
-                bills.consultations(filename_consult, self.cursor, [bill])
+                bills.consultations(filename_consult, [bill])
                 cmd, cap = mailcap.findmatch(mailcap.getcaps(), 'application/pdf', 'view', filename_consult)
                 os.system(cmd + '&')
         self.real_validate()
@@ -73,7 +73,7 @@ class CashRegisterFrame(DBMixin, HelpMenuMixin, cash_register.MainFrame):
         bill.payment_method = self.payment_method.StringSelection
         bill.save(self.cursor)
         filename_consult = normalize_filename(datetime.datetime.now().strftime('consultation_%F_%Hh%Mm%Ss.pdf'))
-        bills.consultations(filename_consult, self.cursor, [bill])
+        bills.consultations(filename_consult, [bill])
         cmd, cap = mailcap.findmatch(mailcap.getcaps(), 'application/pdf', 'view', filename_consult)
         os.system(cmd + '&')
         self.real_validate()
