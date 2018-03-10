@@ -59,6 +59,10 @@ Bug fixes
 
 * Fixed very old bills not being printable because they lacked a payment method.
 
+* Fix layouting issue in the bill window on small screen.
+  Thanks to Charles-Elie for contributing this fix.
+
+
 Cleanups
 ========
 

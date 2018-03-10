@@ -245,6 +245,7 @@ class BillDialog(wx.Dialog):
 
     def on_add_position(self, event):
         self.add_position()
+        self.Layout()
 
     def add_position(self, position=None, readonly=False):
         tarif_code_widget = self._gen_tarif_code()
@@ -323,6 +324,7 @@ class BillDialog(wx.Dialog):
         size = self._positions_grid.GetMinSize()
         self._positions_scroll.SetVirtualSize(size)
         self.update_total()
+        self.Layout()
 
     def on_select_tarif_code(self, event):
         choice_widget = event.EventObject
