@@ -25,6 +25,7 @@ import datetime
 import traceback
 import calendar
 import mailcap
+from operator import attrgetter
 
 #sys.path.insert(0, os.path.dirname(__file__))
 
@@ -78,33 +79,25 @@ class AccountingFrame(DBMixin, HelpMenuMixin, accounting.MainFrame):
         bill_status = self.bill_status.StringSelection
         filter_firstname = self.filter_firstname.Value.strip()
         filter_lastname = self.filter_lastname.Value.strip()
-        conditions = ['TRUE']
-        args = []
+        where = {}
         if therapeute != 'Tous':
-            conditions.append('bills.author_id = %s')
-            args.append(therapeute)
+            where['author_id'] = therapeute
         if payment_method != '':
-            conditions.append('bills.payment_method = %s')
-            args.append(payment_method)
+            where['payment_method'] = payment_method
         if filter_start:
-            conditions.append('bills.timestamp >= %s')
-            args.append(filter_start)
+            where['timestamp__ge'] = filter_start
         if filter_end:
-            conditions.append('bills.timestamp < %s')
-            args.append(filter_end + datetime.timedelta(days=1))
+            where['timestamp__lt'] = filter_end + datetime.timedelta(days=1)
         if bill_status != 'Tous':
             bill_status = bill_status[0]
             if bill_status == 'O':
-                conditions.append("bills.status in ('O', 'I', 'E')")
+                where['status__in'] = ('O', 'I', 'E')
             else:
-                conditions.append('bills.status = %s')
-                args.append(bill_status)
+                where['status'] = bill_status
         if filter_firstname:
-            conditions.append('bills.firstname LIKE %s')
-            args.append(filter_firstname.replace('*', '%'))
+            where['firstname__like'] = filter_firstname.replace('*', '%')
         if filter_lastname:
-            conditions.append('bills.lastname LIKE %s')
-            args.append(filter_lastname.replace('*', '%'))
+            where['lastname__like'] = filter_lastname.replace('*', '%')
         self.payments.DeleteAllItems()
         self.payments_count.Value = ''
         self.total_bills.Value = ''
@@ -115,34 +108,19 @@ class AccountingFrame(DBMixin, HelpMenuMixin, accounting.MainFrame):
         total_bills = 0
         total_reminder_costs = 0
         try:
-            self.cursor.execute("""SELECT bills.id,
-                                          bills.type,
-                                          bills.status,
-                                          bills.timestamp,
-                                          bills.payment_date,
-                                          bills.sex,
-                                          bills.lastname,
-                                          bills.firstname,
-                                          CAST(COALESCE((SELECT SUM(quantity * price_cts) FROM positions WHERE id_bill = bills.id), 0) AS SIGNED),
-                                          CAST(COALESCE((SELECT SUM(amount_cts) FROM reminders WHERE id_bill = bills.id), 0) AS SIGNED),
-                                          (SELECT count(*) FROM reminders WHERE id_bill = bills.id)
-                                    FROM bills
-                                   WHERE %s
-                                   ORDER BY bills.timestamp""" % ' AND '.join(conditions), args)
-            data = list(self.cursor)
-            aux_cursor = self.connection.cursor()
-            for id_bill, type_, status, timestamp, payment_date, sex, lastname, firstname, amount_cts, reminders_cts, reminders_cnt in data:
-                if status not in (STATUS_ABANDONED, STATUS_PAYED) and reminders_cnt != 0:
-                    aux_cursor.execute("""SELECT status FROM reminders WHERE id_bill = %s ORDER BY reminder_date DESC LIMIT 1""", [id_bill])
-                    status, = aux_cursor.fetchone()
-                index = self.payments.Append((status, sex, lastname, firstname, timestamp.date(), '%6.2f' % ((amount_cts + reminders_cts)/100.), payment_date or ''))
-                if reminders_cnt == 1:
+            for bill in Bill.yield_all(self.cursor, where=where, order='timestamp'):
+                if bill.status not in (STATUS_ABANDONED, STATUS_PAYED) and bill.reminders:
+                    status = sorted(bill.reminders, key=attrgetter('reminder_date'))[-1].status
+                else:
+                    status = bill.status
+                index = self.payments.Append((status, bill.sex, bill.lastname, bill.firstname, bill.timestamp.date(), '%6.2f' % (bill.total_cts/100), bill.payment_date or ''))
+                if len(bill.reminders) == 1:
                     self.payments.GetItem(index).SetTextColour(wx.Colour(64, 0, 0))
-                elif reminders_cnt > 1:
+                elif len(bill.reminders) > 1:
                     self.payments.GetItem(index).SetTextColour(wx.Colour(128, 0, 0))
-                self.data.append(id_bill)
-                total_bills += amount_cts
-                total_reminder_costs += reminders_cts
+                self.data.append(bill.id)
+                total_bills += sum(p.total_cts for p in bill.positions)
+                total_reminder_costs += sum(r.amount_cts for r in bill.reminders)
                 count += 1
         except:
             traceback.print_exc()
@@ -216,19 +194,14 @@ class AccountingFrame(DBMixin, HelpMenuMixin, accounting.MainFrame):
                 continue
             l = None
             reminder_cts = 0
-            self.cursor.execute("""SELECT bills.id, SUM(positions.quantity * positions.price_cts), bills.payment_date
-                                     FROM bills
-                               INNER JOIN positions ON positions.id_bill = bills.id
-                                    WHERE bills.bv_ref = %s
-                                    GROUP BY bills.id, bills.payment_date""",
-                                [ref_no])
-            if self.cursor.rowcount != 0:
-                id_bill, bill_cts, payment_date = self.cursor.fetchone()
-                self.cursor.execute("SELECT amount_cts FROM reminders WHERE id_bill = %s ORDER BY reminder_date", [id_bill])
-                for r in [0] + [r for r, in self.cursor]:
-                    reminder_cts += r
+            bills = list(Bill.yield_all(self.cursor, where=dict(bv_ref=ref_no)))
+            if bills:
+                bill = bills[0]
+                bill_cts = sum(p.total_cts for p in bill.positions)
+                for reminder in [0] + [r.amount_cts for r in sorted(bill.reminders, key=attrgetter('reminder_date'))]:
+                    reminder_cts += reminder
                     if bill_cts + reminder_cts == amount_cts:
-                        if payment_date is None:
+                        if bill.payment_date is None:
                             l = ok
                         else:
                             l = doubled
@@ -236,7 +209,7 @@ class AccountingFrame(DBMixin, HelpMenuMixin, accounting.MainFrame):
                 else:
                     l = ko
             if l is not None:
-                l.append((id_bill, bill_cts, reminder_cts, transaction_type, bvr_client_no, ref_no, amount_cts, depot_ref, depot_date, processing_date, credit_date, microfilm_no, reject_code, postal_fee_cts))
+                l.append((bill.id, bill_cts, reminder_cts, transaction_type, bvr_client_no, ref_no, amount_cts, depot_ref, depot_date, processing_date, credit_date, microfilm_no, reject_code, postal_fee_cts))
             else:
                 not_found.append((transaction_type, bvr_client_no, ref_no, amount_cts, depot_ref, depot_date, processing_date, credit_date, microfilm_no, reject_code, postal_fee_cts))
 
@@ -271,7 +244,7 @@ class AccountingFrame(DBMixin, HelpMenuMixin, accounting.MainFrame):
     def on_mark_paid(self, event):
         from dateutil import parse_ISO
         payment_date = parse_ISO(self.payment_date.Value.strip())
-        bill_ids = [id for i, id in enumerate(self.data) if self.payments.IsSelected(i) and id >= 0]
+        bill_ids = [id for i, id in enumerate(self.data) if self.payments.IsSelected(i)]
         try:
             if len(bill_ids) > 1:
                 self.cursor.execute("""UPDATE bills SET payment_date = %s, status = 'P'
@@ -285,7 +258,7 @@ class AccountingFrame(DBMixin, HelpMenuMixin, accounting.MainFrame):
         self.update_list()
 
     def on_print_again(self, event):
-        bill_ids = [id for i, id in enumerate(self.data) if self.payments.IsSelected(i) and id >= 0]
+        bill_ids = [id for i, id in enumerate(self.data) if self.payments.IsSelected(i)]
         if bill_ids:
             bills = [Bill.load(self.cursor, id_bill) for id_bill in bill_ids]
             consults = [b for b in bills if b.type == BILL_TYPE_CONSULTATION]
@@ -311,7 +284,7 @@ class AccountingFrame(DBMixin, HelpMenuMixin, accounting.MainFrame):
         self.mark_status(STATUS_ABANDONED)
 
     def mark_status(self, status):
-        bill_ids = [id for i, id in enumerate(self.data) if self.payments.IsSelected(i) and id >= 0]
+        bill_ids = [id for i, id in enumerate(self.data) if self.payments.IsSelected(i)]
         try:
             for id_bill in bill_ids:
                 self.cursor.execute("""SELECT id FROM reminders WHERE id_bill = %s ORDER BY reminder_date DESC LIMIT 1""", [id_bill])
@@ -339,38 +312,23 @@ class RemindersManagementDialog(DBMixin, accounting.RemindersManagementDialog):
         self.data = []
         self.is_updating_list = True
         try:
-            self.cursor.execute("""SELECT bills.id,
-                                          bills.type,
-                                          bills.status,
-                                          bills.timestamp,
-                                          bills.payment_date,
-                                          bills.sex,
-                                          bills.lastname,
-                                          bills.firstname,
-                                          CAST(COALESCE((SELECT SUM(quantity * price_cts) FROM positions WHERE id_bill = bills.id), 0) AS SIGNED),
-                                          CAST(COALESCE((SELECT SUM(amount_cts) FROM reminders WHERE id_bill = bills.id), 0) AS SIGNED),
-                                          (SELECT count(*) FROM reminders WHERE id_bill = bills.id),
-                                          (SELECT max(reminders.reminder_date) FROM reminders WHERE id_bill = bills.id)
-                                    FROM bills
-                                   WHERE bills.payment_date IS NULL
-                                         AND bills.bv_ref IS NOT NULL AND bills.bv_ref != ''
-                                         AND bills.timestamp <= %s
-                                         AND bills.status NOT IN ('P', 'A')
-                                   ORDER BY bills.timestamp""", [upto])
-            for id_bill, type, status, timestamp, payment_date, sex, lastname, firstname, bill_cts, reminders_cts, reminders_cnt, reminders_last in self.cursor:
-                if reminders_last is None:
+            where = dict(payment_date__isnull=True, bv_ref__isnull=False, bv_ref__ne='', timestamp__le=upto, status__notin=('P', 'A'))
+            for bill in Bill.yield_all(self.cursor, where=where, order='timestamp'):
+                if bill.reminders:
+                    reminders_last = sorted(bill.reminders, key=attrgetter('reminder_date'))[-1].reminder_date
+                    if reminders_last > upto:
+                        continue
+                else:
                     reminders_last = ''
-                elif reminders_last > upto:
-                    continue
-                index = self.reminders.Append((sex, lastname, firstname, timestamp.date(), '%0.2f' % ((bill_cts + reminders_cts)/100.), reminders_last, reminders_cnt))
+                index = self.reminders.Append((bill.sex, bill.lastname, bill.firstname, bill.timestamp.date(), '%0.2f' % ((bill.total_cts)/100.), reminders_last, len(bill.reminders)))
                 self.reminders.Select(index)
-                if reminders_cnt == 1:
+                if len(bill.reminders) == 1:
                     self.reminders.SetItemTextColour(index, wx.Colour(64, 0, 0))
                     self.reminders.SetItemFont(index, self.GetFont().Italic())
-                elif reminders_cnt > 1:
+                elif len(bill.reminders) > 1:
                     self.reminders.SetItemTextColour(index, wx.Colour(128, 0, 0))
                     self.reminders.SetItemFont(index, self.GetFont().Bold())
-                self.data.append((id_bill, bill_cts+reminders_cts, sex, lastname, firstname, timestamp, reminders_cnt, bill_cts, reminders_cts))
+                self.data.append((bill.id, bill.total_cts, bill.sex, bill.lastname, bill.firstname, bill.timestamp, len(bill.reminders), sum(p.total_cts for p in bill.positions), sum(r.amount_cts for r in bill.reminders)))
         except:
             traceback.print_exc()
             showwarning(windows_title.db_error, errors_text.db_read)
@@ -512,7 +470,7 @@ class StatisticsDialog(DBMixin, accounting.StatisticsDialog):
                                         ORDER BY author_id""" % sql_filter, args)
             elif mode == 'CHF Factures':
                 self.cursor.execute("""SELECT author_id,
-                                              sum((SELECT sum(quantity*price_cts)
+                                              sum((SELECT sum(total_cts)
                                                  FROM positions
                                                 WHERE id_bill = bills.id)) / 100
                                          FROM bills
@@ -522,7 +480,7 @@ class StatisticsDialog(DBMixin, accounting.StatisticsDialog):
             else:
                 tarif_code = mode.replace('CHF Code ', '')
                 self.cursor.execute("""SELECT author_id,
-                                              sum((SELECT sum(quantity*price_cts)
+                                              sum((SELECT sum(total_cts)
                                                  FROM positions
                                                 WHERE id_bill = bills.id AND tarif_code = %%s)) / 100
                                          FROM bills

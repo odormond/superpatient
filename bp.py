@@ -34,7 +34,7 @@ from superpatient import bills, normalize_filename, gen_title
 from superpatient.bvr import gen_bvr_ref
 import superpatient.customization as custo
 from superpatient.customization import windows_title, errors_text, labels_text, DATE_FMT, DEFAULT_CANTON
-from superpatient.models import (Patient, Consultation, Bill, Position,
+from superpatient.models import (Patient, Consultation, Bill, Position, round_cts,
                                  STATUS_OPENED, STATUS_PAYED, STATUS_PRINTED,
                                  SEX_ALL, SEX_FEMALE, SEX_MALE,
                                  BILL_TYPE_CONSULTATION, BILL_TYPE_MANUAL,
@@ -199,12 +199,12 @@ class ManualBillDialog(DBMixin, CancelableMixin, core.ManualBillDialog):
                         comment=remark)
             bill.save(self.cursor)
             # and positions
+            price_cts = round_cts(int(amount * 100))
             pos = Position(id_bill=bill.id, position_date=bill.timestamp.date(),
                            tarif_code='999', tarif_description=reason,
-                           quantity=1, price_cts=int(amount * 100))
+                           quantity=1, price_cts=price_cts, total_cts=price_cts)
             pos.save(self.cursor)
             bill.positions.append(pos)
-            bill.total_cts = pos.price_cts
         except:
             traceback.print_exc()
             showwarning(windows_title.db_error, errors_text.db_update)
@@ -1401,16 +1401,15 @@ class BillDialog(DBMixin, CancelableMixin, bill.BillDialog):
         bill.accident_no = self.accident_no.Value.strip()
         bill.comment = self.comment.Value.strip()
         bill.payment_method = self.payment_method.StringSelection or None
-        bill.total_cts = 0
         bill.positions = []
         for position_id, position_date, tarif_code, tarif_description, quantity, price_cts in self.get_positions():
-            bill.total_cts += quantity * price_cts
             bill.positions.append(Position(id=position_id,
                                            position_date=position_date,
                                            tarif_code=tarif_code,
                                            tarif_description=tarif_description,
                                            quantity=quantity,
-                                           price_cts=price_cts))
+                                           price_cts=price_cts,
+                                           total_cts=round_cts(quantity * price_cts)))
         if not custo.PAIEMENT_SORTIE and bill.payment_date is None and bill.payment_method not in ('BVR', 'CdM', 'Dû', 'PVPE'):
             bill.payment_date = datetime.date.today()
             bill.status = STATUS_PAYED

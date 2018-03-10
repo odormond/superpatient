@@ -16,6 +16,9 @@
 #    along with SuperPatient; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
+from .customization import ROUNDING_MODE
+
+
 OLD_PAYMENT_METHODS = [u'CdM']
 PAYMENT_METHODS = [u'Cash', u'Carte', u'BVR', u'Dû', u'PVPE']
 PAYMENT_STATUSES = [u'Tous', u'Comptabilisé', u'Non-comptabilisé']
@@ -35,6 +38,24 @@ BILL_TYPE_MANUAL = "M"
 BILL_TYPES = [BILL_TYPE_CONSULTATION, BILL_TYPE_MANUAL]
 
 CANTONS = ["AG", "AI", "AR", "BE", "BL", "BS", "FR", "GE", "GL", "GR", "JU", "LU", "NE", "NW", "OW", "SG", "SH", "SO", "SZ", "TG", "TI", "UR", "VD", "VS", "ZG", "ZH", "N/A"]
+
+
+if ROUNDING_MODE is None:
+    def round_cts(cts):
+        return cts
+elif ROUNDING_MODE == '5cts':
+    def round_cts(cts):
+        return round_to_nearest(cts, 5)
+elif ROUNDING_MODE == '10cts_unless_5cts':
+    def round_cts(cts):
+        return cts if cts % 5 == 0 else round_to_nearest(cts, 10)
+else:
+    assert False, "Unknown ROUNDING_MODE: {!r}".format(ROUNDING_MODE)
+
+
+def round_to_nearest(value, near):
+    rest = value % near
+    return value + near - rest if rest + rest >= near else value - rest
 
 
 class Model(object):
@@ -61,22 +82,30 @@ class Model(object):
     def yield_all(klass, cursor, where=None, order=None):
         where_cond = []
         where_args = []
-        if isinstance(where, dict):
+        if isinstance(where, dict) and where:
             for key, value in where.items():
                 if '__' in key:
                     field, test = key.split('__')
                 else:
                     field, test = key, 'eq'
-                test = {'eq': '=',
-                        'gt': '>',
-                        'lt': '<',
-                        'ge': '>=',
-                        'le': '<=',
-                        'like': 'LIKE',
-                        'ilike': 'ILIKE',
-                        }[test]
-                where_cond.append('%s %s %%s' % (field, test))
-                where_args.append(value)
+                if test == 'isnull':
+                    if value is True:
+                        where_cond.append('%s IS NULL' % field)
+                    else:
+                        where_cond.append('%s IS NOT NULL' % field)
+                else:
+                    test = {'eq': '=',
+                            'ne': '!=',
+                            'gt': '>',
+                            'lt': '<',
+                            'ge': '>=',
+                            'le': '<=',
+                            'like': 'LIKE',
+                            'in': 'IN',
+                            'notin': 'NOT IN',
+                            }[test]
+                    where_cond.append('%s %s %%s' % (field, test))
+                    where_args.append(value)
             where = 'WHERE ' + ' AND '.join(where_cond)
         elif isinstance(where, str):
             where = 'WHERE ' + where
@@ -186,7 +215,7 @@ class Consultation(Model):
 class Position(Model):
     TABLE = 'positions'
     FIELDS = ['id', 'id_bill', 'position_date', 'tarif_code', 'tarif_description',
-              'quantity', 'price_cts']
+              'quantity', 'price_cts', 'total_cts']
 
 
 class Reminder(Model):
@@ -205,7 +234,11 @@ class Bill(Model):
               'accident_date', 'accident_no',
               'mandant', 'diagnostic', 'comment', 'signature']
     AUTO_FIELD = 'id'
-    EXTRA_FIELDS = ['patient', 'consultation', 'positions', 'reminders', 'copy', 'total_cts']
+    EXTRA_FIELDS = ['patient', 'consultation', 'positions', 'reminders', 'copy']
+
+    @property
+    def total_cts(self):
+        return sum(p.total_cts for p in self.positions) + sum(r.amount_cts for r in self.reminders)
 
     @classmethod
     def load(klass, cursor, key, consultation=None):
@@ -219,13 +252,11 @@ class Bill(Model):
         cursor.execute("SELECT id FROM positions WHERE id_bill = %s", [self.id])
         position_ids = [i for i, in cursor]
         self.positions = [Position.load(cursor, id_pos) for id_pos in position_ids]
-        self.total_cts = sum(pos.quantity * pos.price_cts for pos in self.positions)
 
     def load_reminders(self, cursor):
         cursor.execute("SELECT id FROM reminders WHERE id_bill = %s", [self.id])
         reminder_ids = [i for i, in cursor]
         self.reminders = [Reminder.load(cursor, id_reminder) for id_reminder in reminder_ids]
-        self.total_cts += sum(r.amount_cts for r in self.reminders)
 
     def load_consultation(self, cursor):
         if self.type == BILL_TYPE_CONSULTATION:

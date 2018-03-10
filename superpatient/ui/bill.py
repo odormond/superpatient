@@ -3,7 +3,7 @@ from collections import OrderedDict
 import wx
 
 from superpatient.customization import DATE_FMT, labels_text
-from superpatient.models import PAYMENT_METHODS, SEX_ALL
+from superpatient.models import PAYMENT_METHODS, SEX_ALL, round_cts
 
 
 class BillDialog(wx.Dialog):
@@ -352,7 +352,7 @@ class BillDialog(wx.Dialog):
         quantity_widget, price_widget, _, _, amount_widget = self._positions[position_index][4:9]
         na = False
         try:
-            quantity_cts = round(float(quantity_widget.Value) * 100)
+            quantity = float(quantity_widget.Value)
         except ValueError:
             na = True
         try:
@@ -360,7 +360,7 @@ class BillDialog(wx.Dialog):
         except ValueError:
             na = True
         if not na:
-            amount_widget.Value = '%0.2f' % (quantity_cts * price_cts / 100 / 100)
+            amount_widget.Value = '%0.2f' % (round_cts(quantity * price_cts) / 100)
         else:
             amount_widget.Value = 'n/a'
         self.update_total()

@@ -128,7 +128,7 @@ def positions(bill):
     VAT = "0.0%"
     data = [["Date", "Tarif", "Code tarifaire", "Quan.", "Prix", "VPt", "TVA", "Montant"]]
     for position in bill.positions:
-        data += [[position.position_date.strftime(DATE_FMT), 590, position.tarif_code, position.quantity, '%0.2f' % (position.price_cts / 100), 1.0, VAT, '%0.2f' % (position.quantity * position.price_cts / 100)],
+        data += [[position.position_date.strftime(DATE_FMT), 590, position.tarif_code, position.quantity, '%0.2f' % (position.price_cts / 100), 1.0, VAT, '%0.2f' % (position.total_cts / 100)],
                  ["", "", position.tarif_description]]
     for reminder in bill.reminders:
         data += [[reminder.reminder_date.strftime(DATE_FMT), 590, 999, 1, '%0.2f' % (reminder.amount_cts / 100), 1.0, VAT, '%0.2f' % (reminder.amount_cts / 100)],
