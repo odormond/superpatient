@@ -1,0 +1,66 @@
+Upgrade instructions
+====================
+
+* Backup everything as usual (code and db)
+
+* Apply db/update_db.v4.24.sql on the database.
+
+* Copy superpatient/credentials.py.example to superpatient/credentials.py
+
+* Edit the new credentials.py and set DB_{USER,PASS} to the respective values
+  USERNAME and PASSWORD from the old superpatient/db.py
+
+* If using the new "signature" feature, edit the new credentials.py and set
+  SIGNATURE_{USER,PASS} to the credentials received from osteosoft. You must
+  also communicate to them the RCCs that will be used.
+
+* Adjust the value of DEFAULT_CANTON in customization.py based on what is in
+  the old models.py.
+
+* Adjust the new ROUNDING_MODE in customization.py if needs be.
+
+
+New features
+============
+
+* Moved the credentials out of the source code.
+  A template file (superpatient/credentials.py.example) is provided. It must be
+  renamed and filled in with appropriate data.
+
+* Moved DEFAULT_CANTON from models.py to customization.py as it's more logical
+  to have all customization in that file.
+
+* Thanks to osteosoft.ch, added a "signature" datamatrix to the bill as
+  requested by the insurance to fight counterfeiting.
+  The credentials.py file must hold the correct information for it AND
+  osteosoft must know the RCC of the therapeutists for this to work.
+  The feature will be disabled if any of SIGNATURE_USER, SIGNATURE_PASS or
+  SIGNATURE_URL evaluate to False.
+
+* Added support for rounding the total of a position in the bill to the nearest
+  5 or 10 cts. By default the rounding is toward the nearest 5 cts. This can be
+  disabled by setting ROUNDING_MODE to None in customization.py. An alternative
+  mode that will round to the nearest 10 cts unless it's exactly a multiple of
+  5 cts is available by setting it to '10cts_unless_5cts'. This later mode
+  allows prices like 120.- for 45' to be defined.
+
+
+Bug fixes
+=========
+
+* Reprinting the bill from bp_caisse.py whenever the payment method changed was
+  broken by a previous cleanup of the bill printing interface. Fixed.
+
+* Fixed a reference to an undefined text that would only appear when inputting
+  an amount that was not a number.
+
+* Fixed placement of the main window on macOS being behind the menu bar and thus
+  impossible to grab and move.
+
+* Fixed very old bills not being printable because they lacked a payment method.
+
+Cleanups
+========
+
+* Removed old TK related stuffs from customization.py.
+* Moved latest update_db*.sql with the older ones in the db directory.
