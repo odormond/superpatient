@@ -23,6 +23,7 @@ from pathlib import Path
 import re
 import sys
 import time
+import threading
 
 import wx
 
@@ -116,6 +117,15 @@ class BaseApp(wx.App):
 
         self.connection.ping(True)
         self.connection.autocommit(True)
+
+        threading.Thread(target=self._keepalive, daemon=True).start()
+
+    def _keepalive(self):
+        while True:
+            t0 = time.time()
+            self.connection.ping(True)
+            logger.debug("Pinged DB in %0.3fms", (time.time()-t0)*1000)
+            time.sleep(30)
 
     def init_dateutil(self):
         try:
