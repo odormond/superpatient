@@ -1329,6 +1329,7 @@ class BillDialog(DBMixin, CancelableMixin, bill.BillDialog):
         self.patient_id.Value = str(bill.id_patient)
         self.treatment_period.Value = bill.treatment_period
         self.reason.StringSelection = bill.treatment_reason
+        self.law.Selection = self.reason.Selection
         self.mandant.Value = bill.mandant
         self.diagnostic.Value = bill.diagnostic
         self.comment.Value = bill.comment
