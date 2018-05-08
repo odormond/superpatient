@@ -106,6 +106,8 @@ class BaseApp(wx.App):
         dateutil.parse_date = parse_date
 
         def parse_ISO(s):
+            if s.find('-') != 4:
+                return parse_date(s)
             try:
                 d = parse(s).date()
             except ValueError:
