@@ -58,7 +58,7 @@ def draw_head(canvas, font_size):
     canvas.saveState()
     canvas.drawImage(os.path.join(BASE_DIR, "logo_pog.jpg"), MARGIN, canvas._pagesize[1]-MARGIN-LOGO_HEIGHT, LOGO_WIDTH, LOGO_HEIGHT)
     canvas.setFont('EuclidBPBold', font_size)
-    canvas.drawRightString(canvas._pagesize[0]-MARGIN, canvas._pagesize[1]-MARGIN-font_size, "{SITE}, le {DATE)".format(SITE=SITE, DATE=datetime.date.today().strftime(u'%d.%m.%y')))
+    canvas.drawRightString(canvas._pagesize[0]-MARGIN, canvas._pagesize[1]-MARGIN-font_size, "{SITE}, le {DATE}".format(SITE=SITE, DATE=datetime.date.today().strftime(u'%d.%m.%y')))
     canvas.restoreState()
 
 
