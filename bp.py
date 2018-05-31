@@ -33,18 +33,32 @@ from superpatient import BaseApp, DBMixin, HelpMenuMixin, CancelableMixin
 from superpatient import bills, normalize_filename, gen_title
 from superpatient.bvr import gen_bvr_ref
 import superpatient.customization as custo
-from superpatient.customization import windows_title, errors_text, labels_text, DATE_FMT, DEFAULT_CANTON
+from superpatient.customization import DATE_FMT, DEFAULT_CANTON, FULL_ADDRESS
 from superpatient.models import (Patient, Consultation, Bill, Position, round_cts,
                                  STATUS_OPENED, STATUS_PAYED, STATUS_PRINTED,
                                  SEX_ALL, SEX_FEMALE, SEX_MALE,
                                  BILL_TYPE_CONSULTATION, BILL_TYPE_MANUAL,
                                  CANTONS)
-from superpatient.ui.common import askyesno, showinfo, showwarning
+from superpatient.ui.common import askyesno, show_info, show_db_warning, show_warning, show_error
 from superpatient.ui import core, bill
 from superpatient.signature import sign
 
 
 FIX_PATIENT_DELAY = 500  # milliseconds
+
+
+def show_invalid_amount():
+    show_warning("Montant invalide")
+
+
+def ask_confirm_printed_bvr():
+    return askyesno("Impression effectuée ?", "Avez-vous imprimé le BVR ?")
+
+
+def ask_really_cancel():
+    return askyesno("Confirmation d'annulation",
+                    "Voulez-vous vraiment annuler ?\n"
+                    "Les données de cette consultation ne seront pas enregistrées.")
 
 
 class MainFrame(DBMixin, HelpMenuMixin, core.MainFrame):
@@ -64,7 +78,7 @@ class MainFrame(DBMixin, HelpMenuMixin, core.MainFrame):
         ManageCollaboratorsDialog(self).ShowModal()
 
     def on_manage_tarifs(self, event):
-        ManageCostsDialog(self, 'tarifs').ShowModal()
+        ManageCostsDialog(self).ShowModal()
 
     def on_manual_bill(self, event):
         ManualBillDialog(self).ShowModal()
@@ -139,7 +153,7 @@ class ManualBillDialog(DBMixin, CancelableMixin, core.ManualBillDialog):
         firstname, lastname, rcc = self.therapeutes[self.therapeute.StringSelection]
         if rcc:
             rcc = 'RCC ' + rcc
-        self.therapeute_address.Value = '{} {}\n{}\n\n{}'.format(firstname, lastname, rcc, labels_text.adresse_pog)
+        self.therapeute_address.Value = '{} {}\n{}\n\n{}'.format(firstname, lastname, rcc, FULL_ADDRESS)
 
     def on_select_address(self, event):
         if self.prefilled_address.StringSelection != self.MANUAL_ADDRESS:
@@ -170,12 +184,12 @@ class ManualBillDialog(DBMixin, CancelableMixin, core.ManualBillDialog):
             identifier = '_'.join(name)
         now = datetime.datetime.now()
         ts = now.strftime('%Y-%m-%d_%H')
-        filename = normalize_filename(u'%s_%sh.pdf' % (identifier.replace(' ', '_'), ts))
+        filename = normalize_filename('%s_%sh.pdf' % (identifier.replace(' ', '_'), ts))
         reason = self.reason.Value.strip()
         try:
             amount = float(self.amount.Value.strip())
         except ValueError:
-            showwarning(windows_title.invalid_error, errors_text.invalid_amount)
+            show_invalid_amount()
             return
         remark = self.remark.Value.strip()
         try:
@@ -207,12 +221,12 @@ class ManualBillDialog(DBMixin, CancelableMixin, core.ManualBillDialog):
             bill.positions.append(pos)
         except:
             traceback.print_exc()
-            showwarning(windows_title.db_error, errors_text.db_update)
+            show_db_warning('update')
             return
         bills.manuals(filename, [bill])
         cmd, cap = mailcap.findmatch(mailcap.getcaps(), 'application/pdf', 'view', filename)
         os.system(cmd)
-        if askyesno(windows_title.print_completed, labels_text.ask_confirm_print_bvr):
+        if ask_confirm_printed_bvr():
             bill.status = STATUS_PRINTED
             bill.save(self.cursor)
 
@@ -220,13 +234,13 @@ class ManualBillDialog(DBMixin, CancelableMixin, core.ManualBillDialog):
 class ManageCollaboratorsDialog(DBMixin, CancelableMixin, core.ManageCollaboratorsDialog):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.SetTitle(windows_title.manage_colleagues)
+        self.SetTitle("Gérer les collaborateurs")
         try:
             self.cursor.execute("""SELECT therapeute, login, entete FROM therapeutes ORDER BY therapeute""")
             self.collaborators = list(self.cursor)
         except:
             traceback.print_exc()
-            showwarning(windows_title.db_error, errors_text.db_read)
+            show_db_warning('read')
             return
         self.index = None
         self.prev_index = None
@@ -283,7 +297,7 @@ class ManageCollaboratorsDialog(DBMixin, CancelableMixin, core.ManageCollaborato
             self.collaborators.append((therapeute, login, address_header))
         except:
             traceback.print_exc()
-            showwarning(windows_title.db_error, errors_text.db_update)
+            show_db_warning('update')
         self.populate()
 
     def on_change_collaborator(self, event):
@@ -299,7 +313,7 @@ class ManageCollaboratorsDialog(DBMixin, CancelableMixin, core.ManageCollaborato
             self.collaborators[self.index] = (therapeute, login, address_header)
         except:
             traceback.print_exc()
-            showwarning(windows_title.db_error, errors_text.db_update)
+            show_db_warning('update')
         self.populate()
 
     def on_remove_collaborator(self, event):
@@ -311,21 +325,20 @@ class ManageCollaboratorsDialog(DBMixin, CancelableMixin, core.ManageCollaborato
             del self.collaborators[self.index]
         except:
             traceback.print_exc()
-            showwarning(windows_title.db_error, errors_text.db_delete)
+            show_db_warning('delete')
         self.populate()
 
 
 class ManageCostsDialog(DBMixin, CancelableMixin, core.ManageCostsDialog):
-    def __init__(self, parent, table, *args, **kwargs):
+    def __init__(self, parent, *args, **kwargs):
         super().__init__(parent, *args, **kwargs)
-        self.table = table
-        self.SetTitle(getattr(windows_title, 'manage_'+self.table))
+        self.SetTitle("Gérer les tarifs")
         try:
-            self.cursor.execute("""SELECT code, description, unit_price_cts FROM %s ORDER BY code, description""" % self.table)
+            self.cursor.execute("""SELECT code, description, unit_price_cts FROM tarifs ORDER BY code, description""")
             self.costs = list(self.cursor)
         except:
             traceback.print_exc()
-            showwarning(windows_title.db_error, errors_text.db_read)
+            show_db_warning('read')
             return
         self.index = None
         self.prev_index = None
@@ -379,7 +392,7 @@ class ManageCostsDialog(DBMixin, CancelableMixin, core.ManageCostsDialog):
                 unit_price_cts = int(float(unit_price_cts) * 100)
             except:
                 traceback.print_exc()
-                showwarning(windows_title.invalid_error, errors_text.invalid_amount)
+                show_invalid_amount()
                 return None
         return [code, description, unit_price_cts]
 
@@ -390,11 +403,11 @@ class ManageCostsDialog(DBMixin, CancelableMixin, core.ManageCostsDialog):
         if values is None:
             return
         try:
-            self.cursor.execute("""INSERT INTO %s (code, description, unit_price_cts) VALUES (%%s, %%s, %%s)""" % self.table, values)
+            self.cursor.execute("""INSERT INTO tarifs (code, description, unit_price_cts) VALUES (%s, %s, %s)""", values)
             self.costs.append(values)
         except:
             traceback.print_exc()
-            showwarning(windows_title.db_error, errors_text.db_update)
+            show_db_warning('update')
         self.populate()
 
     def on_change_cost(self, event):
@@ -405,12 +418,12 @@ class ManageCostsDialog(DBMixin, CancelableMixin, core.ManageCostsDialog):
             return
         try:
             old_value = self.costs[self.index]
-            self.cursor.execute("""UPDATE %s SET code = %%s, description = %%s, unit_price_cts = %%s WHERE code = %%s AND description = %%s AND unit_price_cts = %%s""" % self.table,
+            self.cursor.execute("""UPDATE tarifs SET code = %s, description = %s, unit_price_cts = %s WHERE code = %s AND description = %s AND unit_price_cts = %s""",
                                 values + list(old_value))
             self.costs[self.index] = values
         except:
             traceback.print_exc()
-            showwarning(windows_title.db_error, errors_text.db_update)
+            show_db_warning('update')
         self.populate()
 
     def on_remove_cost(self, event):
@@ -418,18 +431,18 @@ class ManageCostsDialog(DBMixin, CancelableMixin, core.ManageCostsDialog):
             return
         try:
             old_value = self.costs[self.index]
-            self.cursor.execute("""DELETE FROM %s WHERE code = %%s AND description = %%s AND unit_price_cts = %%s""" % self.table, list(old_value))
+            self.cursor.execute("""DELETE FROM tarifs WHERE code = %s AND description = %s AND unit_price_cts = %s""", list(old_value))
             del self.costs[self.index]
         except:
             traceback.print_exc()
-            showwarning(windows_title.db_error, errors_text.db_delete)
+            show_db_warning('delete')
         self.populate()
 
 
 class ManageAddressesDialog(DBMixin, CancelableMixin, core.ManageAddressesDialog):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.SetTitle(windows_title.manage_addresses)
+        self.SetTitle("Gérer les adresses")
         try:
             self.cursor.execute("""SELECT id, title, firstname, lastname,
                                           complement, street, zip, city
@@ -437,7 +450,7 @@ class ManageAddressesDialog(DBMixin, CancelableMixin, core.ManageAddressesDialog
             self.addresses = list(self.cursor)
         except:
             traceback.print_exc()
-            showwarning(windows_title.db_error, errors_text.db_read)
+            show_db_warning('read')
             return
         self.index = None
         self.prev_index = None
@@ -520,7 +533,7 @@ class ManageAddressesDialog(DBMixin, CancelableMixin, core.ManageAddressesDialog
             self.addresses.append(fields)
         except:
             traceback.print_exc()
-            showwarning(windows_title.db_error, errors_text.db_update)
+            show_db_warning('update')
         self.populate()
 
     def on_change_address(self, event):
@@ -539,7 +552,7 @@ class ManageAddressesDialog(DBMixin, CancelableMixin, core.ManageAddressesDialog
             self.addresses[self.index] = fields
         except:
             traceback.print_exc()
-            showwarning(windows_title.db_error, errors_text.db_update)
+            show_db_warning('update')
         self.populate()
 
     def on_remove_address(self, event):
@@ -551,17 +564,17 @@ class ManageAddressesDialog(DBMixin, CancelableMixin, core.ManageAddressesDialog
             del self.addresses[self.index]
         except:
             traceback.print_exc()
-            showwarning(windows_title.db_error, errors_text.db_delete)
+            show_db_warning('delete')
         self.populate()
 
 
 class ManagePatientsDialog(DBMixin, CancelableMixin, core.ManagePatientsDialog):
     def __init__(self, parent, mode, *args, **kwargs):
         self.mode = mode
-        titles = dict(delete=windows_title.delete_patient,
-                      patient=windows_title.show_change_patient,
-                      consultation=windows_title.show_change_consult,
-                      new_consultation=windows_title.patients_db)
+        titles = dict(delete="Base de patients - Suppression de données",
+                      patient="Voir ou modifier la fiche d'un patient",
+                      consultation="Voir ou modifier les consultations d'un patient",
+                      new_consultation="Base de patients")
         assert self.mode in titles
         super().__init__(parent, *args, **kwargs)
         self.SetTitle(titles[self.mode])
@@ -592,7 +605,7 @@ class ManagePatientsDialog(DBMixin, CancelableMixin, core.ManagePatientsDialog):
                                 [self.lastname.Value.strip(), self.firstname.Value.strip()])
         except:
             traceback.print_exc()
-            showwarning(windows_title.db_error, errors_text.db_search)
+            show_db_warning('search')
         self.results = []
         self.patients.DeleteAllItems()
         for id, sex, nom, prenom, n_consult in self.cursor:
@@ -628,17 +641,21 @@ class ManagePatientsDialog(DBMixin, CancelableMixin, core.ManagePatientsDialog):
                 sex, nom, prenom, date_naiss = self.cursor.fetchone()
             except:
                 traceback.print_exc()
-                showwarning(windows_title.db_error, errors_text.db_search)
+                show_db_warning('search')
                 return
-            if askyesno(windows_title.delete, labels_text.suppr_def_1+u'\n'+str(sex+u" "+prenom+u" "+nom)+labels_text.suppr_def_2+date_naiss.strftime(DATE_FMT)+u'\n'+labels_text.suppr_def_3):
+            if askyesno("Suppression",
+                        "Supprimer définitivement\n"
+                        "{} {} {}, né(e) le {}\n"
+                        "ainsi que toutes ses consultations ?"
+                        .format(sex, prenom, nom, date_naiss.strftime(DATE_FMT))):
                 try:
                     self.cursor.execute("DELETE FROM bills WHERE id_patient = %s", [id_patient])
                     self.cursor.execute("DELETE FROM consultations WHERE id = %s", [id_patient])
                     self.cursor.execute("DELETE FROM patients WHERE id = %s", [id_patient])
-                    showinfo(windows_title.done, labels_text.pat_sup_1+str(prenom+u" "+nom+u" ")+labels_text.pat_sup_2)
+                    show_info("Patient(e) {} {} supprimé(e) de la base".format(prenom, nom))
                 except:
                     traceback.print_exc()
-                    showwarning(windows_title.db_error, errors_text.db_delete)
+                    show_db_warning('delete')
         self.on_search_patient(None)
 
     def on_display_consultations(self, event):
@@ -664,13 +681,13 @@ class ManageConsultationsDialog(DBMixin, CancelableMixin, core.ManageConsultatio
             nom, prenom, sex, therapeute, date_naiss = self.cursor.fetchone()
         except:
             traceback.print_exc()
-            showwarning(windows_title.db_error, errors_text.db_read)
+            show_db_warning('read')
             return
 
         if self.mode == 'delete':
-            self.SetTitle(windows_title.delete_consultation % (sex, nom))
+            self.SetTitle("Supprimer une consultation de %s %s" % (sex, nom))
         else:
-            self.SetTitle(windows_title.show_consultation % (sex, nom))
+            self.SetTitle("Afficher une consultation de %s %s" % (sex, nom))
         self.patient.LabelText = "{} {} {}\nNaissance: {}\nThérapeute: {}".format(sex, prenom, nom, date_naiss, therapeute)
 
         self.update_list()
@@ -687,7 +704,7 @@ class ManageConsultationsDialog(DBMixin, CancelableMixin, core.ManageConsultatio
                                 [self.id_patient])
         except:
             traceback.print_exc()
-            showwarning(windows_title.db_error, errors_text.db_show)
+            show_db_warning('show')
         self.results = []
         self.consultations.DeleteAllItems()
         for id_consult, date_consult, therapeute, MC, paye_le in self.cursor:
@@ -711,26 +728,26 @@ class ManageConsultationsDialog(DBMixin, CancelableMixin, core.ManageConsultatio
     def on_delete_consultation(self, event):
         id_consult = self.get_selected_consult_id()
         if id_consult is not None:
-            if askyesno(windows_title.delete, labels_text.sup_def_c):
+            if askyesno("Suppression", "Supprimer définitivement cette consultation ?"):
                 try:
                     self.cursor.execute("DELETE FROM bills WHERE id_consult = %s", [id_consult])
                     self.cursor.execute("DELETE FROM consultations WHERE id_consult=%s", [id_consult])
-                    showinfo(windows_title.done, labels_text.cons_sup)
+                    show_info("Consultation supprimée de la base")
                 except:
                     traceback.print_exc()
-                    showwarning(windows_title.db_error, errors_text.db_delete)
+                    show_db_warning('delete')
         self.update_list()
 
     def on_delete_bill(self, event):
         id_consult = self.get_selected_consult_id()
         if id_consult is not None:
-            if askyesno(windows_title.delete, labels_text.sup_def_b):
+            if askyesno("Suppression", "Supprimer définitivement la facture de cette consultation ?"):
                 try:
                     self.cursor.execute("DELETE FROM bills WHERE id_consult = %s", [id_consult])
-                    showinfo(windows_title.done, labels_text.bill_sup)
+                    show_info("Facture supprimée de la base")
                 except:
                     traceback.print_exc()
-                    showwarning(windows_title.db_error, errors_text.db_delete)
+                    show_db_warning('delete')
         self.update_list()
 
     def on_show_consultation(self, event):
@@ -752,7 +769,7 @@ class AllConsultationsDialog(DBMixin, CancelableMixin, core.AllConsultationsDial
         except:
             print("id_patient:", self.id_patient)
             traceback.print_exc()
-            showwarning(windows_title.db_error, errors_text.db_show)
+            show_db_warning('show')
             return
         html = ["""
         <html>
@@ -780,22 +797,22 @@ class AllConsultationsDialog(DBMixin, CancelableMixin, core.AllConsultationsDial
         """.format(**patient.__dict__)]
         for consult in Consultation.yield_all(self.cursor, where=dict(id=patient.id), order='-date_consult'):
             html += filter(None, [
-                """<hr/><h2 class="date">********** Consultation du {} **********</h2>""".format(consult.date_consult),
-                """<h3 class="unpaid">!!!!! Non-payé !!!!!</h3>""" if consult.bill is not None and consult.bill.payment_date is None else None,
-                """<h3>{}</h3><div>{}</div>""".format(labels_text.eg, consult.EG) if consult.EG.strip() else None,
-                """<h3>{}</h3><div>{}</div>""".format(labels_text.therapeute, consult.therapeute) if consult.therapeute else None,
-                """<h3>{}&nbsp;: {}</h3><div>{}</div>""".format(labels_text.mc, (labels_text.accident if consult.MC_accident else labels_text.maladie), consult.MC),
-                """<h3>{}</h3><div>{}</div>""".format(labels_text.thorax, consult.APT_thorax) if consult.APT_thorax.strip() else None,
-                """<h3>{}</h3><div>{}</div>""".format(labels_text.abdomen, consult.APT_abdomen) if consult.APT_abdomen.strip() else None,
-                """<h3>{}</h3><div>{}</div>""".format(labels_text.tete, consult.APT_tete) if consult.APT_tete.strip() else None,
-                """<h3>{}</h3><div>{}</div>""".format(labels_text.ms, consult.APT_MS) if consult.APT_MS.strip() else None,
-                """<h3>{}</h3><div>{}</div>""".format(labels_text.mi, consult.APT_MI) if consult.APT_MI.strip() else None,
-                """<h3>{}</h3><div>{}</div>""".format(labels_text.gen, consult.APT_system) if consult.APT_system.strip() else None,
-                """<h3>{}</h3><div>{}</div>""".format(labels_text.a_osteo, consult.A_osteo) if consult.A_osteo.strip() else None,
-                """<h3>{}</h3><div>{}</div>""".format(labels_text.exph, consult.exam_phys) if consult.exam_phys.strip() else None,
-                """<h3>{}</h3><div>{}</div>""".format(labels_text.ttt, consult.traitement) if consult.traitement.strip() else None,
-                """<h3>{}</h3><div>{}</div>""".format(labels_text.expc, consult.exam_pclin) if consult.exam_pclin.strip() else None,
-                """<h3>{}</h3><div>{}</div>""".format(labels_text.remarques, consult.divers) if consult.divers.strip() else None,
+                "<hr/><h2 class='date'>********** Consultation du {} **********</h2>".format(consult.date_consult),
+                "<h3 class='unpaid'>!!!!! Non-payé !!!!!</h3>" if consult.bill is not None and consult.bill.payment_date is None else None,
+                "<h3>État général</h3><div>{}</div>".format(consult.EG) if consult.EG.strip() else None,
+                "<h3>Thérapeute</h3><div>{}</div>".format(consult.therapeute) if consult.therapeute else None,
+                "<h3>Motif&nbsp;: {}</h3><div>{}</div>".format(("accident" if consult.MC_accident else "maladie"), consult.MC),
+                "<h3>Thorax</h3><div>{}</div>".format(consult.APT_thorax) if consult.APT_thorax.strip() else None,
+                "<h3>Abdomen</h3><div>{}</div>".format(consult.APT_abdomen) if consult.APT_abdomen.strip() else None,
+                "<h3>Tête et cou</h3><div>{}</div>".format(consult.APT_tete) if consult.APT_tete.strip() else None,
+                "<h3>Membres supérieurs</h3><div>{}</div>".format(consult.APT_MS) if consult.APT_MS.strip() else None,
+                "<h3>Membres inférieurs</h3><div>{}</div>".format(consult.APT_MI) if consult.APT_MI.strip() else None,
+                "<h3>Neuro, vascul, dermato, endocrino, lymph</h3><div>{}</div>".format(consult.APT_system) if consult.APT_system.strip() else None,
+                "<h3>Anamnèse ostéopathique</h3><div>{}</div>".format(consult.A_osteo) if consult.A_osteo.strip() else None,
+                "<h3>Examen physique</h3><div>{}</div>".format(consult.exam_phys) if consult.exam_phys.strip() else None,
+                "<h3>Traitement</h3><div>{}</div>".format(consult.traitement) if consult.traitement.strip() else None,
+                "<h3>Examens paracliniques</h3><div>{}</div>".format(consult.exam_pclin) if consult.exam_pclin.strip() else None,
+                "<h3>Remarques</h3><div>{}</div>".format(consult.divers) if consult.divers.strip() else None,
             ])
         html.append("</body></html>")
         self.html.SetPage('\n'.join(html), "")
@@ -929,9 +946,9 @@ class PatientDialog(FixPatientMixin, DBMixin, CancelableMixin, core.PatientDialo
         self.update_btn.Show(bool(self.patient and not self.readonly))
 
         if patient:
-            title = windows_title.patient
+            title = "Fiche patient"
         else:
-            title = windows_title.new_patient
+            title = "Nouveau patient"
         self.SetTitle(title)
 
         if patient.date_ouverture is None:
@@ -949,7 +966,7 @@ class PatientDialog(FixPatientMixin, DBMixin, CancelableMixin, core.PatientDialo
             self.cursor.execute("""SELECT therapeute, login FROM therapeutes ORDER BY therapeute""")
         except:
             traceback.print_exc()
-            showwarning(windows_title.db_error, errors_text.db_read)
+            show_db_warning('read')
             return
         therapeutes = []
         for t, login in self.cursor:
@@ -1056,7 +1073,7 @@ class PatientDialog(FixPatientMixin, DBMixin, CancelableMixin, core.PatientDialo
                 or not patient.zip
                 or not patient.city):
             self.highlight_missing_fields()
-            showwarning(windows_title.invalid_error, errors_text.missing_data)
+            show_warning("Veuillez compléter les champs en rouge")
             return False
         return True
 
@@ -1101,7 +1118,7 @@ class PatientDialog(FixPatientMixin, DBMixin, CancelableMixin, core.PatientDialo
             parse_date(self.opening_date.Value.strip())
         except:
             traceback.print_exc()
-            showwarning(windows_title.invalid_error, errors_text.invalid_date)
+            show_error("Veuillez vérifier le format des champs dates")
             return
         if not self.is_patient_valid():
             return
@@ -1109,7 +1126,7 @@ class PatientDialog(FixPatientMixin, DBMixin, CancelableMixin, core.PatientDialo
             self.patient.save(self.cursor)
         except:
             traceback.print_exc()
-            showwarning(windows_title.db_error, errors_text.db_insert)
+            show_db_warning('insert')
             return
         self.on_cancel()
         if with_consultation:
@@ -1122,7 +1139,7 @@ class PatientDialog(FixPatientMixin, DBMixin, CancelableMixin, core.PatientDialo
             self.patient.save(self.cursor)
         except:
             traceback.print_exc()
-            showwarning(windows_title.db_error, errors_text.db_update)
+            show_db_warning('update')
         self.on_cancel()
 
 
@@ -1163,7 +1180,7 @@ class ConsultationDialog(FixPatientMixin, DBMixin, CancelableMixin, core.Consult
             self.cursor.execute("""SELECT therapeute, login, entete FROM therapeutes ORDER BY therapeute""")
         except:
             traceback.print_exc()
-            showwarning(windows_title.db_error, errors_text.db_read)
+            show_db_warning('read')
             return
         therapeutes = ['']
         for t, login, header in self.cursor:
@@ -1171,11 +1188,11 @@ class ConsultationDialog(FixPatientMixin, DBMixin, CancelableMixin, core.Consult
             if consult.therapeute is None and login == LOGIN:
                 consult.therapeute = t
         if consult:
-            title = windows_title.consultation % (consult.date_consult, self.patient.sex, self.patient.nom)
+            title = "Consultation du %s - %s %s" % (consult.date_consult, self.patient.sex, self.patient.nom)
         else:
             consult.date_consult = datetime.date.today()
             consult.MC_accident = False
-            title = windows_title.new_consultation % (self.patient.sex, self.patient.nom)
+            title = "Nouvelle consultation - %s %s" % (self.patient.sex, self.patient.nom)
         self.therapeute.Set(therapeutes)
 
         fixed_therapist = self.readonly or (consult.id_consult is not None and 'MANAGE_CONSULTATIONS' not in wx.GetApp().ACCESS_RIGHTS)
@@ -1241,12 +1258,12 @@ class ConsultationDialog(FixPatientMixin, DBMixin, CancelableMixin, core.Consult
         consult.therapeute = self.therapeute.StringSelection
 
     def on_close(self, event):
-        if self.readonly or event.EventObject == self.ok_btn or askyesno(windows_title.really_cancel, labels_text.really_cancel):
+        if self.readonly or event.EventObject == self.ok_btn or ask_really_cancel():
             self.EndModal(0)
 
     def on_save(self, event):
         if not self.therapeute.StringSelection:
-            showwarning(windows_title.missing_error, errors_text.missing_therapeute)
+            show_error("Veuillez préciser le thérapeute ayant pris en charge le patient")
             return
         self.set_consultation_fields()
         # New consultation => create a new bill or user explicitely requested that with the button
@@ -1263,7 +1280,7 @@ class ConsultationDialog(FixPatientMixin, DBMixin, CancelableMixin, core.Consult
             self.EndModal(0)
         except:
             traceback.print_exc()
-            showwarning(windows_title.db_error, errors_text.db_update)
+            show_db_warning('update')
 
     def on_view_bill(self, *args):
         if self.consultation.bill is None:
@@ -1290,14 +1307,14 @@ class BillDialog(DBMixin, CancelableMixin, bill.BillDialog):
                 self.bill = Bill(consultation=self.consultation, patient=self.consultation.patient)
         except:
             traceback.print_exc()
-            showwarning(windows_title.db_error, errors_text.db_read)
+            show_db_warning('read')
         try:
             self.cursor.execute("""SELECT code, description, unit_price_cts FROM tarifs ORDER BY code, description""")
             for code, description, unit_price_cts in self.cursor:
                 self.tarif_codes[self.tarif_display(code, description)] = (code, description, unit_price_cts)
         except:
             traceback.print_exc()
-            showwarning(windows_title.db_error, errors_text.db_read)
+            show_db_warning('read')
         if not self.bill:
             self.initialize_bill()
         else:
@@ -1358,7 +1375,7 @@ class BillDialog(DBMixin, CancelableMixin, bill.BillDialog):
                 entete = ""
         except:
             traceback.print_exc()
-            showwarning(windows_title.db_error, errors_text.db_read)
+            show_db_warning('read')
             entete = ""
         bill.author_id = therapeute
         bill.author_firstname = bill.author_lastname = bill.author_rcc = ''
@@ -1422,7 +1439,7 @@ class BillDialog(DBMixin, CancelableMixin, bill.BillDialog):
                 bill.bv_ref = None
         except:
             traceback.print_exc()
-            showwarning(windows_title.db_error, errors_text.db_read)
+            show_db_warning('read')
         bill.signature = sign(bill.author_rcc, bill.birthdate, bill.zip, bill.total_cts, bill.timestamp)
 
     def on_print(self, *args):
@@ -1432,24 +1449,24 @@ class BillDialog(DBMixin, CancelableMixin, bill.BillDialog):
             self.bill.signature = sign(self.bill.author_rcc, self.bill.birthdate, self.bill.zip, self.bill.total_cts, self.bill.timestamp)
             self.bill.save(self.cursor)
         ts = datetime.datetime.now().strftime('%H')
-        filename = normalize_filename(u'%s_%s_%s_%s_%sh.pdf' % (self.bill.lastname,
-                                                                self.bill.firstname,
-                                                                self.bill.sex,
-                                                                self.bill.timestamp.date(),
-                                                                ts))
+        filename = normalize_filename('%s_%s_%s_%s_%sh.pdf' % (self.bill.lastname,
+                                                               self.bill.firstname,
+                                                               self.bill.sex,
+                                                               self.bill.timestamp.date(),
+                                                               ts))
         bills.consultations(filename, [self.bill])
         cmd, cap = mailcap.findmatch(mailcap.getcaps(), 'application/pdf', 'view', filename)
         os.system(cmd)
-        if self.bill.payment_method == 'BVR' and askyesno(windows_title.print_completed, labels_text.ask_confirm_print_bvr):
+        if self.bill.payment_method == 'BVR' and ask_confirm_printed_bvr():
             self.bill.status = STATUS_PRINTED
             self.bill.save(self.cursor)
 
     def on_save_and_print(self, event):
         if (self.payment_method.StringSelection or None) is None:
-            showwarning(windows_title.missing_error, errors_text.missing_payment_info)
+            show_error("Veuillez préciser le prix et le moyen de paiement")
             return
         if not self.get_positions():
-            showwarning(windows_title.missing_error, errors_text.missing_positions)
+            show_error("Veuillez ajouter au moins une position à la facture")
             return
         if self.bill:
             self.save_edited_bill()
@@ -1465,7 +1482,7 @@ class BillDialog(DBMixin, CancelableMixin, bill.BillDialog):
                 position.save(self.cursor)
         except:
             traceback.print_exc()
-            showwarning(windows_title.db_error, errors_text.db_insert)
+            show_db_warning('insert')
         else:
             self.on_print()
             self.EndModal(0)
@@ -1478,7 +1495,7 @@ class BillDialog(DBMixin, CancelableMixin, bill.BillDialog):
         self.save_new_bill()
 
     def on_close(self, event):
-        if self.readonly or event.EventObject == self.save_and_print_btn or askyesno(windows_title.really_cancel, labels_text.bill_really_cancel):
+        if self.readonly or event.EventObject == self.save_and_print_btn or ask_really_cancel():
             self.EndModal(0)
 
 
@@ -1509,11 +1526,9 @@ LOGIN = os.getlogin()
 if __name__ == '__main__':
     app = MainApp()
     try:
-        if not os.path.exists(custo.PDF_DIR):
-            os.mkdir(custo.PDF_DIR)
-        elif not os.path.isdir(custo.PDF_DIR) or not os.access(custo.PDF_DIR, os.W_OK):
-            raise ValueError()
-    except:
-        showwarning(u"Wrong directory", u"Cannot store PDFs in " + custo.PDF_DIR)
+        os.makedirs(custo.PDF_DIR, exist_ok=True)
+    except OSError as e:
+        show_error("Echec de création du répertoire de sauvegarde des PDFs.\n"
+                   "{}".format(e))
         sys.exit()
     app.MainLoop()

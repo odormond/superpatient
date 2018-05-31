@@ -19,19 +19,19 @@
 from .customization import ROUNDING_MODE
 
 
-OLD_PAYMENT_METHODS = [u'CdM']
-PAYMENT_METHODS = [u'Cash', u'Carte', u'BVR', u'Dû', u'PVPE']
-PAYMENT_STATUSES = [u'Tous', u'Comptabilisé', u'Non-comptabilisé']
+OLD_PAYMENT_METHODS = ['CdM']
+PAYMENT_METHODS = ['Cash', 'Carte', 'BVR', 'Dû', 'PVPE']
+PAYMENT_STATUSES = ['Tous', 'Comptabilisé', 'Non-comptabilisé']
 SEX_MALE = "M"
 SEX_FEMALE = "F"
 SEX_ALL = [SEX_MALE, SEX_FEMALE]
 
-BILL_STATUSES = [u'Tous', u'Ouverte', u'Imprimée', u'Envoyée', u'Payée', u'Abandonnée']
-STATUS_OPENED = u'O'
-STATUS_PRINTED = u'I'
-STATUS_SENT = u'E'
-STATUS_PAYED = u'P'
-STATUS_ABANDONED = u'A'
+BILL_STATUSES = ['Tous', 'Ouverte', 'Imprimée', 'Envoyée', 'Payée', 'Abandonnée']
+STATUS_OPENED = 'O'
+STATUS_PRINTED = 'I'
+STATUS_SENT = 'E'
+STATUS_PAYED = 'P'
+STATUS_ABANDONED = 'A'
 
 BILL_TYPE_CONSULTATION = "C"
 BILL_TYPE_MANUAL = "M"

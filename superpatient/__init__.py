@@ -25,7 +25,7 @@ import wx
 from . import credentials, db
 from .customization import PDF_DIR
 from .models import SEX_MALE
-from .ui.common import showerror, AboutDialog, LicenseDialog
+from .ui.common import show_error, AboutDialog, LicenseDialog
 
 
 WIN_CORNER_SHIFT = 32
@@ -48,7 +48,7 @@ class BaseApp(wx.App):
     def init_reportlab(self):
         from . import bills
         if bills.REPORTLAB_IS_MISSING:
-            showerror("Dependency Error", "The reportlab module is not correctly installed!")
+            show_error("The reportlab module is not correctly installed!")
             sys.exit(1)
 
     def init_db(self):
@@ -56,7 +56,7 @@ class BaseApp(wx.App):
             import MySQLdb
             import MySQLdb.cursors
         except:
-            showerror("Dependency Error", "The MySQLdb module is not correctly installed!")
+            show_error("The MySQLdb module is not correctly installed!")
             sys.exit(1)
 
         class ResilientCursor(MySQLdb.cursors.Cursor):
@@ -72,7 +72,7 @@ class BaseApp(wx.App):
         try:
             self.connection = MySQLdb.connect(host=db.SERVER, user=credentials.DB_USER, passwd=credentials.DB_PASS, db=db.DATABASE, charset='utf8', cursorclass=ResilientCursor)
         except:
-            showerror("MySQL", "Cannot connect to database")
+            show_error("Cannot connect to database")
             sys.exit(1)
 
         self.connection.ping(True)
@@ -83,14 +83,14 @@ class BaseApp(wx.App):
             import dateutil
             from dateutil.parser import parse, parserinfo
         except:
-            showerror("Dependency Error", "The dateutil module is not correctly installed!")
+            show_error("The dateutil module is not correctly installed!")
             sys.exit(1)
 
         class FrenchParserInfo(parserinfo):
-            MONTHS = [(u'jan', u'janvier'), (u'fév', u'février'), (u'mar', u'mars'), (u'avr', u'avril'), (u'mai', u'mai'), (u'jui', u'juin'), (u'jul', u'juillet'), (u'aoû', u'août'), (u'sep', u'septembre'), (u'oct', u'octobre'), (u'nov', u'novembre'), (u'déc', u'décembre')]
-            WEEKDAYS = [(u'Lun', u'Lundi'), (u'Mar', u'Mardi'), (u'Mer', u'Mercredi'), (u'Jeu', u'Jeudi'), (u'Ven', u'Vendredi'), (u'Sam', u'Samedi'), (u'Dim', u'Dimanche')]
-            HMS = [(u'h', u'heure', u'heures'), (u'm', u'minute', u'minutes'), (u's', u'seconde', u'secondes')]
-            JUMP = [u' ', u'.', u',', u';', u'-', u'/', u"'", u"le", u"er", u"ième"]
+            MONTHS = [('jan', 'janvier'), ('fév', 'février'), ('mar', 'mars'), ('avr', 'avril'), ('mai', 'mai'), ('jui', 'juin'), ('jul', 'juillet'), ('aoû', 'août'), ('sep', 'septembre'), ('oct', 'octobre'), ('nov', 'novembre'), ('déc', 'décembre')]
+            WEEKDAYS = [('Lun', 'Lundi'), ('Mar', 'Mardi'), ('Mer', 'Mercredi'), ('Jeu', 'Jeudi'), ('Ven', 'Vendredi'), ('Sam', 'Samedi'), ('Dim', 'Dimanche')]
+            HMS = [('h', 'heure', 'heures'), ('m', 'minute', 'minutes'), ('s', 'seconde', 'secondes')]
+            JUMP = [' ', '.', ',', ';', '-', '/', "'", "le", "er", "ième"]
 
         datesFR = FrenchParserInfo(dayfirst=True)
         MIN_DATE = datetime.date(1900, 1, 1)  # Cannot strftime before that date
@@ -130,7 +130,7 @@ class HelpMenuMixin:
         super().__init__(*args, **kwargs)
         assert hasattr(self, 'menubar'), "A `menubar` must be present to use the HelpMenuMixin"
         help_menu = wx.Menu()
-        item = help_menu.Append(wx.ID_ANY, u"\u00c0 propos", "")
+        item = help_menu.Append(wx.ID_ANY, "À propos", "")
         self.Bind(wx.EVT_MENU, self.on_about, id=item.GetId())
         item = help_menu.Append(wx.ID_ANY, "Conditions d'utilisations", "")
         self.Bind(wx.EVT_MENU, self.on_license, id=item.GetId())

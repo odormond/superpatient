@@ -19,7 +19,7 @@
 #    along with SuperPatient; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
-from .customization import bvr
+from .customization import BVR
 
 
 def bvr_checksum(n):
@@ -37,5 +37,5 @@ def gen_bvr_ref(cursor, key_one, key_two, date):
     cursor.execute("UPDATE bvr_sequence SET counter = @counter := counter + 1")
     cursor.execute("SELECT @counter")
     bvr_counter, = cursor.fetchone()
-    bv_ref = u'%06d%010d%02d%02d%02d%04d' % (bvr.prefix, bvr_counter, alpha_to_num(key_one[0]), alpha_to_num(key_two[0]), date.month, date.year)
+    bv_ref = '%06d%010d%02d%02d%02d%04d' % (BVR.prefix, bvr_counter, alpha_to_num(key_one[0]), alpha_to_num(key_two[0]), date.month, date.year)
     return bv_ref + str(bvr_checksum(bv_ref))

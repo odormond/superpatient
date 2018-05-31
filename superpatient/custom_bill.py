@@ -23,7 +23,7 @@ from reportlab.lib.units import mm, cm, inch
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 
-from .customization import bvr, SITE
+from .customization import BVR, SITE
 from .bvr import bvr_checksum
 
 BASE_DIR = os.path.join(os.path.dirname(__file__), 'pdfs')
@@ -58,7 +58,7 @@ def draw_head(canvas, font_size):
     canvas.saveState()
     canvas.drawImage(os.path.join(BASE_DIR, "logo_pog.jpg"), MARGIN, canvas._pagesize[1]-MARGIN-LOGO_HEIGHT, LOGO_WIDTH, LOGO_HEIGHT)
     canvas.setFont('EuclidBPBold', font_size)
-    canvas.drawRightString(canvas._pagesize[0]-MARGIN, canvas._pagesize[1]-MARGIN-font_size, "{SITE}, le {DATE}".format(SITE=SITE, DATE=datetime.date.today().strftime(u'%d.%m.%y')))
+    canvas.drawRightString(canvas._pagesize[0]-MARGIN, canvas._pagesize[1]-MARGIN-font_size, "{SITE}, le {DATE}".format(SITE=SITE, DATE=datetime.date.today().strftime('%d.%m.%y')))
     canvas.restoreState()
 
 
@@ -69,13 +69,13 @@ def draw_bvr(canvas, prix_cts, address_patient, bv_ref):
         canvas.drawImage(os.path.join(BASE_DIR, "442_05_LAC_609_quer_Bank_CMYK.png"), 0, 0, BV_WIDTH, BV_HEIGHT)
     # CCP
     canvas.setFont('OCRB', 12)
-    canvas.drawString(12*BV_COLUMN, BV_REF_Y - 11*BV_LINE, bvr.CCP)
-    canvas.drawString(BV_REF_X + 12*BV_COLUMN, BV_REF_Y - 11*BV_LINE, bvr.CCP)
+    canvas.drawString(12*BV_COLUMN, BV_REF_Y - 11*BV_LINE, BVR.CCP)
+    canvas.drawString(BV_REF_X + 12*BV_COLUMN, BV_REF_Y - 11*BV_LINE, BVR.CCP)
     # Lignes de codage
-    v, x, c = bvr.CCP.split('-')
-    codage = u''.join((v, u'0'*(6-len(x)), x, c, u'>'))
-    prix = u'01%010d' % prix_cts
-    codage = u'%s%d>%s+ %s' % (prix, bvr_checksum(prix), bv_ref, codage)
+    v, x, c = BVR.CCP.split('-')
+    codage = ''.join((v, '0'*(6-len(x)), x, c, '>'))
+    prix = '01%010d' % prix_cts
+    codage = '%s%d>%s+ %s' % (prix, bvr_checksum(prix), bv_ref, codage)
     text_obj = canvas.beginText()
     text_obj.setTextTransform(REF_NO_SCALE, 0, 0, 1, BV_REF_X + 3*BV_COLUMN + REF_NO_SHIFT, BV_REF_Y - 21*BV_LINE)
     text_obj.textLines(codage)
@@ -85,18 +85,18 @@ def draw_bvr(canvas, prix_cts, address_patient, bv_ref):
     text_obj = canvas.beginText()
     text_obj.setTextTransform(LEFT_TEXT_SCALE, 0, 0, 1, BV_COLUMN + LEFT_TEXT_SHIFT, BV_REF_Y - 3*BV_LINE)
     text_obj.setLeading(0.9*10)
-    text_obj.textLines(bvr.versement_pour+u'\n\n\n'+bvr.en_faveur_de)
+    text_obj.textLines(BVR.versement_pour + '\n\n\n' + BVR.en_faveur_de)
     canvas.drawText(text_obj)
     text_obj = canvas.beginText()
     text_obj.setTextTransform(MIDDLE_TEXT_SCALE, 0, 0, 1, BV_REF_X + BV_COLUMN + MIDDLE_TEXT_SHIFT, BV_REF_Y - 3*BV_LINE)
     text_obj.setLeading(0.9*10)
-    text_obj.textLines(bvr.versement_pour+u'\n\n\n'+bvr.en_faveur_de)
+    text_obj.textLines(BVR.versement_pour + '\n\n\n' + BVR.en_faveur_de)
     canvas.drawText(text_obj)
     # Versé par
     ref = list(bv_ref)
     for i in (2, 8, 14, 20, 26):
-        ref.insert(i, u' ')
-    ref = u''.join(ref)
+        ref.insert(i, ' ')
+    ref = ''.join(ref)
     canvas.setFont('OCRB', 8)
     text_obj = canvas.beginText()
     text_obj.setTextTransform(LEFT_TEXT_SCALE, 0, 0, 1, BV_COLUMN + LEFT_TEXT_SHIFT, BV_REF_Y - 15*BV_LINE)

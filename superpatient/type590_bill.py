@@ -11,7 +11,7 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 
 from . import gen_title
-from .customization import DATE_FMT, labels_text
+from .customization import DATE_FMT, COMPANY_NAME, FULL_ADDRESS, BILL_TYPE_AND_SITE
 from .custom_bill import draw_head, draw_bvr
 from .signature import datamatrix
 
@@ -64,7 +64,7 @@ class Signature(Flowable):
 
 def therapeute(bill):
     name = bill.author_firstname + ' ' + bill.author_lastname
-    pog, address, zip_city, web, phone = labels_text.adresse_pog.splitlines()
+    pog, address, zip_city, web, phone = FULL_ADDRESS.splitlines()
     data = [
         ["Document", "{} {}".format(bill.id, bill.timestamp)],
         ["Auteur\nfacture", "N° GLN", "", name, web],
@@ -97,8 +97,8 @@ def patient(bill):
         ["", "Type de remb.", "TG", "Date/N° de facture"],
         ["", "N° contrat", "", "Date/N° de rappel"],
         ["", "Traitement", bill.treatment_period, "Motif traitement", bill.treatment_reason],
-        ["", "N°/Nom entreprise", "Permanence Ostéopathique de la Gare (POG) Sàrl"],
-        ["", "Rôle/Localité", labels_text.bill_role_locality],
+        ["", "N°/Nom entreprise", COMPANY_NAME],
+        ["", "Rôle/Localité", BILL_TYPE_AND_SITE],
     ]
     return Table(data, colWidths=[2*cm, 2.5*cm, 6.5*cm, '*'], rowHeights=[13] + [11]*(len(data)-1), style=PATIENT_TSTYLE)
 
@@ -137,11 +137,11 @@ def positions(bill):
               [('FONT', (0, row), (-1, row), TITLE_STYLE.fontName, 6) for row in range(2, len(data), 2)] +
               [('SPAN', (2, row), (-1, row)) for row in range(2, len(data), 2)])
     amount_label = {
-        'Cash': 'Payement cash',
-        'Carte': 'Payement par carte',
-        'BVR': 'Payement par BVR',
-        'Dû': 'Payement dû',
-        'PVPE': 'Payement par BVR'
+        'Cash': 'Paiement cash',
+        'Carte': 'Paiement par carte',
+        'BVR': 'Paiement par BVR',
+        'Dû': 'Paiement dû',
+        'PVPE': 'Paiement par BVR'
     }.get(bill.payment_method, "Total")
 
     if bill.signature:
@@ -244,7 +244,7 @@ def manuals(filename, bills):
             rcc = 'RCC ' + bill.author_rcc
         else:
             rcc = bill.author_rcc
-        therapeute = '{} {}\n{}\n\n{}'.format(bill.author_firstname, bill.author_lastname, rcc, labels_text.adresse_pog)
+        therapeute = '{} {}\n{}\n\n{}'.format(bill.author_firstname, bill.author_lastname, rcc, FULL_ADDRESS)
         address = '{}\n{} {}\n{}\n{}\n{} {}'.format(bill.title, bill.firstname, bill.lastname, bill.complement, bill.street, bill.zip, bill.city)
         story += [Table([[[ParagraphOrSpacer(line, MANUAL_STYLE) for line in therapeute.splitlines()],
                           [ParagraphOrSpacer(line, MANUAL_STYLE) for line in address.splitlines()]]],

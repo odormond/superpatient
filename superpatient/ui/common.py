@@ -1,22 +1,35 @@
 import datetime
+from textwrap import dedent
 
 import wx
 import wx.adv
 
 
-def showinfo(title, message, parent=None):
-    print("INFO:", title, ":", message)
-    wx.MessageBox(message, title, wx.OK | wx.ICON_INFORMATION, parent)
+def show_info(message, parent=None):
+    print("INFO:", message)
+    wx.MessageBox(message, "Information", wx.OK | wx.ICON_INFORMATION, parent)
 
 
-def showwarning(title, message, parent=None):
-    print("WARN:", title, ":", message)
-    wx.MessageBox(message, title, wx.OK | wx.ICON_EXCLAMATION, parent)
+def show_warning(message, parent=None):
+    print("WARN:", message)
+    wx.MessageBox(message, "Attention", wx.OK | wx.ICON_EXCLAMATION, parent)
 
 
-def showerror(title, message, parent=None):
-    print("WARN:", title, ":", message)
-    wx.MessageBox(message, title, wx.OK | wx.ICON_ERROR, parent)
+def show_db_warning(operation):
+    message = dict(read="Impossible de lire les données !",
+                   update="Modification impossible !",
+                   insert="Insertion impossible !",
+                   delete="Suppression impossible !",
+                   search="Recherche impossible !",
+                   show="Affichage impossible !",
+                   )[operation]
+    print("WARN: database error:", message)
+    wx.MessageBox(message, "Problème avec la base de donnée", wx.OK | wx.ICON_EXCLAMATION)
+
+
+def show_error(message, parent=None):
+    print("ERROR:", message)
+    wx.MessageBox(message, "Erreur", wx.OK | wx.ICON_ERROR, parent)
 
 
 def askyesno(title, message, parent=None):
@@ -32,16 +45,30 @@ class AboutDialog(wx.Dialog):
         self.__do_layout()
 
     def __set_properties(self):
-        self.SetTitle(u"À propos")
+        self.SetTitle("À propos")
         self.SetFont(wx.Font(12, wx.DEFAULT, wx.NORMAL, wx.BOLD, 0, ""))
 
     def __do_layout(self):
-        from ..customization import labels_text
-        sizer_3 = wx.BoxSizer(wx.VERTICAL)
-        label_15 = wx.StaticText(self, wx.ID_ANY, labels_text.apropos_description, style=wx.ALIGN_CENTER)
-        sizer_3.Add(label_15, 1, wx.ALL | wx.EXPAND, 5)
-        self.SetSizer(sizer_3)
-        sizer_3.Fit(self)
+        from ..customization import VERSION
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        label = wx.StaticText(
+            self, wx.ID_ANY,
+            dedent("""
+            SuperPatient ver. {VERSION} est un gestionnaire de patients, de consultations, et de facturation.
+
+            Il a été créé en 2006 pour satisfaire aux besoins minimaux d'un cabinet de groupe d'ostéopathes.
+
+            Superpatient est sous licence GPL.
+
+            Pour tout autre renseignement, veuillez écrire à
+
+            Tibor Csernay
+            csernay@pog.swiss
+            """).format(VERSION=VERSION),
+            style=wx.ALIGN_CENTER)
+        label.Wrap(350)
+        sizer.Add(label, 1, wx.ALL | wx.EXPAND, 10)
+        self.SetSizerAndFit(sizer)
         self.Layout()
 
 
@@ -58,12 +85,22 @@ class LicenseDialog(wx.Dialog):
         self.SetFont(wx.Font(12, wx.DEFAULT, wx.NORMAL, wx.BOLD, 0, ""))
 
     def __do_layout(self):
-        from ..customization import labels_text
-        sizer_1 = wx.BoxSizer(wx.VERTICAL)
-        label_1 = wx.StaticText(self, wx.ID_ANY, labels_text.licence_description, style=wx.ALIGN_CENTER)
-        sizer_1.Add(label_1, 1, wx.ALL | wx.EXPAND, 5)
-        self.SetSizer(sizer_1)
-        sizer_1.Fit(self)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        label = wx.StaticText(
+            self, wx.ID_ANY,
+            dedent("""
+            POG Sàrl - Copyright 2006-2018 - www.pog.swiss
+
+            SuperPatient is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later version.
+
+            SuperPatient is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+
+            You should have received a copy of the GNU General Public License along with SuperPatient; if not, write to the Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+            """),
+            style=wx.ALIGN_CENTER)
+        label.Wrap(400)
+        sizer.Add(label, 1, wx.ALL | wx.EXPAND, 10)
+        self.SetSizerAndFit(sizer)
         self.Layout()
 
 

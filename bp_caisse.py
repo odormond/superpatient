@@ -11,9 +11,8 @@ import wx
 from superpatient import BaseApp, DBMixin, HelpMenuMixin
 from superpatient import bills, normalize_filename
 from superpatient.bvr import gen_bvr_ref
-from superpatient.customization import windows_title, errors_text, labels_text
 from superpatient.models import Bill, PAYMENT_METHODS, STATUS_OPENED, STATUS_SENT, STATUS_PAYED
-from superpatient.ui.common import askyesno, showwarning
+from superpatient.ui.common import askyesno, show_db_warning
 from superpatient.ui import cash_register
 
 
@@ -65,7 +64,7 @@ class CashRegisterFrame(DBMixin, HelpMenuMixin, cash_register.MainFrame):
     def on_change_payment(self, event):
         bill = self.data[self.selected_idx]
         if self.payment_method.StringSelection == 'BVR':
-            if not askyesno(windows_title.confirm_change, labels_text.ask_confirm_payment_method_change_to_BVR):
+            if not askyesno("Confirmer le changement", "Voulez-vous vraiment changer la méthode de paiement vers BVR ?"):
                 return
             bill.bv_ref = gen_bvr_ref(self.cursor, bill.firstname, bill.lastname, bill.timestamp)
         else:
@@ -89,7 +88,7 @@ class CashRegisterFrame(DBMixin, HelpMenuMixin, cash_register.MainFrame):
                 self.payments.Append((bill.sex, bill.lastname, bill.firstname, bill.consultation.therapeute, bill.timestamp.strftime('%H:%M'), '%0.2f' % (bill.total_cts/100), bill.payment_method))
         except:
             traceback.print_exc()
-            showwarning(windows_title.db_error, errors_text.db_read)
+            show_db_warning('read')
 
     def real_validate(self):
         bill = self.data[self.selected_idx]
@@ -97,13 +96,13 @@ class CashRegisterFrame(DBMixin, HelpMenuMixin, cash_register.MainFrame):
             if self.payment_method.StringSelection == 'BVR':
                 bill.status = STATUS_SENT
                 bill.save(self.cursor)
-            elif self.payment_method.StringSelection not in (u'Dû', u'PVPE'):
+            elif self.payment_method.StringSelection not in ('Dû', 'PVPE'):
                 bill.status = STATUS_PAYED
                 bill.payment_date = datetime.date.today()
                 bill.save(self.cursor)
         except:
             traceback.print_exc()
-            showwarning(windows_title.db_error, errors_text.db_update)
+            show_db_warning('update')
 
 
 class CashRegisterApp(BaseApp):

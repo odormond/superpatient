@@ -34,9 +34,8 @@ import wx
 from superpatient import BaseApp, DBMixin, CancelableMixin, HelpMenuMixin
 from superpatient import bills as pdf_bills, normalize_filename
 import superpatient.customization as custo
-from superpatient.customization import windows_title, errors_text
 from superpatient.models import Bill, PAYMENT_METHODS, OLD_PAYMENT_METHODS, BILL_STATUSES, STATUS_PRINTED, STATUS_SENT, STATUS_PAYED, STATUS_ABANDONED, BILL_TYPE_CONSULTATION, BILL_TYPE_MANUAL
-from superpatient.ui.common import showwarning, showerror, DatePickerDialog
+from superpatient.ui.common import show_db_warning, show_error, DatePickerDialog
 from superpatient.ui import accounting
 
 
@@ -56,7 +55,7 @@ class AccountingFrame(DBMixin, HelpMenuMixin, accounting.MainFrame):
             therapeutes = ['Tous'] + [t for t, in self.cursor]
         except:
             traceback.print_exc()
-            showwarning(windows_title.db_error, errors_text.db_read)
+            show_db_warning('read')
             sys.exit(1)
         self.therapeute.SetItems(therapeutes)
         self.therapeute.StringSelection = therapeutes[0]
@@ -124,7 +123,7 @@ class AccountingFrame(DBMixin, HelpMenuMixin, accounting.MainFrame):
                 count += 1
         except:
             traceback.print_exc()
-            showwarning(windows_title.db_error, errors_text.db_read)
+            show_db_warning('read')
         for c in range(self.payments.ColumnCount):
             self.payments.SetColumnWidth(c, wx.LIST_AUTOSIZE_USEHEADER if c == 1 else wx.LIST_AUTOSIZE)
         self.payments_count.Value = str(count)
@@ -171,12 +170,12 @@ class AccountingFrame(DBMixin, HelpMenuMixin, accounting.MainFrame):
                 assert total_line is not None and len(records) == count, "Records count does not match total line indication"
             except Exception as e:
                 print(e)
-                showerror("Fichier corrompu", "Une erreur s'est produite lors de la lecture du fichier de payement.\n%r" % e.args)
+                show_error("Une erreur s'est produite lors de la lecture du fichier de paiement.\n%r" % e.args)
                 return None
         return records
 
     def on_import_payments(self, event):
-        with wx.FileDialog(self, "Importer les paiements", wildcard="Relevers de payement (*.v11)|*.v11", style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST) as dlg:
+        with wx.FileDialog(self, "Importer les paiements", wildcard="Relevers de paiement (*.v11)|*.v11", style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST) as dlg:
             if dlg.ShowModal() == wx.ID_CANCEL:
                 return
             filename = dlg.GetPath()
@@ -254,7 +253,7 @@ class AccountingFrame(DBMixin, HelpMenuMixin, accounting.MainFrame):
                 self.cursor.execute("""UPDATE bills SET payment_date = %s, status = 'P' WHERE id = %s""", [payment_date, bill_ids[0]])
         except:
             traceback.print_exc()
-            showwarning(windows_title.db_error, errors_text.db_update)
+            show_db_warning('update')
         self.update_list()
 
     def on_print_again(self, event):
@@ -294,7 +293,7 @@ class AccountingFrame(DBMixin, HelpMenuMixin, accounting.MainFrame):
                     self.cursor.execute("""UPDATE reminders SET status = %s WHERE status != 'P' AND id = %s""", [status, last_reminder_id])
         except:
             traceback.print_exc()
-            showwarning(windows_title.db_error, errors_text.db_update)
+            show_db_warning('update')
         self.update_list()
 
 
@@ -331,7 +330,7 @@ class RemindersManagementDialog(DBMixin, accounting.RemindersManagementDialog):
                 self.data.append((bill.id, bill.total_cts, bill.sex, bill.lastname, bill.firstname, bill.timestamp, len(bill.reminders), sum(p.total_cts for p in bill.positions), sum(r.amount_cts for r in bill.reminders)))
         except:
             traceback.print_exc()
-            showwarning(windows_title.db_error, errors_text.db_read)
+            show_db_warning('read')
         self.is_updating_list = False
         for c in range(self.reminders.ColumnCount):
             self.reminders.SetColumnWidth(c, wx.LIST_AUTOSIZE)
@@ -398,7 +397,7 @@ class StatisticsDialog(DBMixin, accounting.StatisticsDialog):
             self.stats.SetRowLabelValue(r, therapeute)
         self.cursor.execute("SELECT DISTINCT YEAR(timestamp) AS year FROM bills WHERE type = 'C' ORDER BY year")
         self.years = [y for y, in self.cursor]
-        self.months = [u'tout', u'janvier', u'février', u'mars', u'avril', u'mai', u'juin', u'juillet', u'août', u'septembre', u'octobre', u'novembre', u'décembre']
+        self.months = ['tout', 'janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre']
         self.year.SetItems(['tout'] + [str(y) for y in self.years])
         self.month.SetItems(self.months)
         self.cursor.execute("SELECT DISTINCT tarif_code FROM positions ORDER BY tarif_code")
@@ -573,7 +572,7 @@ class ImportDialog(DBMixin, accounting.ImportDialog):
             self.Close()
         except:
             traceback.print_exc()
-            showwarning(windows_title.db_error, errors_text.db_update)
+            show_db_warning('update')
 
     def on_cancel_import(self, event):
         self.Close()
