@@ -84,7 +84,7 @@ def patient(bill):
         ["", "NPA", bill.zip],
         ["", "Localité", bill.city],
         ["", "Date de naissance", bill.birthdate.strftime(DATE_FMT)],
-        ["", "Loi", "LCA"],
+        ["", "Loi", "LCA" if bill.treatment_reason == 'Maladie' else 'LAA'],
         ["", "Sexe", bill.sex],
         ["", "Date du sinistre", "" if bill.accident_date is None else bill.accident_date.strftime(DATE_FMT)],
         ["", "No du sinistre", bill.accident_no or ""],
