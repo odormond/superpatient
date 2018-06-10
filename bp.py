@@ -20,6 +20,7 @@
 #    along with SuperPatient; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
+import getpass
 import os
 import sys
 import mailcap
@@ -1520,7 +1521,7 @@ class MainApp(BaseApp):
         super().__init__(*args, **kwargs)
 
 
-LOGIN = os.getlogin()
+LOGIN = getpass.getuser()
 
 
 if __name__ == '__main__':
