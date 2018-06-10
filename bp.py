@@ -1348,6 +1348,9 @@ class BillDialog(DBMixin, CancelableMixin, bill.BillDialog):
         self.treatment_period.Value = bill.treatment_period
         self.reason.StringSelection = bill.treatment_reason
         self.law.Selection = self.reason.Selection
+        if bill.treatment_reason == 'Accident':
+            self.accident_date.Enable(True)
+            self.accident_no.Enable(True)
         self.mandant.Value = bill.mandant
         self.diagnostic.Value = bill.diagnostic
         self.comment.Value = bill.comment
