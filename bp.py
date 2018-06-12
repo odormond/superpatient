@@ -1343,14 +1343,12 @@ class BillDialog(DBMixin, CancelableMixin, bill.BillDialog):
         self.city.Value = bill.city
         self.canton.StringSelection = bill.canton
         title = gen_title(bill.sex, bill.birthdate)
+        # TODO add trigger on changes to firstname, lastname, street, zip and city to update the address
         self.address.Value = '\n'.join((title, bill.firstname + ' ' + bill.lastname, bill.street, bill.zip + ' ' + bill.city))
         self.patient_id.Value = str(bill.id_patient)
         self.treatment_period.Value = bill.treatment_period
         self.reason.StringSelection = bill.treatment_reason
         self.law.Selection = self.reason.Selection
-        if bill.treatment_reason == 'Accident':
-            self.accident_date.Enable(True)
-            self.accident_no.Enable(True)
         self.mandant.Value = bill.mandant
         self.diagnostic.Value = bill.diagnostic
         self.comment.Value = bill.comment
@@ -1358,8 +1356,18 @@ class BillDialog(DBMixin, CancelableMixin, bill.BillDialog):
         for position in bill.positions:
             self.add_position(position, self.readonly)
 
+        if self.readonly or bill.treatment_reason != 'Accident':
+            self.accident_date.Disable()
+            self.accident_no.Disable()
+        if self.readonly or 'FULL_BILL_EDIT' not in wx.GetApp().ACCESS_RIGHTS:
+            for widget in (self.lastname, self.firstname, self.street, self.zip, self.city, self.birthdate, self.sex, self.canton):
+                if isinstance(widget, wx.TextCtrl):
+                    widget.WindowStyle |= wx.TE_READONLY
+                widget.Disable()
         if self.readonly:
-            for widget in (self.reason, self.treatment_period, self.comment, self.payment_method, self.position_adder_btn):
+            for widget in (self.law, self.reason, self.treatment_period, self.mandant, self.diagnostic, self.comment, self.payment_method, self.position_adder_btn):
+                if isinstance(widget, wx.TextCtrl):
+                    widget.WindowStyle |= wx.TE_READONLY
                 widget.Disable()
 
         self.Bind(wx.EVT_CLOSE, self.on_close)
@@ -1416,11 +1424,21 @@ class BillDialog(DBMixin, CancelableMixin, bill.BillDialog):
     def set_bill_fields(self):
         from dateutil import parse_date
         bill = self.bill
+        bill.lastname = self.lastname.Value
+        bill.firstname = self.firstname.Value
+        bill.sex = self.sex.StringSelection
+        bill.birthdate = parse_date(self.birthdate.Value)
+        bill.street = self.street.Value
+        bill.zip = self.zip.Value
+        bill.city = self.city.Value
+        bill.canton = self.canton.StringSelection
         bill.copy = self.copy.StringSelection == "Oui"
         bill.treatment_reason = self.reason.StringSelection
         bill.treatment_period = self.treatment_period.Value.strip()
         bill.accident_date = parse_date(self.accident_date.Value.strip())
         bill.accident_no = self.accident_no.Value.strip()
+        bill.mandant = self.mandant.Value
+        bill.diagnostic = self.diagnostic.Value
         bill.comment = self.comment.Value.strip()
         bill.payment_method = self.payment_method.StringSelection or None
         bill.positions = []
@@ -1508,7 +1526,7 @@ class MainApp(BaseApp):
 
     def __init__(self, *args, **kwargs):
         # Define the access rights based on the executable name
-        self.ACCESS_RIGHTS = []
+        self.ACCESS_RIGHTS = []  # TODO use enum
         # Available values are:
         #   MANAGE_DB
         #   MANAGE_THERAPISTS
@@ -1516,9 +1534,10 @@ class MainApp(BaseApp):
         #   MANAGE_PATIENTS
         #   MANAGE_CONSULTATIONS
         #   MANUAL_BILL
+        #   FULL_BILL_EDIT
         app_name = os.path.basename(sys.argv[0])
         if app_name in ['bp_admin.py', 'bp_fondateur.py']:
-            self.ACCESS_RIGHTS += ['MANAGE_PATIENTS', 'MANAGE_CONSULTATIONS', 'MANUAL_BILL']
+            self.ACCESS_RIGHTS += ['MANAGE_PATIENTS', 'MANAGE_CONSULTATIONS', 'MANUAL_BILL', 'FULL_BILL_EDIT']
         if app_name in ['bp_admin.py']:
             self.ACCESS_RIGHTS += ['MANAGE_DB', 'MANAGE_THERAPISTS', 'MANAGE_COSTS']
         super().__init__(*args, **kwargs)
