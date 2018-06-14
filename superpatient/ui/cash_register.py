@@ -1,4 +1,9 @@
+import logging
+
 import wx
+
+
+logger = logging.getLogger(__name__)
 
 
 class MainFrame(wx.Frame):
@@ -84,27 +89,27 @@ class MainFrame(wx.Frame):
         # end wxGlade
 
     def on_deselect_payment(self, event):  # wxGlade: MainFrame.<event_handler>
-        print("Event handler 'on_deselect_payment' not implemented!")
+        logger.warning("Event handler 'on_deselect_payment' not implemented!")
         event.Skip()
 
     def on_select_payment(self, event):  # wxGlade: MainFrame.<event_handler>
-        print("Event handler 'on_select_payment' not implemented!")
+        logger.warning("Event handler 'on_select_payment' not implemented!")
         event.Skip()
 
     def on_select_payment_method(self, event):  # wxGlade: MainFrame.<event_handler>
-        print("Event handler 'on_select_payment_method' not implemented!")
+        logger.warning("Event handler 'on_select_payment_method' not implemented!")
         event.Skip()
 
     def on_validate(self, event):  # wxGlade: MainFrame.<event_handler>
-        print("Event handler 'on_validate' not implemented!")
+        logger.warning("Event handler 'on_validate' not implemented!")
         event.Skip()
 
     def on_change_payment(self, event):  # wxGlade: MainFrame.<event_handler>
-        print("Event handler 'on_change_payment' not implemented!")
+        logger.warning("Event handler 'on_change_payment' not implemented!")
         event.Skip()
 
     def on_refresh(self, event):  # wxGlade: MainFrame.<event_handler>
-        print("Event handler 'on_refresh' not implemented!")
+        logger.warning("Event handler 'on_refresh' not implemented!")
         event.Skip()
 
 

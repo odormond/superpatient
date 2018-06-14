@@ -1,9 +1,14 @@
-import datetime
 from collections import OrderedDict
+import datetime
+import logging
+
 import wx
 
 from superpatient.customization import DATE_FMT, COMPANY_NAME, BILL_TYPE_AND_SITE
 from superpatient.models import PAYMENT_METHODS, SEX_ALL, round_cts
+
+
+logger = logging.getLogger(__name__)
 
 
 class BillDialog(wx.Dialog):
@@ -391,13 +396,13 @@ class BillDialog(wx.Dialog):
                 for position_id, date_wgt, _, tarif_code_wgt, quantity_wgt, price_wgt, _, _, _, _ in self._positions]
 
     def on_save_and_print(self, event):
-        print("Event handler 'on_save_and_print' not implemented!")
+        logger.warning("Event handler 'on_save_and_print' not implemented!")
         event.Skip()
 
     def on_print(self, event):
-        print("Event handler 'on_print' not implemented!")
+        logger.warning("Event handler 'on_print' not implemented!")
         event.Skip()
 
     def on_cancel(self, event):
-        print("Event handler 'on_cancel' not implemented!")
+        logger.warning("Event handler 'on_cancel' not implemented!")
         event.Skip()

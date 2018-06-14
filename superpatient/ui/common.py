@@ -1,21 +1,23 @@
 import datetime
 from textwrap import dedent
+import sys
 
 import wx
 import wx.adv
 
 
-def show_info(message, parent=None):
-    print("INFO:", message)
+def show_info(logger, message, parent=None):
+    logger.info(message)
     wx.MessageBox(message, "Information", wx.OK | wx.ICON_INFORMATION, parent)
 
 
-def show_warning(message, parent=None):
-    print("WARN:", message)
+def show_warning(logger, message, parent=None):
+    exc_info = sys.exc_info() != (None, None, None)
+    logger.warning(message, exc_info=exc_info)
     wx.MessageBox(message, "Attention", wx.OK | wx.ICON_EXCLAMATION, parent)
 
 
-def show_db_warning(operation):
+def show_db_warning(logger, operation):
     message = dict(read="Impossible de lire les données !",
                    update="Modification impossible !",
                    insert="Insertion impossible !",
@@ -23,12 +25,14 @@ def show_db_warning(operation):
                    search="Recherche impossible !",
                    show="Affichage impossible !",
                    )[operation]
-    print("WARN: database error:", message)
+    exc_info = sys.exc_info() != (None, None, None)
+    logger.warning("database error: %s", message, exc_info=exc_info)
     wx.MessageBox(message, "Problème avec la base de donnée", wx.OK | wx.ICON_EXCLAMATION)
 
 
-def show_error(message, parent=None):
-    print("ERROR:", message)
+def show_error(logger, message, parent=None):
+    exc_info = sys.exc_info() != (None, None, None)
+    logger.error(message, exc_info=exc_info)
     wx.MessageBox(message, "Erreur", wx.OK | wx.ICON_ERROR, parent)
 
 

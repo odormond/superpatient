@@ -1,10 +1,10 @@
 #! /usr/bin/env python3
 # coding:UTF-8
 
-import os
 import datetime
-import traceback
 import mailcap
+import logging
+import os
 
 import wx
 
@@ -14,6 +14,9 @@ from superpatient.bvr import gen_bvr_ref
 from superpatient.models import Bill, PAYMENT_METHODS, STATUS_OPENED, STATUS_SENT, STATUS_PAYED
 from superpatient.ui.common import askyesno, show_db_warning
 from superpatient.ui import cash_register
+
+
+logger = logging.getLogger(__name__)
 
 
 class CashRegisterFrame(DBMixin, HelpMenuMixin, cash_register.MainFrame):
@@ -87,8 +90,7 @@ class CashRegisterFrame(DBMixin, HelpMenuMixin, cash_register.MainFrame):
             for bill in self.data:
                 self.payments.Append((bill.sex, bill.lastname, bill.firstname, bill.consultation.therapeute, bill.timestamp.strftime('%H:%M'), '%0.2f' % (bill.total_cts/100), bill.payment_method))
         except:
-            traceback.print_exc()
-            show_db_warning('read')
+            show_db_warning(logger, 'read')
 
     def real_validate(self):
         bill = self.data[self.selected_idx]
@@ -101,8 +103,7 @@ class CashRegisterFrame(DBMixin, HelpMenuMixin, cash_register.MainFrame):
                 bill.payment_date = datetime.date.today()
                 bill.save(self.cursor)
         except:
-            traceback.print_exc()
-            show_db_warning('update')
+            show_db_warning(logger, 'update')
 
 
 class CashRegisterApp(BaseApp):
@@ -110,4 +111,4 @@ class CashRegisterApp(BaseApp):
 
 
 if __name__ == '__main__':
-    CashRegisterApp().MainLoop()
+    CashRegisterApp() .MainLoop()

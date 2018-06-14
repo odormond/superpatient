@@ -1,8 +1,13 @@
+import logging
+
 import wx
 import wx.html2
 
 from ..models import CANTONS
 from ..customization import VERSION, SITE
+
+
+logger = logging.getLogger(__name__)
 
 
 class MainFrame(wx.Frame):
@@ -81,51 +86,51 @@ class MainFrame(wx.Frame):
         self.Layout()
 
     def on_manage_collaborators(self, event):
-        print("Event handler 'on_manage_collaborators' not implemented!")
+        logger.warning("Event handler 'on_manage_collaborators' not implemented!")
         event.Skip()
 
     def on_manage_tarifs(self, event):
-        print("Event handler 'on_manage_tarifs' not implemented!")
+        logger.warning("Event handler 'on_manage_tarifs' not implemented!")
         event.Skip()
 
     def on_manual_bill(self, event):
-        print("Event handler 'on_manual_bill' not implemented!")
+        logger.warning("Event handler 'on_manual_bill' not implemented!")
         event.Skip()
 
     def on_manage_addresses(self, event):
-        print("Event handler 'on_manage_addresses' not implemented!")
+        logger.warning("Event handler 'on_manage_addresses' not implemented!")
         event.Skip()
 
     def on_delete_data(self, event):
-        print("Event handler 'on_delete_data' not implemented!")
+        logger.warning("Event handler 'on_delete_data' not implemented!")
         event.Skip()
 
     def on_dump_database(self, event):
-        print("Event handler 'on_dump_database' not implemented!")
+        logger.warning("Event handler 'on_dump_database' not implemented!")
         event.Skip()
 
     def on_restore_database(self, event):
-        print("Event handler 'on_restore_database' not implemented!")
+        logger.warning("Event handler 'on_restore_database' not implemented!")
         event.Skip()
 
     def on_new_patient(self, event):
-        print("Event handler 'on_new_patient' not implemented!")
+        logger.warning("Event handler 'on_new_patient' not implemented!")
         event.Skip()
 
     def on_search_patient(self, event):
-        print("Event handler 'on_search_patient' not implemented!")
+        logger.warning("Event handler 'on_search_patient' not implemented!")
         event.Skip()
 
     def on_new_consultation(self, event):
-        print("Event handler 'on_new_consultation' not implemented!")
+        logger.warning("Event handler 'on_new_consultation' not implemented!")
         event.Skip()
 
     def on_search_consultation(self, event):
-        print("Event handler 'on_search_consultation' not implemented!")
+        logger.warning("Event handler 'on_search_consultation' not implemented!")
         event.Skip()
 
     def on_activate(self, event):
-        print("Event handler 'on_activate' not implemented!")
+        logger.warning("Event handler 'on_activate' not implemented!")
         event.Skip()
 
 
@@ -185,23 +190,23 @@ class ManageCollaboratorsDialog(wx.Dialog):
         self.Layout()
 
     def on_deselect_collaborator(self, event):
-        print("Event handler 'on_deselect_collaborator' not implemented!")
+        logger.warning("Event handler 'on_deselect_collaborator' not implemented!")
         event.Skip()
 
     def on_select_collaborator(self, event):
-        print("Event handler 'on_select_collaborator' not implemented!")
+        logger.warning("Event handler 'on_select_collaborator' not implemented!")
         event.Skip()
 
     def on_add_collaborator(self, event):
-        print("Event handler 'on_add_collaborator' not implemented!")
+        logger.warning("Event handler 'on_add_collaborator' not implemented!")
         event.Skip()
 
     def on_change_collaborator(self, event):
-        print("Event handler 'on_change_collaborator' not implemented!")
+        logger.warning("Event handler 'on_change_collaborator' not implemented!")
         event.Skip()
 
     def on_remove_collaborator(self, event):
-        print("Event handler 'on_remove_collaborator' not implemented!")
+        logger.warning("Event handler 'on_remove_collaborator' not implemented!")
         event.Skip()
 
 
@@ -266,23 +271,23 @@ class ManageCostsDialog(wx.Dialog):
         self.Layout()
 
     def on_deselect_cost(self, event):
-        print("Event handler 'on_deselect_cost' not implemented!")
+        logger.warning("Event handler 'on_deselect_cost' not implemented!")
         event.Skip()
 
     def on_select_cost(self, event):
-        print("Event handler 'on_select_cost' not implemented!")
+        logger.warning("Event handler 'on_select_cost' not implemented!")
         event.Skip()
 
     def on_add_cost(self, event):
-        print("Event handler 'on_add_cost' not implemented!")
+        logger.warning("Event handler 'on_add_cost' not implemented!")
         event.Skip()
 
     def on_change_cost(self, event):
-        print("Event handler 'on_change_cost' not implemented!")
+        logger.warning("Event handler 'on_change_cost' not implemented!")
         event.Skip()
 
     def on_remove_cost(self, event):
-        print("Event handler 'on_remove_cost' not implemented!")
+        logger.warning("Event handler 'on_remove_cost' not implemented!")
         event.Skip()
 
 
@@ -387,15 +392,15 @@ class ManualBillDialog(wx.Dialog):
         self.Layout()
 
     def on_select_therapeute(self, event):
-        print("Event handler 'on_select_therapeute' not implemented!")
+        logger.warning("Event handler 'on_select_therapeute' not implemented!")
         event.Skip()
 
     def on_select_address(self, event):
-        print("Event handler 'on_select_address' not implemented!")
+        logger.warning("Event handler 'on_select_address' not implemented!")
         event.Skip()
 
     def on_generate(self, event):
-        print("Event handler 'on_generate' not implemented!")
+        logger.warning("Event handler 'on_generate' not implemented!")
         event.Skip()
 
 
@@ -491,23 +496,23 @@ class ManageAddressesDialog(wx.Dialog):
         self.Layout()
 
     def on_deselect_address(self, event):
-        print("Event handler 'on_deselect_address' not implemented!")
+        logger.warning("Event handler 'on_deselect_address' not implemented!")
         event.Skip()
 
     def on_select_address(self, event):
-        print("Event handler 'on_select_address' not implemented!")
+        logger.warning("Event handler 'on_select_address' not implemented!")
         event.Skip()
 
     def on_add_address(self, event):
-        print("Event handler 'on_add_address' not implemented!")
+        logger.warning("Event handler 'on_add_address' not implemented!")
         event.Skip()
 
     def on_change_address(self, event):
-        print("Event handler 'on_change_address' not implemented!")
+        logger.warning("Event handler 'on_change_address' not implemented!")
         event.Skip()
 
     def on_remove_address(self, event):
-        print("Event handler 'on_remove_address' not implemented!")
+        logger.warning("Event handler 'on_remove_address' not implemented!")
         event.Skip()
 
 
@@ -557,27 +562,27 @@ class ManageConsultationsDialog(wx.Dialog):
         self.Layout()
 
     def on_delete_consultation(self, event):
-        print("Event handler 'on_delete_consultation' not implemented!")
+        logger.warning("Event handler 'on_delete_consultation' not implemented!")
         event.Skip()
 
     def on_delete_bill(self, event):
-        print("Event handler 'on_delete_bill' not implemented!")
+        logger.warning("Event handler 'on_delete_bill' not implemented!")
         event.Skip()
 
     def on_show_consultation(self, event):
-        print("Event handler 'on_show_consultation' not implemented!")
+        logger.warning("Event handler 'on_show_consultation' not implemented!")
         event.Skip()
 
     def on_modify_consultation(self, event):
-        print("Event handler 'on_modify_consultation' not implemented!")
+        logger.warning("Event handler 'on_modify_consultation' not implemented!")
         event.Skip()
 
     def on_show_all_consultations(self, event):
-        print("Event handler 'on_show_all_consultations' not implemented!")
+        logger.warning("Event handler 'on_show_all_consultations' not implemented!")
         event.Skip()
 
     def on_cancel(self, event):
-        print("Event handler 'on_cancel' not implemented!")
+        logger.warning("Event handler 'on_cancel' not implemented!")
         event.Skip()
 
 
@@ -769,19 +774,19 @@ class PatientDialog(wx.Dialog):
         self.SetSize((962, 571))
 
     def on_new_consultation(self, event):
-        print("Event handler 'on_new_consultation' not implemented!")
+        logger.warning("Event handler 'on_new_consultation' not implemented!")
         event.Skip()
 
     def on_save(self, event):
-        print("Event handler 'on_save' not implemented!")
+        logger.warning("Event handler 'on_save' not implemented!")
         event.Skip()
 
     def on_update(self, event):
-        print("Event handler 'on_update' not implemented!")
+        logger.warning("Event handler 'on_update' not implemented!")
         event.Skip()
 
     def on_cancel(self, event):
-        print("Event handler 'on_cancel' not implemented!")
+        logger.warning("Event handler 'on_cancel' not implemented!")
         event.Skip()
 
 
@@ -853,35 +858,35 @@ class ManagePatientsDialog(wx.Dialog):
         self.Layout()
 
     def on_search_patient(self, event):
-        print("Event handler 'on_search_patient' not implemented!")
+        logger.warning("Event handler 'on_search_patient' not implemented!")
         event.Skip()
 
     def on_show_patient(self, event):
-        print("Event handler 'on_show_patient' not implemented!")
+        logger.warning("Event handler 'on_show_patient' not implemented!")
         event.Skip()
 
     def on_modify_patient(self, event):
-        print("Event handler 'on_modify_patient' not implemented!")
+        logger.warning("Event handler 'on_modify_patient' not implemented!")
         event.Skip()
 
     def on_new_consultation(self, event):
-        print("Event handler 'on_new_consultation' not implemented!")
+        logger.warning("Event handler 'on_new_consultation' not implemented!")
         event.Skip()
 
     def on_show_consultations(self, event):
-        print("Event handler 'on_show_consultations' not implemented!")
+        logger.warning("Event handler 'on_show_consultations' not implemented!")
         event.Skip()
 
     def on_delete_patient(self, event):
-        print("Event handler 'on_delete_patient' not implemented!")
+        logger.warning("Event handler 'on_delete_patient' not implemented!")
         event.Skip()
 
     def on_display_consultations(self, event):
-        print("Event handler 'on_display_consultations' not implemented!")
+        logger.warning("Event handler 'on_display_consultations' not implemented!")
         event.Skip()
 
     def on_cancel(self, event):
-        print("Event handler 'on_cancel' not implemented!")
+        logger.warning("Event handler 'on_cancel' not implemented!")
         event.Skip()
 
 
@@ -1057,23 +1062,23 @@ class ConsultationDialog(wx.Dialog):
         self.SetSize((1024, -1))
 
     def on_save(self, event):
-        print("Event handler 'on_save' not implemented!")
+        logger.warning("Event handler 'on_save' not implemented!")
         event.Skip()
 
     def on_cancel(self, event):
-        print("Event handler 'on_cancel' not implemented!")
+        logger.warning("Event handler 'on_cancel' not implemented!")
         event.Skip()
 
     def on_close(self, event):
-        print("Event handler 'on_close' not implemented!")
+        logger.warning("Event handler 'on_close' not implemented!")
         event.Skip()
 
     def on_view_bill(self, event):
-        print("Event handler 'on_view_bill' not implemented!")
+        logger.warning("Event handler 'on_view_bill' not implemented!")
         event.Skip()
 
     def on_show_all_consultations(self, event):
-        print("Event handler 'on_show_all_consultations' not implemented!")
+        logger.warning("Event handler 'on_show_all_consultations' not implemented!")
         event.Skip()
 
 
@@ -1103,5 +1108,5 @@ class AllConsultationsDialog(wx.Dialog):
         self.SetSize((800, 600))
 
     def on_cancel(self, event):
-        print("Event handler 'on_cancel' not implemented!")
+        logger.warning("Event handler 'on_cancel' not implemented!")
         event.Skip()

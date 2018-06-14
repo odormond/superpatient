@@ -1,5 +1,10 @@
+import logging
+
 import wx
 import wx.grid
+
+
+logger = logging.getLogger(__name__)
 
 
 class MainFrame(wx.Frame):
@@ -149,47 +154,47 @@ class MainFrame(wx.Frame):
         self.SetSize((800, 600))
 
     def on_import_payments(self, event):
-        print("Event handler 'on_import_payments' not implemented!")
+        logger.warning("Event handler 'on_import_payments' not implemented!")
         event.Skip()
 
     def on_manage_reminders(self, event):
-        print("Event handler 'on_manage_reminders' not implemented!")
+        logger.warning("Event handler 'on_manage_reminders' not implemented!")
         event.Skip()
 
     def on_show_stats(self, event):
-        print("Event handler 'on_show_stats' not implemented!")
+        logger.warning("Event handler 'on_show_stats' not implemented!")
         event.Skip()
 
     def on_popup_start_date(self, event):
-        print("Event handler 'on_popup_start_date' not implemented!")
+        logger.warning("Event handler 'on_popup_start_date' not implemented!")
         event.Skip()
 
     def on_popup_end_date(self, event):
-        print("Event handler 'on_popup_end_date' not implemented!")
+        logger.warning("Event handler 'on_popup_end_date' not implemented!")
         event.Skip()
 
     def on_search(self, event):
-        print("Event handler 'on_search' not implemented!")
+        logger.warning("Event handler 'on_search' not implemented!")
         event.Skip()
 
     def on_mark_paid(self, event):
-        print("Event handler 'on_mark_paid' not implemented!")
+        logger.warning("Event handler 'on_mark_paid' not implemented!")
         event.Skip()
 
     def on_print_again(self, event):
-        print("Event handler 'on_print_again' not implemented!")
+        logger.warning("Event handler 'on_print_again' not implemented!")
         event.Skip()
 
     def on_mark_printed(self, event):
-        print("Event handler 'on_mark_printed' not implemented!")
+        logger.warning("Event handler 'on_mark_printed' not implemented!")
         event.Skip()
 
     def on_mark_sent(self, event):
-        print("Event handler 'on_mark_sent' not implemented!")
+        logger.warning("Event handler 'on_mark_sent' not implemented!")
         event.Skip()
 
     def on_mark_abandoned(self, event):
-        print("Event handler 'on_mark_abandoned' not implemented!")
+        logger.warning("Event handler 'on_mark_abandoned' not implemented!")
         event.Skip()
 
 
@@ -250,23 +255,23 @@ class RemindersManagementDialog(wx.Dialog):
         self.SetSize((900, 600))
 
     def on_update_list(self, event):
-        print("Event handler 'on_update_list' not implemented!")
+        logger.warning("Event handler 'on_update_list' not implemented!")
         event.Skip()
 
     def on_popup_date(self, event):
-        print("Event handler 'on_popup_date' not implemented!")
+        logger.warning("Event handler 'on_popup_date' not implemented!")
         event.Skip()
 
     def on_update_selection(self, event):
-        print("Event handler 'on_update_selection' not implemented!")
+        logger.warning("Event handler 'on_update_selection' not implemented!")
         event.Skip()
 
     def on_generate(self, event):
-        print("Event handler 'on_generate' not implemented!")
+        logger.warning("Event handler 'on_generate' not implemented!")
         event.Skip()
 
     def on_cancel(self, event):
-        print("Event handler 'on_cancel' not implemented!")
+        logger.warning("Event handler 'on_cancel' not implemented!")
         event.Skip()
 
 
@@ -309,11 +314,11 @@ class StatisticsDialog(wx.Dialog):
         self.Layout()
 
     def update_display(self, event):
-        print("Event handler 'update_display' not implemented!")
+        logger.warning("Event handler 'update_display' not implemented!")
         event.Skip()
 
     def on_done(self, event):
-        print("Event handler 'on_done' not implemented!")
+        logger.warning("Event handler 'on_done' not implemented!")
         event.Skip()
 
 
@@ -400,31 +405,31 @@ class ImportDialog(wx.Dialog):
         self.Layout()
 
     def on_details_in_order(self, event):
-        print("Event handler 'on_details_in_order' not implemented!")
+        logger.warning("Event handler 'on_details_in_order' not implemented!")
         event.Skip()
 
     def on_details_wrong_amount(self, event):
-        print("Event handler 'on_details_wrong_amount' not implemented!")
+        logger.warning("Event handler 'on_details_wrong_amount' not implemented!")
         event.Skip()
 
     def on_details_already_paid(self, event):
-        print("Event handler 'on_details_already_paid' not implemented!")
+        logger.warning("Event handler 'on_details_already_paid' not implemented!")
         event.Skip()
 
     def on_details_not_found(self, event):
-        print("Event handler 'on_details_not_found' not implemented!")
+        logger.warning("Event handler 'on_details_not_found' not implemented!")
         event.Skip()
 
     def on_details_ignored(self, event):
-        print("Event handler 'on_details_ignored' not implemented!")
+        logger.warning("Event handler 'on_details_ignored' not implemented!")
         event.Skip()
 
     def on_validate_import(self, event):
-        print("Event handler 'on_validate_import' not implemented!")
+        logger.warning("Event handler 'on_validate_import' not implemented!")
         event.Skip()
 
     def on_cancel_import(self, event):
-        print("Event handler 'on_cancel_import' not implemented!")
+        logger.warning("Event handler 'on_cancel_import' not implemented!")
         event.Skip()
 
 

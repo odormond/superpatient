@@ -17,7 +17,9 @@
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 import datetime
-import os.path
+import logging
+import logging.config
+from pathlib import Path
 import sys
 
 import wx
@@ -28,11 +30,15 @@ from .models import SEX_MALE, SEX_FEMALE
 from .ui.common import show_error, AboutDialog, LicenseDialog
 
 
+logger = logging.getLogger(__name__)
+
 WIN_CORNER_SHIFT = 32
 
 
 class BaseApp(wx.App):
     def OnInit(self):
+        self.app_name = Path(sys.argv[0]).stem
+        self.init_logging()
         self.init_db()
         self.init_reportlab()
         self.init_dateutil()
@@ -45,10 +51,37 @@ class BaseApp(wx.App):
         self.main_frame.Position = (0, WIN_CORNER_SHIFT) if sys.platform == 'darwin' else (0, 0)
         return True
 
+    def init_logging(self):
+        logfile = (Path(__file__).parents[1] / 'logs' / self.app_name).with_suffix('.log')
+        logfile.parent.mkdir(exist_ok=True)
+        logging.config.dictConfig(
+            {'version': 1,
+             'disable_existing_loggers': False,
+             'formatters': {'default': {'format': '%(asctime)-15s %(levelname)8s %(name)s:%(lineno)s: %(message)s'},
+                            'brief': {'format': '%(levelname)s: %(message)s'},
+                            },
+             'handlers': {'file': {'class': 'logging.handlers.RotatingFileHandler',
+                                   'formatter': 'default',
+                                   'level': 'DEBUG',
+                                   'filename': str(logfile),
+                                   'maxBytes': 10*1024*1024,
+                                   'backupCount': 5,
+                                   },
+                          'console': {'class': 'logging.StreamHandler',
+                                      'formatter': 'brief',
+                                      'level': 'INFO',
+                                      'stream': 'ext://sys.stdout',
+                                      },
+                          },
+             'root': {'level': 'DEBUG',
+                      'handlers': ['file', 'console']},
+             })
+        logger.info("Detailed logs can be found in %s", logfile)
+
     def init_reportlab(self):
         from . import bills
         if bills.REPORTLAB_IS_MISSING:
-            show_error("The reportlab module is not correctly installed!")
+            show_error(logger, "The reportlab module is not correctly installed!")
             sys.exit(1)
 
     def init_db(self):
@@ -56,7 +89,7 @@ class BaseApp(wx.App):
             import MySQLdb
             import MySQLdb.cursors
         except:
-            show_error("The MySQLdb module is not correctly installed!")
+            show_error(logger, "The MySQLdb module is not correctly installed!")
             sys.exit(1)
 
         class ResilientCursor(MySQLdb.cursors.Cursor):
@@ -72,7 +105,7 @@ class BaseApp(wx.App):
         try:
             self.connection = MySQLdb.connect(host=db.SERVER, user=credentials.DB_USER, passwd=credentials.DB_PASS, db=db.DATABASE, charset='utf8', cursorclass=ResilientCursor)
         except:
-            show_error("Cannot connect to database")
+            show_error(logger, "Cannot connect to database")
             sys.exit(1)
 
         self.connection.ping(True)
@@ -83,7 +116,7 @@ class BaseApp(wx.App):
             import dateutil
             from dateutil.parser import parse, parserinfo
         except:
-            show_error("The dateutil module is not correctly installed!")
+            show_error(logger, "The dateutil module is not correctly installed!")
             sys.exit(1)
 
         class FrenchParserInfo(parserinfo):
@@ -163,7 +196,7 @@ def normalize_filename(filename):
     for char in '\'"/`!$[]{}':
         filename = filename.replace(char, '-')
     filename = filename.replace(' ', '_').replace('\t', '_')
-    return os.path.join(PDF_DIR, filename)
+    return str(Path(PDF_DIR, filename))
 
 
 def gen_title(sex, birthdate):

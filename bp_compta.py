@@ -19,15 +19,13 @@
 #    along with SuperPatient; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
+import calendar
+import datetime
+import mailcap
+import logging
+from operator import attrgetter
 import os
 import sys
-import datetime
-import traceback
-import calendar
-import mailcap
-from operator import attrgetter
-
-#sys.path.insert(0, os.path.dirname(__file__))
 
 import wx
 
@@ -37,6 +35,8 @@ import superpatient.customization as custo
 from superpatient.models import Bill, PAYMENT_METHODS, OLD_PAYMENT_METHODS, BILL_STATUSES, STATUS_PRINTED, STATUS_SENT, STATUS_PAYED, STATUS_ABANDONED, BILL_TYPE_CONSULTATION, BILL_TYPE_MANUAL
 from superpatient.ui.common import show_db_warning, show_error, DatePickerDialog
 from superpatient.ui import accounting
+
+logger = logging.getLogger(__name__)
 
 
 def sum_found(positions):
@@ -54,8 +54,7 @@ class AccountingFrame(DBMixin, HelpMenuMixin, accounting.MainFrame):
             self.cursor.execute("SELECT therapeute FROM therapeutes ORDER BY therapeute")
             therapeutes = ['Tous'] + [t for t, in self.cursor]
         except:
-            traceback.print_exc()
-            show_db_warning('read')
+            show_db_warning(logger, 'read')
             sys.exit(1)
         self.therapeute.SetItems(therapeutes)
         self.therapeute.StringSelection = therapeutes[0]
@@ -122,8 +121,7 @@ class AccountingFrame(DBMixin, HelpMenuMixin, accounting.MainFrame):
                 total_reminder_costs += sum(r.amount_cts for r in bill.reminders)
                 count += 1
         except:
-            traceback.print_exc()
-            show_db_warning('read')
+            show_db_warning(logger, 'read')
         for c in range(self.payments.ColumnCount):
             self.payments.SetColumnWidth(c, wx.LIST_AUTOSIZE_USEHEADER if c == 1 else wx.LIST_AUTOSIZE)
         self.payments_count.Value = str(count)
@@ -169,8 +167,7 @@ class AccountingFrame(DBMixin, HelpMenuMixin, accounting.MainFrame):
                     assert line in ('', '\n'), "Garbage at end of line %d" % line_no
                 assert total_line is not None and len(records) == count, "Records count does not match total line indication"
             except Exception as e:
-                print(e)
-                show_error("Une erreur s'est produite lors de la lecture du fichier de paiement.\n%r" % e.args)
+                show_error(logger, "Une erreur s'est produite lors de la lecture du fichier de paiement.\n%r" % e.args)
                 return None
         return records
 
@@ -252,8 +249,7 @@ class AccountingFrame(DBMixin, HelpMenuMixin, accounting.MainFrame):
             elif len(bill_ids) == 1:
                 self.cursor.execute("""UPDATE bills SET payment_date = %s, status = 'P' WHERE id = %s""", [payment_date, bill_ids[0]])
         except:
-            traceback.print_exc()
-            show_db_warning('update')
+            show_db_warning(logger, 'update')
         self.update_list()
 
     def on_print_again(self, event):
@@ -292,8 +288,7 @@ class AccountingFrame(DBMixin, HelpMenuMixin, accounting.MainFrame):
                 if last_reminder_id is not None:
                     self.cursor.execute("""UPDATE reminders SET status = %s WHERE status != 'P' AND id = %s""", [status, last_reminder_id])
         except:
-            traceback.print_exc()
-            show_db_warning('update')
+            show_db_warning(logger, 'update')
         self.update_list()
 
 
@@ -329,8 +324,7 @@ class RemindersManagementDialog(DBMixin, accounting.RemindersManagementDialog):
                     self.reminders.SetItemFont(index, self.GetFont().Bold())
                 self.data.append((bill.id, bill.total_cts, bill.sex, bill.lastname, bill.firstname, bill.timestamp, len(bill.reminders), sum(p.total_cts for p in bill.positions), sum(r.amount_cts for r in bill.reminders)))
         except:
-            traceback.print_exc()
-            show_db_warning('read')
+            show_db_warning(logger, 'read')
         self.is_updating_list = False
         for c in range(self.reminders.ColumnCount):
             self.reminders.SetColumnWidth(c, wx.LIST_AUTOSIZE)
@@ -571,8 +565,7 @@ class ImportDialog(DBMixin, accounting.ImportDialog):
                         reminder_cts -= billed_reminder_cts
             self.Close()
         except:
-            traceback.print_exc()
-            show_db_warning('update')
+            show_db_warning(logger, 'update')
 
     def on_cancel_import(self, event):
         self.Close()

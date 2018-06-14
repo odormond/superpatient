@@ -20,13 +20,13 @@
 #    along with SuperPatient; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
+from collections import OrderedDict
+import datetime
 import getpass
+import logging
+import mailcap
 import os
 import sys
-import mailcap
-import datetime
-import traceback
-from collections import OrderedDict
 
 import wx
 
@@ -45,11 +45,13 @@ from superpatient.ui import core, bill
 from superpatient.signature import sign
 
 
+logger = logging.getLogger(__name__)
+
 FIX_PATIENT_DELAY = 500  # milliseconds
 
 
-def show_invalid_amount():
-    show_warning("Montant invalide")
+def show_invalid_amount(logger):
+    show_warning(logger, "Montant invalide")
 
 
 def ask_confirm_printed_bvr():
@@ -190,7 +192,7 @@ class ManualBillDialog(DBMixin, CancelableMixin, core.ManualBillDialog):
         try:
             amount = float(self.amount.Value.strip())
         except ValueError:
-            show_invalid_amount()
+            show_invalid_amount(logger)
             return
         remark = self.remark.Value.strip()
         try:
@@ -221,8 +223,7 @@ class ManualBillDialog(DBMixin, CancelableMixin, core.ManualBillDialog):
             pos.save(self.cursor)
             bill.positions.append(pos)
         except:
-            traceback.print_exc()
-            show_db_warning('update')
+            show_db_warning(logger, 'update')
             return
         bills.manuals(filename, [bill])
         cmd, cap = mailcap.findmatch(mailcap.getcaps(), 'application/pdf', 'view', filename)
@@ -240,8 +241,7 @@ class ManageCollaboratorsDialog(DBMixin, CancelableMixin, core.ManageCollaborato
             self.cursor.execute("""SELECT therapeute, login, entete FROM therapeutes ORDER BY therapeute""")
             self.collaborators = list(self.cursor)
         except:
-            traceback.print_exc()
-            show_db_warning('read')
+            show_db_warning(logger, 'read')
             return
         self.index = None
         self.prev_index = None
@@ -297,8 +297,7 @@ class ManageCollaboratorsDialog(DBMixin, CancelableMixin, core.ManageCollaborato
                                 [therapeute, login, address_header])
             self.collaborators.append((therapeute, login, address_header))
         except:
-            traceback.print_exc()
-            show_db_warning('update')
+            show_db_warning(logger, 'update')
         self.populate()
 
     def on_change_collaborator(self, event):
@@ -313,8 +312,7 @@ class ManageCollaboratorsDialog(DBMixin, CancelableMixin, core.ManageCollaborato
                                 [therapeute, login, address_header, key])
             self.collaborators[self.index] = (therapeute, login, address_header)
         except:
-            traceback.print_exc()
-            show_db_warning('update')
+            show_db_warning(logger, 'update')
         self.populate()
 
     def on_remove_collaborator(self, event):
@@ -325,8 +323,7 @@ class ManageCollaboratorsDialog(DBMixin, CancelableMixin, core.ManageCollaborato
             self.cursor.execute("""DELETE FROM therapeutes WHERE therapeute = %s""", [key])
             del self.collaborators[self.index]
         except:
-            traceback.print_exc()
-            show_db_warning('delete')
+            show_db_warning(logger, 'delete')
         self.populate()
 
 
@@ -338,8 +335,7 @@ class ManageCostsDialog(DBMixin, CancelableMixin, core.ManageCostsDialog):
             self.cursor.execute("""SELECT code, description, unit_price_cts FROM tarifs ORDER BY code, description""")
             self.costs = list(self.cursor)
         except:
-            traceback.print_exc()
-            show_db_warning('read')
+            show_db_warning(logger, 'read')
             return
         self.index = None
         self.prev_index = None
@@ -392,8 +388,7 @@ class ManageCostsDialog(DBMixin, CancelableMixin, core.ManageCostsDialog):
             try:
                 unit_price_cts = int(float(unit_price_cts) * 100)
             except:
-                traceback.print_exc()
-                show_invalid_amount()
+                show_invalid_amount(logger)
                 return None
         return [code, description, unit_price_cts]
 
@@ -407,8 +402,7 @@ class ManageCostsDialog(DBMixin, CancelableMixin, core.ManageCostsDialog):
             self.cursor.execute("""INSERT INTO tarifs (code, description, unit_price_cts) VALUES (%s, %s, %s)""", values)
             self.costs.append(values)
         except:
-            traceback.print_exc()
-            show_db_warning('update')
+            show_db_warning(logger, 'update')
         self.populate()
 
     def on_change_cost(self, event):
@@ -423,8 +417,7 @@ class ManageCostsDialog(DBMixin, CancelableMixin, core.ManageCostsDialog):
                                 values + list(old_value))
             self.costs[self.index] = values
         except:
-            traceback.print_exc()
-            show_db_warning('update')
+            show_db_warning(logger, 'update')
         self.populate()
 
     def on_remove_cost(self, event):
@@ -435,8 +428,7 @@ class ManageCostsDialog(DBMixin, CancelableMixin, core.ManageCostsDialog):
             self.cursor.execute("""DELETE FROM tarifs WHERE code = %s AND description = %s AND unit_price_cts = %s""", list(old_value))
             del self.costs[self.index]
         except:
-            traceback.print_exc()
-            show_db_warning('delete')
+            show_db_warning(logger, 'delete')
         self.populate()
 
 
@@ -450,8 +442,7 @@ class ManageAddressesDialog(DBMixin, CancelableMixin, core.ManageAddressesDialog
                                      FROM addresses ORDER BY id""")
             self.addresses = list(self.cursor)
         except:
-            traceback.print_exc()
-            show_db_warning('read')
+            show_db_warning(logger, 'read')
             return
         self.index = None
         self.prev_index = None
@@ -533,8 +524,7 @@ class ManageAddressesDialog(DBMixin, CancelableMixin, core.ManageAddressesDialog
                                 list(fields))
             self.addresses.append(fields)
         except:
-            traceback.print_exc()
-            show_db_warning('update')
+            show_db_warning(logger, 'update')
         self.populate()
 
     def on_change_address(self, event):
@@ -552,8 +542,7 @@ class ManageAddressesDialog(DBMixin, CancelableMixin, core.ManageAddressesDialog
                                 list(fields) + [key])
             self.addresses[self.index] = fields
         except:
-            traceback.print_exc()
-            show_db_warning('update')
+            show_db_warning(logger, 'update')
         self.populate()
 
     def on_remove_address(self, event):
@@ -564,8 +553,7 @@ class ManageAddressesDialog(DBMixin, CancelableMixin, core.ManageAddressesDialog
             self.cursor.execute("""DELETE FROM addresses WHERE id = %s""", [key])
             del self.addresses[self.index]
         except:
-            traceback.print_exc()
-            show_db_warning('delete')
+            show_db_warning(logger, 'delete')
         self.populate()
 
 
@@ -605,8 +593,7 @@ class ManagePatientsDialog(DBMixin, CancelableMixin, core.ManagePatientsDialog):
                                  ORDER BY nom""",
                                 [self.lastname.Value.strip(), self.firstname.Value.strip()])
         except:
-            traceback.print_exc()
-            show_db_warning('search')
+            show_db_warning(logger, 'search')
         self.results = []
         self.patients.DeleteAllItems()
         for id, sex, nom, prenom, n_consult in self.cursor:
@@ -641,8 +628,7 @@ class ManagePatientsDialog(DBMixin, CancelableMixin, core.ManagePatientsDialog):
                                     [id_patient])
                 sex, nom, prenom, date_naiss = self.cursor.fetchone()
             except:
-                traceback.print_exc()
-                show_db_warning('search')
+                show_db_warning(logger, 'search')
                 return
             if askyesno("Suppression",
                         "Supprimer définitivement\n"
@@ -653,10 +639,9 @@ class ManagePatientsDialog(DBMixin, CancelableMixin, core.ManagePatientsDialog):
                     self.cursor.execute("DELETE FROM bills WHERE id_patient = %s", [id_patient])
                     self.cursor.execute("DELETE FROM consultations WHERE id = %s", [id_patient])
                     self.cursor.execute("DELETE FROM patients WHERE id = %s", [id_patient])
-                    show_info("Patient(e) {} {} supprimé(e) de la base".format(prenom, nom))
+                    show_info(logger, "Patient(e) {} {} supprimé(e) de la base".format(prenom, nom))
                 except:
-                    traceback.print_exc()
-                    show_db_warning('delete')
+                    show_db_warning(logger, 'delete')
         self.on_search_patient(None)
 
     def on_display_consultations(self, event):
@@ -681,8 +666,7 @@ class ManageConsultationsDialog(DBMixin, CancelableMixin, core.ManageConsultatio
                                      FROM patients WHERE id = %s""", [self.id_patient])
             nom, prenom, sex, therapeute, date_naiss = self.cursor.fetchone()
         except:
-            traceback.print_exc()
-            show_db_warning('read')
+            show_db_warning(logger, 'read')
             return
 
         if self.mode == 'delete':
@@ -704,8 +688,7 @@ class ManageConsultationsDialog(DBMixin, CancelableMixin, core.ManageConsultatio
                                  ORDER BY date_consult DESC""",
                                 [self.id_patient])
         except:
-            traceback.print_exc()
-            show_db_warning('show')
+            show_db_warning(logger, 'show')
         self.results = []
         self.consultations.DeleteAllItems()
         for id_consult, date_consult, therapeute, MC, paye_le in self.cursor:
@@ -733,10 +716,9 @@ class ManageConsultationsDialog(DBMixin, CancelableMixin, core.ManageConsultatio
                 try:
                     self.cursor.execute("DELETE FROM bills WHERE id_consult = %s", [id_consult])
                     self.cursor.execute("DELETE FROM consultations WHERE id_consult=%s", [id_consult])
-                    show_info("Consultation supprimée de la base")
+                    show_info(logger, "Consultation supprimée de la base")
                 except:
-                    traceback.print_exc()
-                    show_db_warning('delete')
+                    show_db_warning(logger, 'delete')
         self.update_list()
 
     def on_delete_bill(self, event):
@@ -745,10 +727,9 @@ class ManageConsultationsDialog(DBMixin, CancelableMixin, core.ManageConsultatio
             if askyesno("Suppression", "Supprimer définitivement la facture de cette consultation ?"):
                 try:
                     self.cursor.execute("DELETE FROM bills WHERE id_consult = %s", [id_consult])
-                    show_info("Facture supprimée de la base")
+                    show_info(logger, "Facture supprimée de la base")
                 except:
-                    traceback.print_exc()
-                    show_db_warning('delete')
+                    show_db_warning(logger, 'delete')
         self.update_list()
 
     def on_show_consultation(self, event):
@@ -768,9 +749,8 @@ class AllConsultationsDialog(DBMixin, CancelableMixin, core.AllConsultationsDial
         try:
             patient = Patient.load(self.cursor, self.id_patient)
         except:
-            print("id_patient:", self.id_patient)
-            traceback.print_exc()
-            show_db_warning('show')
+            logger.debug("id_patient: %r", self.id_patient)
+            show_db_warning(logger, 'show')
             return
         html = ["""
         <html>
@@ -966,8 +946,7 @@ class PatientDialog(FixPatientMixin, DBMixin, CancelableMixin, core.PatientDialo
         try:
             self.cursor.execute("""SELECT therapeute, login FROM therapeutes ORDER BY therapeute""")
         except:
-            traceback.print_exc()
-            show_db_warning('read')
+            show_db_warning(logger, 'read')
             return
         therapeutes = []
         for t, login in self.cursor:
@@ -1074,7 +1053,7 @@ class PatientDialog(FixPatientMixin, DBMixin, CancelableMixin, core.PatientDialo
                 or not patient.zip
                 or not patient.city):
             self.highlight_missing_fields()
-            show_warning("Veuillez compléter les champs en rouge")
+            show_warning(logger, "Veuillez compléter les champs en rouge")
             return False
         return True
 
@@ -1118,16 +1097,14 @@ class PatientDialog(FixPatientMixin, DBMixin, CancelableMixin, core.PatientDialo
             parse_date(self.birthdate.Value.strip())
             parse_date(self.opening_date.Value.strip())
         except:
-            traceback.print_exc()
-            show_error("Veuillez vérifier le format des champs dates")
+            show_error(logger, "Veuillez vérifier le format des champs dates")
             return
         if not self.is_patient_valid():
             return
         try:
             self.patient.save(self.cursor)
         except:
-            traceback.print_exc()
-            show_db_warning('insert')
+            show_db_warning(logger, 'insert')
             return
         self.on_cancel()
         if with_consultation:
@@ -1139,8 +1116,7 @@ class PatientDialog(FixPatientMixin, DBMixin, CancelableMixin, core.PatientDialo
         try:
             self.patient.save(self.cursor)
         except:
-            traceback.print_exc()
-            show_db_warning('update')
+            show_db_warning(logger, 'update')
         self.on_cancel()
 
 
@@ -1180,8 +1156,7 @@ class ConsultationDialog(FixPatientMixin, DBMixin, CancelableMixin, core.Consult
                 consult.therapeute = consult.therapeute.strip()  # Sanity guard against old data
             self.cursor.execute("""SELECT therapeute, login, entete FROM therapeutes ORDER BY therapeute""")
         except:
-            traceback.print_exc()
-            show_db_warning('read')
+            show_db_warning(logger, 'read')
             return
         therapeutes = ['']
         for t, login, header in self.cursor:
@@ -1264,7 +1239,7 @@ class ConsultationDialog(FixPatientMixin, DBMixin, CancelableMixin, core.Consult
 
     def on_save(self, event):
         if not self.therapeute.StringSelection:
-            show_error("Veuillez préciser le thérapeute ayant pris en charge le patient")
+            show_error(logger, "Veuillez préciser le thérapeute ayant pris en charge le patient")
             return
         self.set_consultation_fields()
         # New consultation => create a new bill or user explicitely requested that with the button
@@ -1280,8 +1255,7 @@ class ConsultationDialog(FixPatientMixin, DBMixin, CancelableMixin, core.Consult
                 BillDialog(self, self.consultation.id_consult).ShowModal()
             self.EndModal(0)
         except:
-            traceback.print_exc()
-            show_db_warning('update')
+            show_db_warning(logger, 'update')
 
     def on_view_bill(self, *args):
         if self.consultation.bill is None:
@@ -1307,15 +1281,13 @@ class BillDialog(DBMixin, CancelableMixin, bill.BillDialog):
             else:
                 self.bill = Bill(consultation=self.consultation, patient=self.consultation.patient)
         except:
-            traceback.print_exc()
-            show_db_warning('read')
+            show_db_warning(logger, 'read')
         try:
             self.cursor.execute("""SELECT code, description, unit_price_cts FROM tarifs ORDER BY code, description""")
             for code, description, unit_price_cts in self.cursor:
                 self.tarif_codes[self.tarif_display(code, description)] = (code, description, unit_price_cts)
         except:
-            traceback.print_exc()
-            show_db_warning('read')
+            show_db_warning(logger, 'read')
         if not self.bill:
             self.initialize_bill()
         else:
@@ -1387,8 +1359,7 @@ class BillDialog(DBMixin, CancelableMixin, bill.BillDialog):
             else:
                 entete = ""
         except:
-            traceback.print_exc()
-            show_db_warning('read')
+            show_db_warning(logger, 'read')
             entete = ""
         bill.author_id = therapeute
         bill.author_firstname = bill.author_lastname = bill.author_rcc = ''
@@ -1461,8 +1432,7 @@ class BillDialog(DBMixin, CancelableMixin, bill.BillDialog):
             else:
                 bill.bv_ref = None
         except:
-            traceback.print_exc()
-            show_db_warning('read')
+            show_db_warning(logger, 'read')
         bill.signature = sign(bill.author_rcc, bill.birthdate, bill.zip, bill.total_cts, bill.timestamp)
 
     def on_update_address(self, event=None):
@@ -1494,10 +1464,10 @@ class BillDialog(DBMixin, CancelableMixin, bill.BillDialog):
 
     def on_save_and_print(self, event):
         if (self.payment_method.StringSelection or None) is None:
-            show_error("Veuillez préciser le prix et le moyen de paiement")
+            show_error(logger, "Veuillez préciser le prix et le moyen de paiement")
             return
         if not self.get_positions():
-            show_error("Veuillez ajouter au moins une position à la facture")
+            show_error(logger, "Veuillez ajouter au moins une position à la facture")
             return
         if self.bill:
             self.save_edited_bill()
@@ -1512,8 +1482,7 @@ class BillDialog(DBMixin, CancelableMixin, bill.BillDialog):
                 position.id_bill = self.bill.id
                 position.save(self.cursor)
         except:
-            traceback.print_exc()
-            show_db_warning('insert')
+            show_db_warning(logger, 'insert')
         else:
             self.on_print()
             self.EndModal(0)
@@ -1560,7 +1529,7 @@ if __name__ == '__main__':
     try:
         os.makedirs(custo.PDF_DIR, exist_ok=True)
     except OSError as e:
-        show_error("Echec de création du répertoire de sauvegarde des PDFs.\n"
+        show_error(logger, "Echec de création du répertoire de sauvegarde des PDFs.\n"
                    "{}".format(e))
         sys.exit()
     app.MainLoop()
