@@ -1342,9 +1342,6 @@ class BillDialog(DBMixin, CancelableMixin, bill.BillDialog):
         self.zip.Value = bill.zip
         self.city.Value = bill.city
         self.canton.StringSelection = bill.canton
-        title = gen_title(bill.sex, bill.birthdate)
-        # TODO add trigger on changes to firstname, lastname, street, zip and city to update the address
-        self.address.Value = '\n'.join((title, bill.firstname + ' ' + bill.lastname, bill.street, bill.zip + ' ' + bill.city))
         self.patient_id.Value = str(bill.id_patient)
         self.treatment_period.Value = bill.treatment_period
         self.reason.StringSelection = bill.treatment_reason
@@ -1370,7 +1367,11 @@ class BillDialog(DBMixin, CancelableMixin, bill.BillDialog):
                     widget.WindowStyle |= wx.TE_READONLY
                 widget.Disable()
 
+        self.on_update_address()
         self.Bind(wx.EVT_CLOSE, self.on_close)
+        for widget in (self.lastname, self.firstname, self.street, self.zip, self.city, self.birthdate):
+            self.Bind(wx.EVT_TEXT, self.on_update_address, widget)
+        self.Bind(wx.EVT_CHOICE, self.on_update_address, self.sex)
 
         self.Fit()
 
@@ -1463,6 +1464,14 @@ class BillDialog(DBMixin, CancelableMixin, bill.BillDialog):
             traceback.print_exc()
             show_db_warning('read')
         bill.signature = sign(bill.author_rcc, bill.birthdate, bill.zip, bill.total_cts, bill.timestamp)
+
+    def on_update_address(self, event=None):
+        from dateutil import parse_date
+        try:
+            title = gen_title(self.sex.StringSelection, parse_date(self.birthdate.Value))
+        except ValueError:
+            return
+        self.address.Value = '\n'.join((title, self.firstname.Value + ' ' + self.lastname.Value, self.street.Value, self.zip.Value + ' ' + self.city.Value))
 
     def on_print(self, *args):
         self.bill.copy = self.copy.StringSelection == "Oui"
