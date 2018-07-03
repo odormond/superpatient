@@ -36,6 +36,7 @@ SIGNATURE_URL = 'https://api.osteosoft.ch/api/v1/billing/datamatrix'  # Set to N
 
 ROUNDING_MODE = '5cts'  # See models.py for alternatives
 
+
 class Config(object):
     def __getitem__(self, key):
         return self.__getattribute__(key)
