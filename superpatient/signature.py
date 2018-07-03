@@ -4,7 +4,7 @@ from urllib.request import urlopen
 from pystrich.datamatrix import DataMatrixEncoder, DataMatrixRenderer
 
 from .credentials import SIGNATURE_USER, SIGNATURE_PASS
-from .customization import SIGNATURE_URL, SIGNATURE2_URL
+from .customization import SIGNATURE_URL
 from .ui.common import showerror
 
 API_DATE_FMT = '%d.%m.%Y'
@@ -25,6 +25,9 @@ def sign(rcc, patient_birthday, patient_zip, treatment_cost_cts, treatment_date)
         response = urlopen(SIGNATURE_URL, data)
     except OSError as e:
         try:
+            data = SIGNATURE_URL.split(".")
+            data[0] += "2"
+            SIGNATURE2_URL = ".".join(data)
             response = urlopen(SIGNATURE2_URL, data)
         except OSError as e2:
             showerror("Signature impossible",
