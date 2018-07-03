@@ -33,6 +33,7 @@ MONTANT_RAPPEL_CTS = 500
 PAIEMENT_SORTIE = True
 
 SIGNATURE_URL = 'https://api.osteosoft.ch/api/v1/billing/datamatrix'  # Set to None to disable the feature
+SIGNATURE2_URL = 'https://api2.osteosoft.ch/api/v1/billing/datamatrix'  # Set to None to disable the feature
 
 ROUNDING_MODE = '5cts'  # See models.py for alternatives
 

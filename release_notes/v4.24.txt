@@ -37,6 +37,9 @@ New features
   The feature will be disabled if any of SIGNATURE_USER, SIGNATURE_PASS or
   SIGNATURE_URL evaluate to False.
 
+  SIGNATURE2_URL allow to get the datamatrix from a different server if it fails
+  from the first server.
+
 * Added support for rounding the total of a position in the bill to the nearest
   5 or 10 cts. By default the rounding is toward the nearest 5 cts. This can be
   disabled by setting ROUNDING_MODE to None in customization.py. An alternative

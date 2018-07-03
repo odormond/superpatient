@@ -4,7 +4,7 @@ from urllib.request import urlopen
 from pystrich.datamatrix import DataMatrixEncoder, DataMatrixRenderer
 
 from .credentials import SIGNATURE_USER, SIGNATURE_PASS
-from .customization import SIGNATURE_URL
+from .customization import SIGNATURE_URL, SIGNATURE2_URL
 from .ui.common import showerror
 
 API_DATE_FMT = '%d.%m.%Y'
@@ -24,11 +24,16 @@ def sign(rcc, patient_birthday, patient_zip, treatment_cost_cts, treatment_date)
     try:
         response = urlopen(SIGNATURE_URL, data)
     except OSError as e:
-        showerror("Signature impossible",
+        try:
+            response = urlopen(SIGNATURE2_URL, data)
+        except OSError as e2:
+            showerror("Signature impossible",
                   "Une erreur s'est produite lors de l'obtention de la signature:\n"
                   "{}\n"
                   "La facture ne possédera pas de 2D-barcode de signature.".format(e))
-        return None
+            return None
+        else:
+            return response.read().decode()
     else:
         return response.read().decode()
 
