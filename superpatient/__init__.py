@@ -20,7 +20,9 @@ import datetime
 import logging
 import logging.config
 from pathlib import Path
+import re
 import sys
+import time
 
 import wx
 
@@ -94,6 +96,7 @@ class BaseApp(wx.App):
 
         class ResilientCursor(MySQLdb.cursors.Cursor):
             def execute(self, query, args=None):
+                t0 = time.time()
                 try:
                     return super(ResilientCursor, self).execute(query, args)
                 except MySQLdb.OperationalError as e:
@@ -101,6 +104,9 @@ class BaseApp(wx.App):
                         return super(ResilientCursor, self).execute(query, args)
                     else:
                         raise
+                finally:
+                    t1 = time.time()
+                    logger.debug("SQL Timing: %.3fms for %r", (t1-t0) * 1000, re.sub(rb'\s+', b' ', self._executed))
 
         try:
             self.connection = MySQLdb.connect(host=db.SERVER, user=credentials.DB_USER, passwd=credentials.DB_PASS, db=db.DATABASE, charset='utf8', cursorclass=ResilientCursor)
