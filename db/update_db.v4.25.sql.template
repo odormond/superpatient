@@ -9,3 +9,8 @@ CREATE INDEX bills_payment_method_idx ON bills (payment_method);
 CREATE INDEX bills_author_id_idx ON bills (author_id(10));
 CREATE INDEX positions_tarif_code_idx ON positions (tarif_code(10));
 DROP TABLE medical;
+ALTER TABLE patients MODIFY COLUMN id INT AUTO_INCREMENT;
+SELECT @next_consult := max(id_consult) + 1 FROM consultations;
+UPDATE consultations SET id_consult = @next_consult WHERE id_consult = 0;
+UPDATE bills SET id_consult = @next_consult WHERE id_consult = 0;
+ALTER TABLE consultations MODIFY COLUMN id_consult INT AUTO_INCREMENT;

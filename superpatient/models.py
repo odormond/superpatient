@@ -176,6 +176,7 @@ class Patient(Model):
               'autre_medecin', 'phone', 'portable', 'profes_phone', 'mail',
               'ass_compl', 'profes', 'etat', 'envoye', 'divers',
               'important', 'site']
+    AUTO_FIELD = 'id'
 
 
 class Consultation(Model):
@@ -184,6 +185,7 @@ class Consultation(Model):
               'exam_pclin', 'exam_phys', 'divers', 'APT_thorax',
               'APT_abdomen', 'APT_tete', 'APT_MS', 'APT_MI', 'APT_system',
               'A_osteo', 'traitement', 'therapeute', 'site']
+    AUTO_FIELD = 'id_consult'
     EXTRA_FIELDS = ['patient', 'bill']
 
     @classmethod
@@ -216,11 +218,13 @@ class Position(Model):
     TABLE = 'positions'
     FIELDS = ['id', 'id_bill', 'position_date', 'tarif_code', 'tarif_description',
               'quantity', 'price_cts', 'total_cts']
+    AUTO_FIELD = 'id'
 
 
 class Reminder(Model):
     TABLE = 'reminders'
     FIELDS = ['id', 'id_bill', 'reminder_date', 'amount_cts', 'status']
+    AUTO_FIELD = 'id'
 
 
 class Bill(Model):
