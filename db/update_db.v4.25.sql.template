@@ -1,3 +1,11 @@
 ALTER TABLE bills ADD COLUMN site varchar(20) NOT NULL DEFAULT '$SITE';
 ALTER TABLE patients ADD COLUMN site varchar(20) NOT NULL DEFAULT '$SITE';
 ALTER TABLE consultations ADD COLUMN site varchar(20) NOT NULL DEFAULT '$SITE';
+CREATE INDEX bills_site_idx ON bills (site);
+CREATE INDEX bills_status_idx ON bills (status);
+CREATE INDEX bills_timestamp_idx ON bills (timestamp);
+CREATE INDEX bills_payment_date_idx ON bills (payment_date);
+CREATE INDEX bills_payment_method_idx ON bills (payment_method);
+CREATE INDEX bills_author_id_idx ON bills (author_id(10));
+CREATE INDEX positions_tarif_code_idx ON positions (tarif_code(10));
+DROP TABLE medical;
