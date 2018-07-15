@@ -175,7 +175,7 @@ class Patient(Model):
               'ATCD_perso', 'ATCD_fam', 'medecin',
               'autre_medecin', 'phone', 'portable', 'profes_phone', 'mail',
               'ass_compl', 'profes', 'etat', 'envoye', 'divers',
-              'important']
+              'important', 'site']
 
 
 class Consultation(Model):
@@ -183,7 +183,7 @@ class Consultation(Model):
     FIELDS = ['id_consult', 'id', 'date_consult', 'MC', 'MC_accident', 'EG',
               'exam_pclin', 'exam_phys', 'divers', 'APT_thorax',
               'APT_abdomen', 'APT_tete', 'APT_MS', 'APT_MI', 'APT_system',
-              'A_osteo', 'traitement', 'therapeute']
+              'A_osteo', 'traitement', 'therapeute', 'site']
     EXTRA_FIELDS = ['patient', 'bill']
 
     @classmethod
@@ -232,7 +232,7 @@ class Bill(Model):
               'street', 'zip', 'city', 'canton',
               'birthdate', 'treatment_period', 'treatment_reason',
               'accident_date', 'accident_no',
-              'mandant', 'diagnostic', 'comment', 'signature']
+              'mandant', 'diagnostic', 'comment', 'signature', 'site']
     AUTO_FIELD = 'id'
     EXTRA_FIELDS = ['patient', 'consultation', 'positions', 'reminders', 'copy']
 

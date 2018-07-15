@@ -11,6 +11,7 @@ import wx
 from superpatient import BaseApp, DBMixin, HelpMenuMixin
 from superpatient import bills, normalize_filename
 from superpatient.bvr import gen_bvr_ref
+from superpatient.customization import SITE
 from superpatient.models import Bill, PAYMENT_METHODS, STATUS_OPENED, STATUS_SENT, STATUS_PAYED
 from superpatient.ui.common import askyesno, show_db_warning
 from superpatient.ui import cash_register
@@ -86,7 +87,7 @@ class CashRegisterFrame(DBMixin, HelpMenuMixin, cash_register.MainFrame):
         self.on_deselect_payment(None)
         self.payments.DeleteAllItems()
         try:
-            self.data = list(Bill.yield_all(self.cursor, "type = 'C' AND timestamp > CURDATE() AND (status = 'O' OR status = 'I' AND payment_method = 'BVR')", "timestamp"))
+            self.data = list(Bill.yield_all(self.cursor, "type = 'C' AND site = '%s' AND timestamp > CURDATE() AND (status = 'O' OR status = 'I' AND payment_method = 'BVR')" % SITE, "timestamp"))
             for bill in self.data:
                 self.payments.Append((bill.sex, bill.lastname, bill.firstname, bill.consultation.therapeute, bill.timestamp.strftime('%H:%M'), '%0.2f' % (bill.total_cts/100), bill.payment_method))
         except:

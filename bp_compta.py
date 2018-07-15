@@ -56,12 +56,20 @@ class AccountingFrame(DBMixin, HelpMenuMixin, accounting.MainFrame):
         except:
             show_db_warning(logger, 'read')
             sys.exit(1)
+        try:
+            self.cursor.execute("SELECT DISTINCT site FROM bills ORDER BY site")
+            sites = ['Tous'] + [s for s, in self.cursor]
+        except:
+            show_db_warning(logger, 'read')
+            sys.exit(1)
         self.therapeute.SetItems(therapeutes)
         self.therapeute.StringSelection = therapeutes[0]
         self.payment_method.SetItems([''] + PAYMENT_METHODS + OLD_PAYMENT_METHODS)
         self.payment_method.StringSelection = ''
         self.bill_status.SetItems(BILL_STATUSES)
         self.bill_status.StringSelection = BILL_STATUSES[0]
+        self.site.SetItems(sites)
+        self.site.StringSelection = sites[0]
         today = datetime.date.today()
         month_end = datetime.date(today.year, today.month, 1) - datetime.timedelta(days=1)
         last_month = datetime.date(month_end.year, month_end.month, 1)
@@ -75,6 +83,7 @@ class AccountingFrame(DBMixin, HelpMenuMixin, accounting.MainFrame):
         filter_start = parse_ISO(self.filter_start.Value.strip())
         filter_end = parse_ISO(self.filter_end.Value.strip())
         bill_status = self.bill_status.StringSelection
+        site = self.site.StringSelection
         filter_firstname = self.filter_firstname.Value.strip()
         filter_lastname = self.filter_lastname.Value.strip()
         where = {}
@@ -92,6 +101,8 @@ class AccountingFrame(DBMixin, HelpMenuMixin, accounting.MainFrame):
                 where['status__in'] = ('O', 'I', 'E')
             else:
                 where['status'] = bill_status
+        if site != 'Tous':
+            where['site'] = site
         if filter_firstname:
             where['firstname__like'] = filter_firstname.replace('*', '%')
         if filter_lastname:
@@ -111,7 +122,7 @@ class AccountingFrame(DBMixin, HelpMenuMixin, accounting.MainFrame):
                     status = sorted(bill.reminders, key=attrgetter('reminder_date'))[-1].status
                 else:
                     status = bill.status
-                index = self.payments.Append((status, bill.sex, bill.lastname, bill.firstname, bill.timestamp.date(), '%6.2f' % (bill.total_cts/100), bill.payment_date or ''))
+                index = self.payments.Append((status, bill.sex, bill.lastname, bill.firstname, bill.site, bill.timestamp.date(), '%6.2f' % (bill.total_cts/100), bill.payment_date or ''))
                 if len(bill.reminders) == 1:
                     self.payments.GetItem(index).SetTextColour(wx.Colour(64, 0, 0))
                 elif len(bill.reminders) > 1:
@@ -314,7 +325,7 @@ class RemindersManagementDialog(DBMixin, accounting.RemindersManagementDialog):
                         continue
                 else:
                     reminders_last = ''
-                index = self.reminders.Append((bill.sex, bill.lastname, bill.firstname, bill.timestamp.date(), '%0.2f' % ((bill.total_cts)/100.), reminders_last, len(bill.reminders)))
+                index = self.reminders.Append((bill.sex, bill.lastname, bill.firstname, bill.site, bill.timestamp.date(), '%0.2f' % ((bill.total_cts)/100.), reminders_last, len(bill.reminders)))
                 self.reminders.Select(index)
                 if len(bill.reminders) == 1:
                     self.reminders.SetItemTextColour(index, wx.Colour(64, 0, 0))
@@ -396,6 +407,8 @@ class StatisticsDialog(DBMixin, accounting.StatisticsDialog):
         self.month.SetItems(self.months)
         self.cursor.execute("SELECT DISTINCT tarif_code FROM positions ORDER BY tarif_code")
         self.stats_type.SetItems(["# Factures", "CHF Factures"] + ["CHF Code %s" % code for code, in self.cursor])
+        self.cursor.execute("SELECT DISTINCT site FROM bills ORDER BY site")
+        self.site.SetItems(['Tous'] + [s for s, in self.cursor])
 
         self.update_display()
 
@@ -446,6 +459,11 @@ class StatisticsDialog(DBMixin, accounting.StatisticsDialog):
         totals = {}
         grand_total = 0
         mode = self.stats_type.StringSelection
+        if self.site.StringSelection != 'Tous':
+            sql_filter += ' AND site = %s'
+            site = [self.site.StringSelection]
+        else:
+            site = []
 
         def format(value):
             return ('{:,d}' if mode == '# Factures' else '{:0,.2f}').format(value).replace(',', "'")
@@ -460,7 +478,7 @@ class StatisticsDialog(DBMixin, accounting.StatisticsDialog):
                                          FROM bills
                                         WHERE type = 'C' AND %s
                                         GROUP BY author_id
-                                        ORDER BY author_id""" % sql_filter, args)
+                                        ORDER BY author_id""" % sql_filter, args + site)
             elif mode == 'CHF Factures':
                 self.cursor.execute("""SELECT author_id,
                                               sum((SELECT sum(total_cts)
@@ -469,7 +487,7 @@ class StatisticsDialog(DBMixin, accounting.StatisticsDialog):
                                          FROM bills
                                         WHERE type = 'C' AND %s
                                         GROUP BY author_id
-                                        ORDER BY author_id""" % sql_filter, args)
+                                        ORDER BY author_id""" % sql_filter, args + site)
             else:
                 tarif_code = mode.replace('CHF Code ', '')
                 self.cursor.execute("""SELECT author_id,
@@ -479,7 +497,7 @@ class StatisticsDialog(DBMixin, accounting.StatisticsDialog):
                                          FROM bills
                                         WHERE type = 'C' AND %s
                                         GROUP BY author_id
-                                        ORDER BY author_id""" % sql_filter, [tarif_code] + args)
+                                        ORDER BY author_id""" % sql_filter, [tarif_code] + args + site)
             col_total = 0
             for therapeute, value in self.cursor:
                 if value is None:
