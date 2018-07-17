@@ -1,0 +1,257 @@
+-- MySQL dump 10.13  Distrib 5.7.22, for osx10.13 (x86_64)
+--
+-- Host: localhost   Database: superpatient   Version: 4.25
+-- --------------------------------------------------------
+-- Server version	5.7.22
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8 */;
+/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
+/*!40103 SET TIME_ZONE='+00:00' */;
+/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
+/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
+/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
+/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+
+--
+-- Table structure for table `addresses`
+--
+
+DROP TABLE IF EXISTS `addresses`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `addresses` (
+  `id` varchar(50) NOT NULL,
+  `title` mediumtext,
+  `firstname` mediumtext NOT NULL,
+  `lastname` mediumtext NOT NULL,
+  `complement` mediumtext,
+  `street` mediumtext NOT NULL,
+  `zip` mediumtext NOT NULL,
+  `city` mediumtext NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `id` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `bills`
+--
+
+DROP TABLE IF EXISTS `bills`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `bills` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `type` varchar(2) NOT NULL,
+  `payment_method` varchar(10) DEFAULT NULL,
+  `bv_ref` mediumtext,
+  `payment_date` date DEFAULT NULL,
+  `status` varchar(2) NOT NULL,
+  `id_consult` int(11) DEFAULT NULL,
+  `id_patient` int(11) DEFAULT NULL,
+  `timestamp` datetime DEFAULT NULL,
+  `author_id` mediumtext NOT NULL,
+  `author_lastname` mediumtext NOT NULL,
+  `author_firstname` mediumtext NOT NULL,
+  `author_rcc` mediumtext NOT NULL,
+  `sex` varchar(1) DEFAULT NULL,
+  `title` mediumtext,
+  `lastname` mediumtext NOT NULL,
+  `firstname` mediumtext NOT NULL,
+  `complement` mediumtext,
+  `street` mediumtext NOT NULL,
+  `zip` mediumtext NOT NULL,
+  `city` mediumtext NOT NULL,
+  `canton` mediumtext,
+  `birthdate` date DEFAULT NULL,
+  `treatment_period` mediumtext,
+  `treatment_reason` mediumtext,
+  `accident_date` date DEFAULT NULL,
+  `accident_no` mediumtext,
+  `mandant` mediumtext,
+  `diagnostic` mediumtext,
+  `comment` mediumtext,
+  `signature` text,
+  `site` varchar(20) NOT NULL DEFAULT '$SITE',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `id` (`id`),
+  UNIQUE KEY `id_consult` (`id_consult`),
+  KEY `bills_site_idx` (`site`),
+  KEY `bills_payment_method_idx` (`payment_method`),
+  KEY `bills_payment_date_idx` (`payment_date`),
+  KEY `bills_status_idx` (`status`),
+  KEY `bills_timestamp_idx` (`timestamp`),
+  KEY `bills_author_id_idx` (`author_id`(10))
+) ENGINE=InnoDB AUTO_INCREMENT=38902 DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `bvr_sequence`
+--
+
+DROP TABLE IF EXISTS `bvr_sequence`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `bvr_sequence` (
+  `counter` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `consultations`
+--
+
+DROP TABLE IF EXISTS `consultations`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `consultations` (
+  `id_consult` int(11) NOT NULL AUTO_INCREMENT,
+  `id` mediumint(9) DEFAULT NULL,
+  `date_consult` date DEFAULT NULL,
+  `MC` mediumtext,
+  `EG` mediumtext,
+  `APT_thorax` mediumtext,
+  `APT_abdomen` mediumtext,
+  `APT_tete` mediumtext,
+  `APT_MS` mediumtext,
+  `APT_MI` mediumtext,
+  `APT_system` mediumtext,
+  `A_osteo` mediumtext,
+  `exam_phys` mediumtext,
+  `traitement` mediumtext,
+  `divers` mediumtext,
+  `exam_pclin` mediumtext,
+  `therapeute` varchar(20) DEFAULT NULL,
+  `MC_accident` tinyint(1) DEFAULT NULL,
+  `accident_date` date DEFAULT NULL,
+  `site` varchar(20) NOT NULL DEFAULT '$SITE',
+  PRIMARY KEY (`id_consult`),
+  KEY `id_consult_id` (`id`,`id_consult`)
+) ENGINE=MyISAM AUTO_INCREMENT=39034 DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `patients`
+--
+
+DROP TABLE IF EXISTS `patients`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `patients` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `date_ouverture` date DEFAULT NULL,
+  `therapeute` varchar(20) DEFAULT NULL,
+  `sex` varchar(8) DEFAULT NULL,
+  `nom` varchar(30) DEFAULT NULL,
+  `prenom` varchar(30) DEFAULT NULL,
+  `date_naiss` date DEFAULT NULL,
+  `ATCD_perso` mediumtext,
+  `ATCD_fam` mediumtext,
+  `medecin` mediumtext,
+  `autre_medecin` mediumtext,
+  `phone` varchar(30) DEFAULT NULL,
+  `portable` varchar(30) DEFAULT NULL,
+  `profes_phone` varchar(30) DEFAULT NULL,
+  `mail` varchar(40) DEFAULT NULL,
+  `adresse` mediumtext,
+  `street` mediumtext,
+  `zip` mediumtext,
+  `city` mediumtext,
+  `canton` mediumtext,
+  `ass_compl` varchar(30) DEFAULT NULL,
+  `profes` varchar(30) DEFAULT NULL,
+  `etat` varchar(30) DEFAULT NULL,
+  `envoye` varchar(30) DEFAULT NULL,
+  `divers` mediumtext,
+  `important` mediumtext,
+  `site` varchar(20) NOT NULL DEFAULT '$SITE',
+  PRIMARY KEY (`id`),
+  KEY `nom_prenom` (`nom`(15),`prenom`(15))
+) ENGINE=MyISAM AUTO_INCREMENT=9427 DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `positions`
+--
+
+DROP TABLE IF EXISTS `positions`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `positions` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id_bill` int(11) NOT NULL,
+  `position_date` date NOT NULL,
+  `tarif_code` mediumtext NOT NULL,
+  `tarif_description` mediumtext NOT NULL,
+  `quantity` float NOT NULL,
+  `price_cts` int(11) NOT NULL,
+  `total_cts` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `id` (`id`),
+  KEY `id_bill` (`id_bill`),
+  KEY `positions_tarif_code_idx` (`tarif_code`(10)),
+  CONSTRAINT `positions_ibfk_1` FOREIGN KEY (`id_bill`) REFERENCES `bills` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=42053 DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `reminders`
+--
+
+DROP TABLE IF EXISTS `reminders`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `reminders` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id_bill` int(11) NOT NULL,
+  `reminder_date` date NOT NULL,
+  `amount_cts` int(11) NOT NULL,
+  `status` varchar(2) NOT NULL DEFAULT 'O',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `id` (`id`),
+  KEY `id_bill` (`id_bill`),
+  CONSTRAINT `reminders_ibfk_1` FOREIGN KEY (`id_bill`) REFERENCES `bills` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=180 DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `tarifs`
+--
+
+DROP TABLE IF EXISTS `tarifs`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `tarifs` (
+  `code` varchar(10) NOT NULL,
+  `description` mediumtext,
+  `unit_price_cts` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `therapeutes`
+--
+
+DROP TABLE IF EXISTS `therapeutes`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `therapeutes` (
+  `therapeute` varchar(20) DEFAULT NULL,
+  `entete` mediumtext,
+  `login` mediumtext
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
+
+/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
+/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
+/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
+
+-- Dump completed on 2018-07-17 21:26:52
