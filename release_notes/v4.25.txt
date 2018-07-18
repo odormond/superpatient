@@ -1,0 +1,65 @@
+Upgrade instructions
+====================
+
+* Backup everything as usual (code and db)
+
+* Adjust `superpatient/customization.py` to set `COMPANY_NAME`, `ADDRESS`,
+  `WEB_SITE` and `PHONE` properly. Previously these values where all in the
+  variable `adresse_pog`.
+
+* Generate the sql update script for the site using:
+  `db/render_template.py db/update_db.v4.25.sql.template >db_update_site.sql`
+
+* Apply the generated `db_update_site.sql`.
+
+
+New features
+============
+
+* Added a retry mechanism to a second server for the signature.
+  Contributed by lowi.
+
+* Added an explicit db ping thread to help in keeping the db connection alive
+  through NAT firewalls.
+
+* Made more bill fields editable by default and almost all fields are editable
+  when run in admin/founders mode.
+
+* Proper logging into the `logs` directory. One file per application, rotating
+  on size.
+
+* Log SQL query execution time. This should help in understanding possible
+  source of slowness.
+
+* Added some indexes to the database to try to speedup bp_compta.py.
+
+* Added support for multiple sites. Patients, consultations and bills are now
+  tagged at creation time with the site where the creation happened. A patient
+  from one site can consult at another and it's now possible to distinguish
+  which consultation took place where as well as separate the bills
+  accordingly. bp_compta.py exposed the site both when searching for bills and
+  when computing statistics. For the time being, it's still assumed that all
+  sites share the same database through the network. Next release will provide
+  a way to have separate databases being synchronized to share the patients and
+  consultations history.
+
+
+Bug fixes
+=========
+
+* Fix usage of `os.getlogin` by using the recommended `getpass.getuser`
+  instead.
+
+* Fix LCA/LAA not properly updated based on the treatment reason.
+
+* Fix accident date and case number not being editable until the treatment
+  reason was edited again.
+
+* Fix to properly use "Aux parents de" or "Madame/Monsieur" based on the exact
+  birthdate of the patient.
+
+
+Cleanups
+========
+
+* Removed all strings from superpatients/customization.py that should not require customization.
