@@ -21,7 +21,7 @@
 from pathlib import Path
 PDF_DIR = str(Path(__file__).parents[1] / 'factures')
 
-VERSION = '4.24'
+VERSION = '4.25'
 SITE = 'Lausanne'
 DEFAULT_CANTON = "VD"
 
