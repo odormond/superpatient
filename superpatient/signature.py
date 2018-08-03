@@ -25,9 +25,9 @@ def sign(rcc, patient_birthday, patient_zip, treatment_cost_cts, treatment_date)
         response = urlopen(SIGNATURE_URL, data)
     except OSError as e:
         try:
-            data = SIGNATURE_URL.split(".")
-            data[0] += "2"
-            SIGNATURE2_URL = ".".join(data)
+            SIG_ARRAY = SIGNATURE_URL.split(".")
+            SIG_ARRAY[0] += "2"
+            SIGNATURE2_URL = ".".join(SIG_ARRAY)
             response = urlopen(SIGNATURE2_URL, data)
         except OSError as e2:
             showerror("Signature impossible",
