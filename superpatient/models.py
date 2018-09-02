@@ -61,6 +61,7 @@ def round_to_nearest(value, near):
 class Model(object):
     TABLE = None
     FIELDS = []
+    RO_FIELDS = []  # Read only fields that won't be written to the database
     AUTO_FIELD = None
     EXTRA_FIELDS = []
 
@@ -75,7 +76,7 @@ class Model(object):
         fields = {}
         for extra in klass.EXTRA_FIELDS:
             fields[extra] = None
-        fields.update(dict(zip(klass.FIELDS, data)))
+        fields.update(dict(zip(klass.FIELDS + klass.RO_FIELDS, data)))
         return klass(**fields)
 
     @classmethod
@@ -119,16 +120,16 @@ class Model(object):
         else:
             order = ''
         cursor.execute("SELECT %s FROM %s %s %s"
-                       % (', '.join(klass.FIELDS),
+                       % (', '.join(klass.FIELDS + klass.RO_FIELDS),
                           klass.TABLE,
                           where,
                           order),
                        where_args)
         for data in cursor:
-            yield klass(**dict(zip(klass.FIELDS, data)))
+            yield klass(**dict(zip(klass.FIELDS + klass.RO_FIELDS, data)))
 
     def __init__(self, **kwds):
-        for field in self.FIELDS + self.EXTRA_FIELDS:
+        for field in self.FIELDS + self.RO_FIELDS + self.EXTRA_FIELDS:
             setattr(self, field, kwds.pop(field, None))
         if kwds:
             raise TypeError("extraneous parameters %s" % ', '.join("`%s'" % k for k in kwds))
@@ -138,7 +139,7 @@ class Model(object):
         return getattr(self, self.FIELDS[0]) is not None
 
     def __setattr__(self, field, value):
-        if field not in self.FIELDS + self.EXTRA_FIELDS:
+        if field not in self.FIELDS + self.RO_FIELDS + self.EXTRA_FIELDS:
             raise AttributeError("unknown attribute `%s'" % field)
         super(Model, self).__setattr__(field, value)
 
@@ -175,7 +176,8 @@ class Patient(Model):
               'ATCD_perso', 'ATCD_fam', 'medecin',
               'autre_medecin', 'phone', 'portable', 'profes_phone', 'mail',
               'ass_compl', 'profes', 'etat', 'envoye', 'divers',
-              'important', 'site']
+              'important']
+    RO_FIELDS = ['site']
     AUTO_FIELD = 'id'
 
 
@@ -184,7 +186,8 @@ class Consultation(Model):
     FIELDS = ['id_consult', 'id', 'date_consult', 'MC', 'MC_accident', 'EG',
               'exam_pclin', 'exam_phys', 'divers', 'APT_thorax',
               'APT_abdomen', 'APT_tete', 'APT_MS', 'APT_MI', 'APT_system',
-              'A_osteo', 'traitement', 'therapeute', 'site']
+              'A_osteo', 'traitement', 'therapeute']
+    RO_FIELDS = ['site']
     AUTO_FIELD = 'id_consult'
     EXTRA_FIELDS = ['patient', 'bill']
 
@@ -210,9 +213,6 @@ class Consultation(Model):
             instance.bill = Bill.load_from_consultation(cursor, instance)
             yield instance
 
-    def __init__(self, **kwds):
-        super().__init__(**kwds)
-
 
 class Position(Model):
     TABLE = 'positions'
@@ -236,7 +236,8 @@ class Bill(Model):
               'street', 'zip', 'city', 'canton',
               'birthdate', 'treatment_period', 'treatment_reason',
               'accident_date', 'accident_no',
-              'mandant', 'diagnostic', 'comment', 'signature', 'site']
+              'mandant', 'diagnostic', 'comment', 'signature']
+    RO_FIELDS = ['site']
     AUTO_FIELD = 'id'
     EXTRA_FIELDS = ['patient', 'consultation', 'positions', 'reminders', 'copy']
 
