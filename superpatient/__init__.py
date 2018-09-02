@@ -104,6 +104,7 @@ class BaseApp(wx.App):
                     if e.args[0] in (2006, 2013):  # Connection was lost. Retry once
                         return super(ResilientCursor, self).execute(query, args)
                     else:
+                        logger.error("Failed to execute SQL query %r with args %r", query, args)
                         raise
                 finally:
                     t1 = time.time()
