@@ -319,6 +319,8 @@ class RemindersManagementDialog(DBMixin, accounting.RemindersManagementDialog):
         try:
             where = dict(payment_date__isnull=True, bv_ref__isnull=False, bv_ref__ne='', timestamp__le=upto, status__notin=('P', 'A'))
             for bill in Bill.yield_all(self.cursor, where=where, order='timestamp'):
+                if bill.total_cts == 0:
+                    continue
                 if bill.reminders:
                     reminders_last = sorted(bill.reminders, key=attrgetter('reminder_date'))[-1].reminder_date
                     if reminders_last > upto:
