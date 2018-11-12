@@ -1,0 +1,31 @@
+Upgrade instructions
+====================
+
+* Backup everything as usual (code and db)
+
+* Recommended: upgrade the dependencies by running: pip install -U -r requirements.txt
+  This is not strictly needed but is recommended.
+
+
+New features
+============
+
+* Consultation without a bill will be highlighted in green and described as offered.
+
+* Exclude bills with an amount of 0 from the reminder management process.
+
+* Support fallback server URLs for the signature process in case the default one is unreachable.
+
+
+Bug fixes
+=========
+
+* Fix an issue with NULL columns in the database.
+
+* Log failed SQL queries too.
+
+
+Clean-ups
+=========
+
+* Bumped the requirements to latest versions.
