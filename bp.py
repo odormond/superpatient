@@ -681,7 +681,7 @@ class ManageConsultationsDialog(DBMixin, CancelableMixin, core.ManageConsultatio
 
     def update_list(self):
         try:
-            self.cursor.execute("""SELECT consultations.id_consult, date_consult, therapeute, MC, payment_date
+            self.cursor.execute("""SELECT consultations.id_consult, date_consult, therapeute, MC, bills.id, bills.payment_date
                                      FROM consultations
                                      LEFT OUTER JOIN bills ON consultations.id_consult = bills.id_consult
                                     WHERE consultations.id=%s
@@ -691,9 +691,12 @@ class ManageConsultationsDialog(DBMixin, CancelableMixin, core.ManageConsultatio
             show_db_warning(logger, 'show')
         self.results = []
         self.consultations.DeleteAllItems()
-        for id_consult, date_consult, therapeute, MC, paye_le in self.cursor:
+        for id_consult, date_consult, therapeute, MC, bill_id, payment_date in self.cursor:
             index = self.consultations.Append((date_consult, therapeute or '', MC))
-            if paye_le is None:
+            if bill_id is None:
+                # No bill at all, usually the consultation was offered
+                self.consultations.SetItemTextColour(index, wx.Colour(0, 128, 0))
+            elif payment_date is None:
                 self.consultations.SetItemTextColour(index, wx.Colour(128, 0, 0))
             self.results.append(id_consult)
         self.consultations.SetColumnWidth(0, wx.LIST_AUTOSIZE)
@@ -758,6 +761,7 @@ class AllConsultationsDialog(DBMixin, CancelableMixin, core.AllConsultationsDial
         <style>
         .date {{ color: red; }}
         .unpaid {{ color: darkred; }}
+        .offered {{ color: darkgreen; }}
         h3 {{ color: blue; }}
         .important {{ color: darkblue; }}
         body {{ font-family: sans-serif; font-size: small; line-height: 1.0; }}
@@ -779,7 +783,8 @@ class AllConsultationsDialog(DBMixin, CancelableMixin, core.AllConsultationsDial
         for consult in Consultation.yield_all(self.cursor, where=dict(id=patient.id), order='-date_consult'):
             html += filter(None, [
                 "<hr/><h2 class='date'>********** Consultation du {} **********</h2>".format(consult.date_consult),
-                "<h3 class='unpaid'>!!!!! Non-payé !!!!!</h3>" if consult.bill is not None and consult.bill.payment_date is None else None,
+                ("<h3 class='unpaid'>!!!!! Non-payé !!!!!</h3>" if consult.bill is not None and consult.bill.payment_date is None else
+                    ("<h3 class='offered'>----- Offerte -----</h3>" if consult.bill is None else None)),
                 "<h3>État général</h3><div>{}</div>".format(consult.EG) if consult.EG.strip() else None,
                 "<h3>Thérapeute</h3><div>{}</div>".format(consult.therapeute) if consult.therapeute else None,
                 "<h3>Motif&nbsp;: {}</h3><div>{}</div>".format(("accident" if consult.MC_accident else "maladie"), consult.MC),
