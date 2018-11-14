@@ -4,7 +4,7 @@ import logging
 
 import wx
 
-from superpatient.customization import DATE_FMT, COMPANY_NAME, BILL_TYPE_AND_SITE
+from superpatient.customization import DATE_FMT, COMPANY_NAME
 from superpatient.models import PAYMENT_METHODS, SEX_ALL, round_cts
 
 
@@ -142,7 +142,8 @@ class BillDialog(wx.Dialog):
         grid_sizer_2.Add(wx.StaticText(self, wx.ID_ANY, "N°/Nom entreprise"), (21, 1), (1, 1), 0, 0)
         grid_sizer_2.Add(wx.StaticText(self, wx.ID_ANY, COMPANY_NAME), (21, 2), (1, 3), 0, 0)
         grid_sizer_2.Add(wx.StaticText(self, wx.ID_ANY, "Rôle/Localité"), (22, 1), (1, 1), 0, 0)
-        grid_sizer_2.Add(wx.StaticText(self, wx.ID_ANY, BILL_TYPE_AND_SITE), (22, 2), (1, 3), 0, 0)
+        self.role_and_site = wx.StaticText(self, wx.ID_ANY, "")
+        grid_sizer_2.Add(self.role_and_site, (22, 2), (1, 3), 0, 0)
         label_27 = wx.StaticText(self, wx.ID_ANY, "Mandataire")
         label_27.SetFont(bold_font)
         grid_sizer_2.Add(label_27, (23, 0), (1, 1), 0, 0)

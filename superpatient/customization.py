@@ -50,7 +50,7 @@ WEB_SITE = "www.pog.swiss"
 PHONE = "021 510 50 50"
 FULL_ADDRESS = "\n".join((COMPANY_NAME, ADDRESS, WEB_SITE, PHONE))
 
-BILL_TYPE_AND_SITE = "Ostéopathie / {SITE}".format(SITE=SITE)
+ROLE = "Ostéopathie"
 
 
 class BVR:

@@ -34,7 +34,7 @@ from superpatient import BaseApp, DBMixin, HelpMenuMixin, CancelableMixin
 from superpatient import bills, normalize_filename, gen_title
 from superpatient.bvr import gen_bvr_ref
 import superpatient.customization as custo
-from superpatient.customization import DATE_FMT, DEFAULT_CANTON, FULL_ADDRESS
+from superpatient.customization import DATE_FMT, DEFAULT_CANTON, FULL_ADDRESS, ROLE
 from superpatient.models import (Patient, Consultation, Bill, Position, round_cts,
                                  STATUS_OPENED, STATUS_PAYED, STATUS_PRINTED,
                                  SEX_ALL, SEX_FEMALE, SEX_MALE,
@@ -1330,6 +1330,7 @@ class BillDialog(DBMixin, CancelableMixin, bill.BillDialog):
         self.diagnostic.Value = bill.diagnostic
         self.comment.Value = bill.comment
         self.payment_method.StringSelection = bill.payment_method or ''
+        self.role_and_site.LabelText = "{} / {}".format(ROLE, bill.site)
         for position in bill.positions:
             self.add_position(position, self.readonly)
 

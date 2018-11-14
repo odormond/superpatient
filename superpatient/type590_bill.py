@@ -11,7 +11,7 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 
 from . import gen_title
-from .customization import DATE_FMT, COMPANY_NAME, FULL_ADDRESS, BILL_TYPE_AND_SITE
+from .customization import DATE_FMT, COMPANY_NAME, FULL_ADDRESS, ROLE
 from .custom_bill import draw_head, draw_bvr
 from .signature import datamatrix
 
@@ -98,7 +98,7 @@ def patient(bill):
         ["", "N° contrat", "", "Date/N° de rappel"],
         ["", "Traitement", bill.treatment_period, "Motif traitement", bill.treatment_reason],
         ["", "N°/Nom entreprise", COMPANY_NAME],
-        ["", "Rôle/Localité", BILL_TYPE_AND_SITE],
+        ["", "Rôle/Localité", "{} / {}".format(ROLE, bill.site)],
     ]
     return Table(data, colWidths=[2*cm, 2.5*cm, 6.5*cm, '*'], rowHeights=[13] + [11]*(len(data)-1), style=PATIENT_TSTYLE)
 
