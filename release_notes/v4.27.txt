@@ -23,3 +23,6 @@ Bug Fixes
 
 * Fix cancelation warning on bills talking about the consultation while it actually
   concerned only the bill
+
+* Fix bills created at a later time instead of the consultation time not using the
+  consultation site

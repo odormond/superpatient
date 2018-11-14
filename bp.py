@@ -1286,7 +1286,7 @@ class BillDialog(DBMixin, CancelableMixin, bill.BillDialog):
                 bill_id, = self.cursor.fetchone()
                 self.bill = Bill.load(self.cursor, bill_id)
             else:
-                self.bill = Bill(consultation=self.consultation, patient=self.consultation.patient)
+                self.bill = Bill(consultation=self.consultation, patient=self.consultation.patient, site=self.consultation.site)
         except:
             show_db_warning(logger, 'read')
         try:
