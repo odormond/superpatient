@@ -29,7 +29,7 @@ import wx
 
 from . import credentials, db
 from .customization import PDF_DIR
-from .models import SEX_MALE, SEX_FEMALE
+from .models import SEX_MALE, SEX_FEMALE, DB_VERSION
 from .ui.common import show_error, AboutDialog, LicenseDialog
 
 
@@ -100,11 +100,13 @@ class BaseApp(wx.App):
                 t0 = time.time()
                 try:
                     return super(ResilientCursor, self).execute(query, args)
-                except MySQLdb.OperationalError as e:
+                except MySQLdb.DatabaseError as e:
                     if e.args[0] in (2006, 2013):  # Connection was lost. Retry once
                         return super(ResilientCursor, self).execute(query, args)
                     else:
                         logger.error("Failed to execute SQL query %r with args %r", query, args)
+                        if self._executed is None:
+                            self._executed = query.encode()
                         raise
                 finally:
                     t1 = time.time()
@@ -118,7 +120,16 @@ class BaseApp(wx.App):
 
         self.connection.ping(True)
         self.connection.autocommit(True)
-
+        cursor = self.connection.cursor()
+        try:
+            cursor.execute("SELECT db_version FROM version_info")
+        except MySQLdb.DatabaseError:
+            version = "undefined"
+        else:
+            version, = cursor.fetchone()
+        if version != DB_VERSION:
+            show_error(logger, "Incompatible DB version: %s; expecting %d!" % (version, DB_VERSION))
+            sys.exit(1)
         threading.Thread(target=self._keepalive, daemon=True).start()
 
     def _keepalive(self):

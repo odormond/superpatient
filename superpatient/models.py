@@ -19,6 +19,9 @@
 from .customization import ROUNDING_MODE
 
 
+DB_VERSION = 1
+
+
 OLD_PAYMENT_METHODS = ['CdM']
 PAYMENT_METHODS = ['Cash', 'Carte', 'BVR', 'Dû', 'PVPE']
 PAYMENT_STATUSES = ['Tous', 'Comptabilisé', 'Non-comptabilisé']

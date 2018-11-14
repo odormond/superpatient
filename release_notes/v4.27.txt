@@ -1,0 +1,12 @@
+Upgrade instructions
+====================
+
+* Backup everything as usual (code and db)
+
+* Apply the database update script `db/update_db.v4.27.sql`
+
+
+New features
+============
+
+* Track the database version and complain if it doesn't match what the code expect
