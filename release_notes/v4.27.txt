@@ -13,6 +13,8 @@ New features
 
 * Display the site associated with a patient or its consultations
 
+* Support multiple sites sharing a single database (was badly overlooked)
+
 
 Bug Fixes
 =========
