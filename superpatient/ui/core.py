@@ -542,6 +542,7 @@ class ManageConsultationsDialog(wx.Dialog):
     def __set_properties(self):
         self.SetTitle("Rechercher une consultation de ???")
         self.consultations.AppendColumn("Date", format=wx.LIST_FORMAT_LEFT, width=-1)
+        self.consultations.AppendColumn("Site", format=wx.LIST_FORMAT_LEFT, width=-1)
         self.consultations.AppendColumn("Thérapeute", format=wx.LIST_FORMAT_LEFT, width=-1)
         self.consultations.AppendColumn("Motif", format=wx.LIST_FORMAT_LEFT, width=-1)
 
@@ -596,6 +597,7 @@ class PatientDialog(wx.Dialog):
         self.patient_id = wx.TextCtrl(self.panel_1, wx.ID_ANY, "", style=wx.TE_READONLY)
         self.lastname = wx.TextCtrl(self.panel_1, wx.ID_ANY, "")
         self.therapeute = wx.Choice(self.panel_1, wx.ID_ANY, choices=[])
+        self.site = wx.TextCtrl(self.panel_1, wx.ID_ANY, "", style=wx.TE_READONLY)
         self.firstname = wx.TextCtrl(self.panel_1, wx.ID_ANY, "")
         self.birthdate = wx.TextCtrl(self.panel_1, wx.ID_ANY, "")
         self.opening_date = wx.TextCtrl(self.panel_1, wx.ID_ANY, "")
@@ -690,6 +692,9 @@ class PatientDialog(wx.Dialog):
         self.firstname_label = wx.StaticText(self.panel_1, wx.ID_ANY, "Prénom")
         grid_sizer_7.Add(self.firstname_label, (2, 0), (1, 1), wx.ALIGN_CENTER_VERTICAL, 0)
         grid_sizer_7.Add(self.firstname, (2, 1), (1, 1), wx.EXPAND, 0)
+        self.site_label = wx.StaticText(self.panel_1, wx.ID_ANY, "Site")
+        grid_sizer_7.Add(self.site_label, (2, 2), (1, 1), wx.ALIGN_CENTER_VERTICAL, 0)
+        grid_sizer_7.Add(self.site, (2, 3), (1, 1), wx.EXPAND, 0)
         self.birthdate_label = wx.StaticText(self.panel_1, wx.ID_ANY, "Naissance le")
         grid_sizer_7.Add(self.birthdate_label, (3, 0), (1, 1), wx.ALIGN_CENTER_VERTICAL, 0)
         grid_sizer_7.Add(self.birthdate, (3, 1), (1, 1), wx.EXPAND, 0)
@@ -826,6 +831,7 @@ class ManagePatientsDialog(wx.Dialog):
         self.patients.AppendColumn("Sexe", format=wx.LIST_FORMAT_LEFT, width=-1)
         self.patients.AppendColumn("Nom", format=wx.LIST_FORMAT_LEFT, width=-1)
         self.patients.AppendColumn("Prénom", format=wx.LIST_FORMAT_LEFT, width=-1)
+        self.patients.AppendColumn("Site", format=wx.LIST_FORMAT_LEFT, width=-1)
         self.patients.SetMinSize((-1, 400))
 
     def __do_layout(self):

@@ -587,7 +587,7 @@ class ManagePatientsDialog(DBMixin, CancelableMixin, core.ManagePatientsDialog):
 
     def on_search_patient(self, event):
         try:
-            self.cursor.execute("""SELECT id, sex, nom, prenom, (SELECT count(*) FROM consultations WHERE id = patients.id)
+            self.cursor.execute("""SELECT id, sex, nom, prenom, site
                                      FROM patients
                                     WHERE nom LIKE %s AND prenom LIKE %s
                                  ORDER BY nom""",
@@ -596,8 +596,8 @@ class ManagePatientsDialog(DBMixin, CancelableMixin, core.ManagePatientsDialog):
             show_db_warning(logger, 'search')
         self.results = []
         self.patients.DeleteAllItems()
-        for id, sex, nom, prenom, n_consult in self.cursor:
-            self.patients.Append((sex, nom, prenom))
+        for id, sex, nom, prenom, site in self.cursor:
+            self.patients.Append((sex, nom, prenom, site))
             self.results.append(id)
         for c in range(self.patients.ColumnCount):
             self.patients.SetColumnWidth(c, wx.LIST_AUTOSIZE)
@@ -681,7 +681,7 @@ class ManageConsultationsDialog(DBMixin, CancelableMixin, core.ManageConsultatio
 
     def update_list(self):
         try:
-            self.cursor.execute("""SELECT consultations.id_consult, date_consult, therapeute, MC, bills.id, bills.payment_date
+            self.cursor.execute("""SELECT consultations.id_consult, date_consult, consultations.site, therapeute, MC, bills.id, bills.payment_date
                                      FROM consultations
                                      LEFT OUTER JOIN bills ON consultations.id_consult = bills.id_consult
                                     WHERE consultations.id=%s
@@ -691,8 +691,8 @@ class ManageConsultationsDialog(DBMixin, CancelableMixin, core.ManageConsultatio
             show_db_warning(logger, 'show')
         self.results = []
         self.consultations.DeleteAllItems()
-        for id_consult, date_consult, therapeute, MC, bill_id, payment_date in self.cursor:
-            index = self.consultations.Append((date_consult, therapeute or '', MC))
+        for id_consult, date_consult, site, therapeute, MC, bill_id, payment_date in self.cursor:
+            index = self.consultations.Append((date_consult, site, therapeute or '', MC))
             if bill_id is None:
                 # No bill at all, usually the consultation was offered
                 self.consultations.SetItemTextColour(index, wx.Colour(0, 128, 0))
@@ -782,7 +782,7 @@ class AllConsultationsDialog(DBMixin, CancelableMixin, core.AllConsultationsDial
         """.format(**patient.__dict__)]
         for consult in Consultation.yield_all(self.cursor, where=dict(id=patient.id), order='-date_consult'):
             html += filter(None, [
-                "<hr/><h2 class='date'>********** Consultation du {} **********</h2>".format(consult.date_consult),
+                "<hr/><h2 class='date'>********** Consultation à {} du {} **********</h2>".format(consult.site, consult.date_consult),
                 ("<h3 class='unpaid'>!!!!! Non-payé !!!!!</h3>" if consult.bill is not None and consult.bill.payment_date is None else
                     ("<h3 class='offered'>----- Offerte -----</h3>" if consult.bill is None else None)),
                 "<h3>État général</h3><div>{}</div>".format(consult.EG) if consult.EG.strip() else None,
@@ -963,6 +963,9 @@ class PatientDialog(FixPatientMixin, DBMixin, CancelableMixin, core.PatientDialo
             self.therapeute.SetSelection(therapeutes.index(patient.therapeute))
         except ValueError:
             self.therapeute.SetSelection(wx.NOT_FOUND)
+
+        self.site.Value = patient.site
+        self.site.Disable()
 
         if patient.date_naiss:
             self.birthdate.Value = patient.date_naiss.strftime(DATE_FMT)
@@ -1169,11 +1172,11 @@ class ConsultationDialog(FixPatientMixin, DBMixin, CancelableMixin, core.Consult
             if consult.therapeute is None and login == LOGIN:
                 consult.therapeute = t
         if consult:
-            title = "Consultation du %s - %s %s" % (consult.date_consult, self.patient.sex, self.patient.nom)
+            title = "Consultation à %s du %s - %s %s" % (consult.site, consult.date_consult, self.patient.sex, self.patient.nom)
         else:
             consult.date_consult = datetime.date.today()
             consult.MC_accident = False
-            title = "Nouvelle consultation - %s %s" % (self.patient.sex, self.patient.nom)
+            title = "Nouvelle consultation à %s - %s %s" % (consult.site, self.patient.sex, self.patient.nom)
         self.therapeute.Set(therapeutes)
 
         fixed_therapist = self.readonly or (consult.id_consult is not None and 'MANAGE_CONSULTATIONS' not in wx.GetApp().ACCESS_RIGHTS)

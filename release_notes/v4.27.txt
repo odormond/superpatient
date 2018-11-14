@@ -10,3 +10,5 @@ New features
 ============
 
 * Track the database version and complain if it doesn't match what the code expect
+
+* Display the site associated with a patient or its consultations
