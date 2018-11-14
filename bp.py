@@ -58,10 +58,9 @@ def ask_confirm_printed_bvr():
     return askyesno("Impression effectuée ?", "Avez-vous imprimé le BVR ?")
 
 
-def ask_really_cancel():
+def ask_really_cancel(warning_message):
     return askyesno("Confirmation d'annulation",
-                    "Voulez-vous vraiment annuler ?\n"
-                    "Les données de cette consultation ne seront pas enregistrées.")
+                    "Voulez-vous vraiment annuler ?\n" + warning_message)
 
 
 class MainFrame(DBMixin, HelpMenuMixin, core.MainFrame):
@@ -1242,7 +1241,7 @@ class ConsultationDialog(FixPatientMixin, DBMixin, CancelableMixin, core.Consult
         consult.therapeute = self.therapeute.StringSelection
 
     def on_close(self, event):
-        if self.readonly or event.EventObject == self.ok_btn or ask_really_cancel():
+        if self.readonly or event.EventObject == self.ok_btn or ask_really_cancel("Les données de cette consultation ne seront pas enregistrées."):
             self.EndModal(0)
 
     def on_save(self, event):
@@ -1504,7 +1503,11 @@ class BillDialog(DBMixin, CancelableMixin, bill.BillDialog):
         self.save_new_bill()
 
     def on_close(self, event):
-        if self.readonly or event.EventObject == self.save_and_print_btn or ask_really_cancel():
+        if self.bill:
+            warning = "Les données de cette facture ne seront pas enregistrées."
+        else:
+            warning = "Aucune facture ne sera émise."
+        if self.readonly or event.EventObject == self.save_and_print_btn or ask_really_cancel(warning):
             self.EndModal(0)
 
 

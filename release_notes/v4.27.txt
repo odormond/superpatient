@@ -20,3 +20,6 @@ Bug Fixes
 =========
 
 * Fix bills always using the application site instead of the bill's one
+
+* Fix cancelation warning on bills talking about the consultation while it actually
+  concerned only the bill
