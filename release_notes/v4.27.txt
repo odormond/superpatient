@@ -15,6 +15,7 @@ New features
 
 * Support multiple sites sharing a single database (was badly overlooked)
 
+* Added indexes on the sites columns of the patients and consultations
 
 Bug Fixes
 =========
